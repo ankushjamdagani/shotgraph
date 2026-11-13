@@ -4,63 +4,308 @@ import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import chokidar from 'chokidar';
+import chokidar, { FSWatcher } from 'chokidar';
 import { initializeSkills, SkillRegistry } from './skills/index.js';
 import { ProjectService, FilmProject } from './services/projectService.js';
+import { ProjectRegistry, GlobalStylePreset } from './services/projectRegistry.js';
 import { AgentManager } from './swarm/agentManager.js';
 import { AGUIServerMessage, AGUIClientMessageSchema } from './protocol/aguiEvents.js';
 
 const PORT = 3030;
-const WORKSPACE_ROOT = process.cwd();
+const DEFAULT_WORKSPACE_ROOT = process.cwd();
 
-// Initialize all atomic skills
+// Initialize all atomic skills & central project registry
 initializeSkills();
+await ProjectRegistry.initialize();
 
 const server = Fastify({ logger: false });
 
 await server.register(cors, { origin: true });
 await server.register(websocket);
 
-// Serve static project assets (video previews, audio files, images)
+// Dynamic static media serving for projects
 await server.register(fastifyStatic, {
-  root: WORKSPACE_ROOT,
+  root: DEFAULT_WORKSPACE_ROOT,
   prefix: '/media/',
   decorateReply: false,
 });
 
-// Connected WebSocket clients
-const connectedClients = new Set<any>();
+// Map of projectId -> Set of WebSocket client connections
+const projectRooms = new Map<string, Set<any>>();
+const globalClients = new Set<any>();
 
-function broadcastAGUI(msg: AGUIServerMessage) {
+function addClientToRoom(projectId: string, client: any) {
+  if (!projectRooms.has(projectId)) {
+    projectRooms.set(projectId, new Set());
+  }
+  projectRooms.get(projectId)!.add(client);
+}
+
+function removeClientFromRoom(projectId: string, client: any) {
+  const room = projectRooms.get(projectId);
+  if (room) {
+    room.delete(client);
+    if (room.size === 0) {
+      projectRooms.delete(projectId);
+    }
+  }
+  globalClients.delete(client);
+}
+
+function broadcastAGUI(msg: AGUIServerMessage, targetProjectId?: string) {
   const payload = JSON.stringify(msg);
-  for (const client of connectedClients) {
+
+  // Broadcast to global listeners
+  for (const client of globalClients) {
     if (client.readyState === 1) {
       client.send(payload);
     }
   }
+
+  // Broadcast to project-specific room
+  if (targetProjectId && projectRooms.has(targetProjectId)) {
+    for (const client of projectRooms.get(targetProjectId)!) {
+      if (client.readyState === 1 && !globalClients.has(client)) {
+        client.send(payload);
+      }
+    }
+  }
 }
 
-// 1. Health Endpoint
+// Active project file watchers: projectRoot -> FSWatcher
+const activeWatchers = new Map<string, FSWatcher>();
+
+function ensureProjectWatcher(projectRoot: string, projectId: string) {
+  if (activeWatchers.has(projectRoot)) return;
+
+  const watcher = chokidar.watch(
+    [
+      path.join(projectRoot, 'raw_footage'),
+      path.join(projectRoot, 'references'),
+      path.join(projectRoot, 'assets'),
+      path.join(projectRoot, 'exports'),
+    ],
+    { ignoreInitial: true }
+  );
+
+  watcher.on('all', (event, filePath) => {
+    const relative = path.relative(projectRoot, filePath);
+    broadcastAGUI(
+      {
+        event: 'project:file_changed',
+        data: {
+          path: relative,
+          changeType: event === 'add' ? 'add' : event === 'unlink' ? 'unlink' : 'change',
+          timestamp: Date.now(),
+        },
+      },
+      projectId
+    );
+  });
+
+  activeWatchers.set(projectRoot, watcher);
+}
+
+/**
+ * Resolves the absolute project root from request params / query / body
+ */
+async function resolveProjectRoot(identifier?: string): Promise<{ projectRoot: string; project?: FilmProject }> {
+  if (!identifier) {
+    // Default to most recent project or current working directory
+    const recents = await ProjectRegistry.listRecentProjects();
+    if (recents.length > 0) {
+      const first = recents[0];
+      try {
+        const project = await ProjectService.loadProject(first.path);
+        return { projectRoot: first.path, project };
+      } catch {
+        // Fall back to default workspace
+      }
+    }
+    const project = await ProjectService.loadProject(DEFAULT_WORKSPACE_ROOT);
+    return { projectRoot: DEFAULT_WORKSPACE_ROOT, project };
+  }
+
+  // Check if identifier is an existing entry in the registry
+  const entry = await ProjectRegistry.getProjectEntry(identifier);
+  if (entry) {
+    const project = await ProjectService.loadProject(entry.path);
+    return { projectRoot: entry.path, project };
+  }
+
+  // Check if identifier is an absolute path on disk
+  try {
+    const resolved = path.resolve(identifier);
+    const project = await ProjectService.loadProject(resolved);
+    return { projectRoot: resolved, project };
+  } catch {
+    const project = await ProjectService.loadProject(DEFAULT_WORKSPACE_ROOT);
+    return { projectRoot: DEFAULT_WORKSPACE_ROOT, project };
+  }
+}
+
+// ==========================================
+// 1. Health & Meta
+// ==========================================
 server.get('/api/health', async () => {
   return {
     status: 'ok',
-    version: '0.1.0',
-    workspace: WORKSPACE_ROOT,
+    version: '0.2.0',
+    workspace: DEFAULT_WORKSPACE_ROOT,
     skillsCount: SkillRegistry.list().length,
   };
 });
 
-// 2. Project State Endpoints
-server.get('/api/project', async () => {
-  return await ProjectService.loadProject(WORKSPACE_ROOT);
+// ==========================================
+// 2. Project Manager & Multi-Project Hub
+// ==========================================
+
+// List recent projects
+server.get('/api/projects', async () => {
+  return await ProjectRegistry.listRecentProjects();
 });
 
-server.post('/api/project/init', async (req) => {
-  const body = req.body as { name?: string };
-  return await ProjectService.initProject(WORKSPACE_ROOT, body?.name || 'My AI Video Project');
+// Trigger native macOS Finder folder picker
+server.post('/api/projects/pick-directory', async () => {
+  const chosenPath = await ProjectRegistry.pickDirectoryNative();
+  return { path: chosenPath };
 });
 
-// 3. Skills Endpoints
+// Open existing directory as project
+server.post('/api/projects/open', async (req, reply) => {
+  const { path: dirPath } = (req.body as any) || {};
+  if (!dirPath) {
+    reply.status(400);
+    return { success: false, error: 'Directory path is required' };
+  }
+
+  try {
+    const resolvedPath = path.resolve(dirPath);
+    const project = await ProjectService.loadProject(resolvedPath);
+    ensureProjectWatcher(resolvedPath, project.id);
+
+    return { success: true, project };
+  } catch (err: any) {
+    reply.status(500);
+    return { success: false, error: err.message };
+  }
+});
+
+// Create new project with format presets
+server.post('/api/projects/create', async (req, reply) => {
+  const {
+    name,
+    path: dirPath,
+    preset = 'reel_9_16',
+    aspectRatio,
+    targetDurationSec,
+    basePresetId = 'liquid_glass',
+  } = (req.body as any) || {};
+
+  if (!name || !dirPath) {
+    reply.status(400);
+    return { success: false, error: 'Name and directory path are required' };
+  }
+
+  try {
+    const resolvedPath = path.resolve(dirPath);
+    const project = await ProjectService.initProject(resolvedPath, name, {
+      preset,
+      aspectRatio,
+      targetDurationSec,
+      basePresetId,
+      initGit: true,
+    });
+
+    ensureProjectWatcher(resolvedPath, project.id);
+    return { success: true, project };
+  } catch (err: any) {
+    reply.status(500);
+    return { success: false, error: err.message };
+  }
+});
+
+// Get specific project by ID or path
+server.get('/api/projects/:id', async (req, reply) => {
+  const { id } = req.params as { id: string };
+  const { project } = await resolveProjectRoot(id);
+  if (!project) {
+    reply.status(404);
+    return { success: false, error: 'Project not found' };
+  }
+  ensureProjectWatcher(project.projectRoot, project.id);
+  return project;
+});
+
+// Remove project from recent list (and optionally move to trash)
+server.post('/api/projects/:id/remove', async (req) => {
+  const { id } = req.params as { id: string };
+  const { moveToTrash = false } = (req.body as any) || {};
+  const removed = await ProjectRegistry.removeProject(id, moveToTrash);
+  return { success: removed };
+});
+
+// Backward-compatible single-project endpoint
+server.get('/api/project', async (req) => {
+  const { projectId } = (req.query as any) || {};
+  const { project } = await resolveProjectRoot(projectId);
+  return project;
+});
+
+// ==========================================
+// 3. Style Presets & Cascading Overrides
+// ==========================================
+
+// List all global style presets
+server.get('/api/styles/presets', async () => {
+  return await ProjectRegistry.listStylePresets();
+});
+
+// Save or create a global style preset
+server.post('/api/styles/presets', async (req, reply) => {
+  const preset = req.body as GlobalStylePreset;
+  if (!preset || !preset.id || !preset.name) {
+    reply.status(400);
+    return { success: false, error: 'Valid style preset payload is required' };
+  }
+  const saved = await ProjectRegistry.saveStylePreset(preset);
+  return { success: true, preset: saved };
+});
+
+// Resolve & apply cascading styles (Base Preset + Local Overrides + Extra Constraints)
+server.post('/api/projects/:id/style/resolve', async (req, reply) => {
+  const { id } = req.params as { id: string };
+  const { basePresetId, styleOverrides, additionalConstraints, applyToProject = true } =
+    (req.body as any) || {};
+
+  const { projectRoot, project } = await resolveProjectRoot(id);
+  if (!project) {
+    reply.status(404);
+    return { success: false, error: 'Project not found' };
+  }
+
+  const basePreset = await ProjectRegistry.getStylePreset(basePresetId || project.basePresetId || 'liquid_glass');
+  const resolved = ProjectRegistry.resolveCompositeStyle(
+    basePreset,
+    styleOverrides || project.styleOverrides || {},
+    additionalConstraints || project.additionalConstraints || []
+  );
+
+  if (applyToProject) {
+    project.basePresetId = basePresetId || project.basePresetId || 'liquid_glass';
+    project.styleOverrides = styleOverrides || project.styleOverrides || {};
+    project.additionalConstraints = additionalConstraints || project.additionalConstraints || [];
+    project.styleMarkdown = resolved.markdown;
+    project.styleTokens = resolved.tokens;
+    await ProjectService.saveProject(project);
+  }
+
+  return { success: true, resolved, project };
+});
+
+// ==========================================
+// 4. Skills Execution (Project-Scoped)
+// ==========================================
 server.get('/api/skills', async () => {
   return SkillRegistry.list().map((s) => ({
     id: s.id,
@@ -71,59 +316,75 @@ server.get('/api/skills', async () => {
 });
 
 server.post('/api/skills/execute', async (req, reply) => {
-  const { skillId, input, targetNodeId, modelEngine } = req.body as {
+  const { skillId, input, targetNodeId, modelEngine, projectId } = req.body as {
     skillId: string;
     input: any;
     targetNodeId?: string;
     modelEngine?: any;
+    projectId?: string;
   };
 
-  const project = await ProjectService.loadProject(WORKSPACE_ROOT);
+  const { projectRoot, project } = await resolveProjectRoot(projectId);
+  if (!project) {
+    reply.status(404);
+    return { success: false, error: 'Project not found' };
+  }
 
   // Update agent status to working
-  const agentId = modelEngine === 'claude-cli' ? 'claude-motion' : (modelEngine === 'ollama' ? 'ollama-local' : 'agy-director');
+  const agentId =
+    modelEngine === 'claude-cli' ? 'claude-motion' : modelEngine === 'ollama' ? 'ollama-local' : 'agy-director';
+
   AgentManager.updatePresence(agentId, {
     status: 'thinking',
     activeNodeId: targetNodeId || null,
     activityMessage: `Executing skill ${skillId}...`,
   });
 
-  broadcastAGUI({
-    event: 'agent:presence',
-    data: AgentManager.getPresence(agentId)!,
-  });
+  broadcastAGUI(
+    {
+      event: 'agent:presence',
+      data: AgentManager.getPresence(agentId)!,
+    },
+    project.id
+  );
 
   try {
     const result = await SkillRegistry.execute(skillId, input, {
-      projectRoot: WORKSPACE_ROOT,
+      projectRoot,
       modelEngine: modelEngine || 'antigravity-cli',
       styleGuideMd: project.styleMarkdown,
       styleTokensJson: project.styleTokens,
       onStdoutChunk: (chunk) => {
-        broadcastAGUI({
-          event: 'agent:stream_delta',
-          data: {
-            sessionId: 'session_1',
-            agentId,
-            nodeId: targetNodeId || 'root',
-            type: 'text',
-            chunk,
-            timestamp: Date.now(),
+        broadcastAGUI(
+          {
+            event: 'agent:stream_delta',
+            data: {
+              sessionId: `session_${project.id}`,
+              agentId,
+              nodeId: targetNodeId || 'root',
+              type: 'text',
+              chunk,
+              timestamp: Date.now(),
+            },
           },
-        });
+          project.id
+        );
       },
       onThinking: (thought) => {
-        broadcastAGUI({
-          event: 'agent:stream_delta',
-          data: {
-            sessionId: 'session_1',
-            agentId,
-            nodeId: targetNodeId || 'root',
-            type: 'thought',
-            chunk: thought,
-            timestamp: Date.now(),
+        broadcastAGUI(
+          {
+            event: 'agent:stream_delta',
+            data: {
+              sessionId: `session_${project.id}`,
+              agentId,
+              nodeId: targetNodeId || 'root',
+              type: 'thought',
+              chunk: thought,
+              timestamp: Date.now(),
+            },
           },
-        });
+          project.id
+        );
       },
     });
 
@@ -148,10 +409,13 @@ server.post('/api/skills/execute', async (req, reply) => {
       activityMessage: 'Task completed successfully',
     });
 
-    broadcastAGUI({
-      event: 'agent:presence',
-      data: AgentManager.getPresence(agentId)!,
-    });
+    broadcastAGUI(
+      {
+        event: 'agent:presence',
+        data: AgentManager.getPresence(agentId)!,
+      },
+      project.id
+    );
 
     return { success: true, result };
   } catch (err: any) {
@@ -161,26 +425,37 @@ server.post('/api/skills/execute', async (req, reply) => {
       activityMessage: `Error: ${err.message}`,
     });
 
-    broadcastAGUI({
-      event: 'agent:presence',
-      data: AgentManager.getPresence(agentId)!,
-    });
+    broadcastAGUI(
+      {
+        event: 'agent:presence',
+        data: AgentManager.getPresence(agentId)!,
+      },
+      project.id
+    );
 
     reply.status(500);
     return { success: false, error: err.message };
   }
 });
 
-// 4. DAG Version Tree Branching & Active Cut
-server.post('/api/tree/branch', async (req) => {
-  const { parentNodeId, versionLabel, prompt, modelEngine } = req.body as {
+// ==========================================
+// 5. DAG Version Tree Branching & Active Cut
+// ==========================================
+server.post('/api/tree/branch', async (req, reply) => {
+  const { parentNodeId, versionLabel, prompt, modelEngine, projectId } = req.body as {
     parentNodeId: string;
     versionLabel: string;
     prompt: string;
     modelEngine?: any;
+    projectId?: string;
   };
 
-  const project = await ProjectService.loadProject(WORKSPACE_ROOT);
+  const { project } = await resolveProjectRoot(projectId);
+  if (!project) {
+    reply.status(404);
+    return { success: false, error: 'Project not found' };
+  }
+
   const newNode = await ProjectService.branchVersionNode(
     project,
     parentNodeId,
@@ -192,31 +467,49 @@ server.post('/api/tree/branch', async (req) => {
   return { success: true, node: newNode, project };
 });
 
-server.post('/api/tree/active-cut', async (req) => {
-  const { sceneId, nodeId } = req.body as { sceneId: string; nodeId: string };
-  const project = await ProjectService.loadProject(WORKSPACE_ROOT);
+server.post('/api/tree/active-cut', async (req, reply) => {
+  const { sceneId, nodeId, projectId } = req.body as {
+    sceneId: string;
+    nodeId: string;
+    projectId?: string;
+  };
+
+  const { project } = await resolveProjectRoot(projectId);
+  if (!project) {
+    reply.status(404);
+    return { success: false, error: 'Project not found' };
+  }
+
   await ProjectService.setActiveCutNode(project, sceneId, nodeId);
 
-  broadcastAGUI({
-    event: 'state:timeline_sync',
-    data: {
-      projectId: project.id,
-      activeCut: project.activeCut,
-      playheadSec: 0,
-      isPlaying: false,
-      updatedBy: 'user',
+  broadcastAGUI(
+    {
+      event: 'state:timeline_sync',
+      data: {
+        projectId: project.id,
+        activeCut: project.activeCut,
+        playheadSec: 0,
+        isPlaying: false,
+        updatedBy: 'user',
+      },
     },
-  });
+    project.id
+  );
 
   return { success: true, activeCut: project.activeCut };
 });
 
-// 5. DaVinci Resolve Multi-Track Export
-server.post('/api/export/davinci', async (req) => {
-  const { fps = 30 } = (req.body as any) || {};
-  const project = await ProjectService.loadProject(WORKSPACE_ROOT);
+// ==========================================
+// 6. DaVinci Resolve Multi-Track Export
+// ==========================================
+server.post('/api/export/davinci', async (req, reply) => {
+  const { fps = 30, projectId } = (req.body as any) || {};
+  const { projectRoot, project } = await resolveProjectRoot(projectId);
+  if (!project) {
+    reply.status(404);
+    return { success: false, error: 'Project not found' };
+  }
 
-  // Collect clips from active cut
   const clips: any[] = [];
   let currentTime = 0;
 
@@ -248,7 +541,7 @@ server.post('/api/export/davinci', async (req) => {
     currentTime += duration;
   }
 
-  // Add audio stem
+  // Add dialogue stem
   clips.push({
     id: 'voice_master',
     name: 'Voiceover Dialogue Master',
@@ -268,11 +561,10 @@ server.post('/api/export/davinci', async (req) => {
       height: project.aspectRatio === '9:16' ? 1920 : 1080,
       clips,
     },
-    { projectRoot: WORKSPACE_ROOT }
+    { projectRoot }
   );
 
-  // Write bundle files to exports/davinci_bundle/
-  const bundleDir = path.join(WORKSPACE_ROOT, 'exports', 'davinci_bundle');
+  const bundleDir = path.join(projectRoot, 'exports', 'davinci_bundle');
   await fs.mkdir(bundleDir, { recursive: true });
 
   await fs.writeFile(path.join(bundleDir, 'timeline.fcpxml'), exportResult.fcpxmlContent, 'utf-8');
@@ -289,9 +581,18 @@ server.post('/api/export/davinci', async (req) => {
   };
 });
 
-// 6. WebSocket AG-UI Protocol Gateway
-server.get('/ws/ag-ui', { websocket: true }, (connection) => {
-  connectedClients.add(connection);
+// ==========================================
+// 7. Multi-Tab Scoped WebSocket AG-UI Gateway
+// ==========================================
+server.get('/ws/ag-ui', { websocket: true }, (connection, req) => {
+  const query = (req.query as any) || {};
+  const projectId = query.projectId as string | undefined;
+
+  if (projectId) {
+    addClientToRoom(projectId, connection);
+  } else {
+    globalClients.add(connection);
+  }
 
   // Send current agent presences on connect
   for (const presence of AgentManager.listPresences()) {
@@ -309,48 +610,32 @@ server.get('/ws/ag-ui', { websocket: true }, (connection) => {
       const parsed = AGUIClientMessageSchema.safeParse(msg);
       if (parsed.success) {
         if (parsed.data.event === 'timeline:scrub') {
-          broadcastAGUI({
-            event: 'state:timeline_sync',
-            data: {
-              projectId: 'active',
-              activeCut: {},
-              playheadSec: parsed.data.data.playheadSec,
-              isPlaying: false,
-              updatedBy: 'client',
+          broadcastAGUI(
+            {
+              event: 'state:timeline_sync',
+              data: {
+                projectId: projectId || 'active',
+                activeCut: {},
+                playheadSec: parsed.data.data.playheadSec,
+                isPlaying: false,
+                updatedBy: 'client',
+              },
             },
-          });
+            projectId
+          );
         }
       }
     } catch {
-      // Ignore invalid JSON
+      // Ignore malformed JSON
     }
   });
 
   connection.on('close', () => {
-    connectedClients.delete(connection);
-  });
-});
-
-// 7. Bi-Directional File Watcher
-const watcher = chokidar.watch(
-  [
-    path.join(WORKSPACE_ROOT, 'raw_footage'),
-    path.join(WORKSPACE_ROOT, 'references'),
-    path.join(WORKSPACE_ROOT, 'assets'),
-    path.join(WORKSPACE_ROOT, 'exports'),
-  ],
-  { ignoreInitial: true }
-);
-
-watcher.on('all', (event, filePath) => {
-  const relative = path.relative(WORKSPACE_ROOT, filePath);
-  broadcastAGUI({
-    event: 'project:file_changed',
-    data: {
-      path: relative,
-      changeType: event === 'add' ? 'add' : event === 'unlink' ? 'unlink' : 'change',
-      timestamp: Date.now(),
-    },
+    if (projectId) {
+      removeClientFromRoom(projectId, connection);
+    } else {
+      globalClients.delete(connection);
+    }
   });
 });
 

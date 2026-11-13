@@ -73,3 +73,14 @@ This document tracks all iterative development phases, sub-milestones, active st
 - [x] **Step 6.1**: End-to-end integration test creating a hybrid sample project (`scripts/verify-studio.ts`).
 - [x] **Step 6.2**: Verify FCPXML v1.10 import compatibility for DaVinci Resolve with ProRes 4444 alpha overlays and audio stems.
 - [x] **Step 6.3**: Walkthrough documentation and quick-start guide.
+
+---
+
+### Phase 7: Multi-Project Management & Cascading Style System
+- [x] **Step 7.1**: Central Project Registry (`server/src/services/projectRegistry.ts`) tracking recent projects at `~/.studio/projects-index.json`.
+- [x] **Step 7.2**: Global Style Presets Library (`~/.studio/style-presets/`) with built-in archetypes (*Liquid Glass*, *Kinetic Creator*, *Editorial Grain*, *Pop Bold*).
+- [x] **Step 7.3**: Cascading Style System with Project Local Overrides (custom accent colors, fonts, cut cadence) and additional negative constraints.
+- [x] **Step 7.4**: Native macOS Finder Directory Picker via `osascript` (`POST /api/projects/pick-directory`).
+- [x] **Step 7.5**: Multi-Tab Scoped WebSockets (`/ws/ag-ui?projectId=...`) and route synchronization (`?projectId=...`).
+- [x] **Step 7.6**: DaVinci Resolve-style `ProjectHubModal` and format preset `NewProjectWizard`.
+- [x] **Step 7.7**: Unit tests (`server/test/services/projectRegistry.test.ts`) and end-to-end multi-project verification (`scripts/verify-multi-project.ts`).

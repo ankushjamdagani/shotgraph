@@ -1,6 +1,11 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { nanoid } from 'nanoid';
+import { ProjectRegistry, GlobalStylePreset } from './projectRegistry.js';
+
+const execAsync = promisify(exec);
 
 export interface VersionNode {
   id: string;
@@ -46,15 +51,31 @@ export interface FilmProject {
   }>;
   activeCut: Record<string, string>; // sceneId -> versionNodeId
   nodes: Record<string, VersionNode>;
+  basePresetId?: string;
+  styleOverrides?: Record<string, any>;
+  additionalConstraints?: string[];
   styleMarkdown: string;
   styleTokens: Record<string, any>;
+}
+
+export interface ProjectInitOptions {
+  aspectRatio?: '9:16' | '16:9' | '1:1';
+  fps?: number;
+  targetDurationSec?: number;
+  preset?: 'reel_9_16' | 'youtube_16_9' | 'ad_1_1';
+  basePresetId?: string;
+  initGit?: boolean;
 }
 
 export class ProjectService {
   /**
    * Initializes a new self-contained Git-native project folder structure.
    */
-  static async initProject(projectRoot: string, name: string): Promise<FilmProject> {
+  static async initProject(
+    projectRoot: string,
+    name: string,
+    options?: ProjectInitOptions
+  ): Promise<FilmProject> {
     const subdirs = [
       '.studio',
       'raw_footage',
@@ -73,13 +94,41 @@ export class ProjectService {
       await fs.mkdir(path.join(projectRoot, dir), { recursive: true });
     }
 
-    // Default scenes for a short film/reel
-    const scenes = [
-      { id: 'scene_01', name: 'Scene 1: The Hook', order: 1, targetDurationSec: 3 },
-      { id: 'scene_02', name: 'Scene 2: Core Value & Problem', order: 2, targetDurationSec: 10 },
-      { id: 'scene_03', name: 'Scene 3: Proof & Feature Reveal', order: 3, targetDurationSec: 12 },
-      { id: 'scene_04', name: 'Scene 4: Call to Action', order: 4, targetDurationSec: 5 },
-    ];
+    // Git initialization
+    if (options?.initGit !== false) {
+      try {
+        await fs.access(path.join(projectRoot, '.git'));
+      } catch {
+        try {
+          await execAsync('git init', { cwd: projectRoot });
+        } catch {
+          // Non-blocking if git is not available
+        }
+      }
+    }
+
+    const aspectRatio: '9:16' | '16:9' | '1:1' =
+      options?.aspectRatio ||
+      (options?.preset === 'youtube_16_9' ? '16:9' : options?.preset === 'ad_1_1' ? '1:1' : '9:16');
+    const targetDurationSec =
+      options?.targetDurationSec ||
+      (options?.preset === 'youtube_16_9' ? 60 : options?.preset === 'ad_1_1' ? 15 : 30);
+    const fps = options?.fps || 30;
+
+    // Default scenes tailored to duration
+    const scenes =
+      targetDurationSec <= 15
+        ? [
+            { id: 'scene_01', name: 'Scene 1: Hook & Core Problem', order: 1, targetDurationSec: 3 },
+            { id: 'scene_02', name: 'Scene 2: Solution & Proof', order: 2, targetDurationSec: 8 },
+            { id: 'scene_03', name: 'Scene 3: Direct Offer / CTA', order: 3, targetDurationSec: 4 },
+          ]
+        : [
+            { id: 'scene_01', name: 'Scene 1: The Hook', order: 1, targetDurationSec: 3 },
+            { id: 'scene_02', name: 'Scene 2: Core Value & Problem', order: 2, targetDurationSec: Math.floor(targetDurationSec * 0.35) },
+            { id: 'scene_03', name: 'Scene 3: Proof & Feature Reveal', order: 3, targetDurationSec: Math.floor(targetDurationSec * 0.45) },
+            { id: 'scene_04', name: 'Scene 4: Call to Action', order: 4, targetDurationSec: Math.max(4, targetDurationSec - 3 - Math.floor(targetDurationSec * 0.35) - Math.floor(targetDurationSec * 0.45)) },
+          ];
 
     // Create root nodes for each scene
     const initialNodes: Record<string, VersionNode> = {};
@@ -107,59 +156,25 @@ export class ProjectService {
       activeCut[scene.id] = nodeId;
     });
 
-    const defaultStyle = `# PROJECT STYLE GUIDE (STYLE.md)
-
-### Archetype & Vibe
-- **Dominant Style**: LIQUID GLASS
-- **Cut Rhythm**: fast_snappy (Average cut: 1.6s)
-
-### Color Palette
-- Background: \`#0F172A\`
-- Card Container: \`#1E293B\`
-- Accent: \`#38BDF8\`
-- Text: \`#F8FAFC\`
-
-### Typography
-- Display / Headings: \`Inter-700\` (sentence_case)
-- Body Copy: \`Inter-400\`
-
-### Motion Engineering
-- Easing Curve: \`power3.out\`
-- Overshoot: Enabled (tactile bounce)
-- Key Moves: rise, pop, count-up, checklist-tick
-
-### Audio & Sound Design
-- Master Target: -14 LUFS
-- Music Ducking Depth: -15 dB under speech
-- SFX Palette: subtle_click, counter_roll, chime
-
-### Banned Aesthetics (Negative Constraints)
-- No generic AI purple or neon rainbow button glows
-- No cartoonish 3D floating without ground contact shadow
-- No unmotivated whooshes on basic card slides
-- No text inside Instagram safe margins (top 10%, bottom 20%, right 15%)
-`;
+    const basePresetId = options?.basePresetId || 'liquid_glass';
+    const basePreset = await ProjectRegistry.getStylePreset(basePresetId);
+    const resolvedStyle = ProjectRegistry.resolveCompositeStyle(basePreset, {}, []);
 
     const project: FilmProject = {
       id: nanoid(8),
       name,
       projectRoot,
-      targetDurationSec: 30,
-      aspectRatio: '9:16',
-      fps: 30,
+      targetDurationSec,
+      aspectRatio,
+      fps,
       scenes,
       activeCut,
       nodes: initialNodes,
-      styleMarkdown: defaultStyle,
-      styleTokens: {
-        archetype: 'liquid_glass',
-        palette: {
-          background: '#0F172A',
-          card: '#1E293B',
-          accent: '#38BDF8',
-          text: '#F8FAFC',
-        },
-      },
+      basePresetId,
+      styleOverrides: {},
+      additionalConstraints: [],
+      styleMarkdown: resolvedStyle.markdown,
+      styleTokens: resolvedStyle.tokens,
     };
 
     // Save project state files
@@ -168,7 +183,14 @@ export class ProjectService {
       JSON.stringify(project, null, 2),
       'utf-8'
     );
-    await fs.writeFile(path.join(projectRoot, 'STYLE.md'), defaultStyle, 'utf-8');
+    await fs.writeFile(path.join(projectRoot, 'STYLE.md'), resolvedStyle.markdown, 'utf-8');
+
+    // Register in central recent list
+    await ProjectRegistry.registerProject(projectRoot, project, {
+      basePresetId,
+      styleOverrides: {},
+      additionalConstraints: [],
+    });
 
     return project;
   }
@@ -180,7 +202,14 @@ export class ProjectService {
     const projectJsonPath = path.join(projectRoot, '.studio', 'project.json');
     try {
       const data = await fs.readFile(projectJsonPath, 'utf-8');
-      return JSON.parse(data) as FilmProject;
+      const project = JSON.parse(data) as FilmProject;
+      // Register in central index as recently opened
+      await ProjectRegistry.registerProject(projectRoot, project, {
+        basePresetId: project.basePresetId,
+        styleOverrides: project.styleOverrides,
+        additionalConstraints: project.additionalConstraints,
+      });
+      return project;
     } catch {
       // If project doesn't exist yet, initialize it automatically
       return this.initProject(projectRoot, path.basename(projectRoot));
@@ -196,6 +225,11 @@ export class ProjectService {
     if (project.styleMarkdown) {
       await fs.writeFile(path.join(project.projectRoot, 'STYLE.md'), project.styleMarkdown, 'utf-8');
     }
+    await ProjectRegistry.registerProject(project.projectRoot, project, {
+      basePresetId: project.basePresetId,
+      styleOverrides: project.styleOverrides,
+      additionalConstraints: project.additionalConstraints,
+    });
   }
 
   /**

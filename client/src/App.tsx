@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { FilmProject, AgentPresence, ModelEngine } from './types.js';
 import { VersionTreeCanvas } from './components/tree/VersionTreeCanvas.js';
 import { MultiSceneTimeline } from './components/timeline/MultiSceneTimeline.js';
@@ -7,8 +7,9 @@ import { TasteMixerModal } from './components/taste/TasteMixerModal.js';
 import { DaVinciExportModal } from './components/export/DaVinciExportModal.js';
 import { MediaTrimmerModal } from './components/trimmer/MediaTrimmerModal.js';
 import { CommandPalette } from './components/palette/CommandPalette.js';
+import { ProjectHubModal } from './components/project/ProjectHubModal.js';
 import { ThemeCustomizer, StudioTheme, StudioLayout } from './components/ui-ux/ThemeCustomizer.js';
-import { Sliders, Film, Command as CmdIcon, Video } from 'lucide-react';
+import { Sliders, Film, Command as CmdIcon, Video, Folder, ChevronDown } from 'lucide-react';
 
 export default function App() {
   const [project, setProject] = useState<FilmProject | null>(null);
@@ -17,31 +18,67 @@ export default function App() {
   const [streamingLog, setStreamingLog] = useState<string>('');
 
   // Modals
+  const [isProjectHubOpen, setIsProjectHubOpen] = useState(false);
   const [isTasteMixerOpen, setIsTasteMixerOpen] = useState(false);
   const [isDaVinciExportOpen, setIsDaVinciExportOpen] = useState(false);
   const [isCmdPaletteOpen, setIsCmdPaletteOpen] = useState(false);
-  const [trimmerData, setTrimmerData] = useState<{ isOpen: boolean; fileName: string; targetDurationSec: number; nodeId: string } | null>(null);
+  const [trimmerData, setTrimmerData] = useState<{
+    isOpen: boolean;
+    fileName: string;
+    targetDurationSec: number;
+    nodeId: string;
+  } | null>(null);
 
   // Meta UI/UX
   const [theme, setTheme] = useState<StudioTheme>('studio-dark');
   const [layout, setLayout] = useState<StudioLayout>('balanced-nle');
 
-  // Load project on mount
-  useEffect(() => {
-    fetch('/api/project')
-      .then((res) => res.json())
-      .then((data: FilmProject) => {
+  // Load project on mount (checking ?projectId= query param)
+  const loadProjectById = useCallback(async (projectId?: string) => {
+    try {
+      const url = projectId ? `http://localhost:3030/api/projects/${projectId}` : 'http://localhost:3030/api/project';
+      const res = await fetch(url);
+      const data: FilmProject = await res.json();
+      if (data && data.id) {
         setProject(data);
         const firstNodeId = Object.keys(data.nodes)[0];
         if (firstNodeId) setSelectedNodeId(firstNodeId);
-      })
-      .catch((err) => console.error('Failed to load project:', err));
+
+        // Update URL query param without reload
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('projectId', data.id);
+        window.history.replaceState({}, '', newUrl.toString());
+      }
+    } catch (err) {
+      console.error('Failed to load project:', err);
+    }
   }, []);
 
-  // Connect to AG-UI WebSocket
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialProjectId = urlParams.get('projectId') || undefined;
+    loadProjectById(initialProjectId);
+  }, [loadProjectById]);
+
+  // Global Keyboard Shortcuts (Cmd+O for Project Hub, Cmd+K for Command Palette)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'o') {
+        e.preventDefault();
+        setIsProjectHubOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Connect to Scoped AG-UI WebSocket
+  useEffect(() => {
+    if (!project?.id) return;
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/ag-ui`;
+    const host = window.location.hostname || 'localhost';
+    const wsUrl = `${protocol}//${host}:3030/ws/ag-ui?projectId=${project.id}`;
     let ws: WebSocket;
 
     try {
@@ -58,7 +95,9 @@ export default function App() {
           } else if (msg.event === 'agent:stream_delta') {
             setStreamingLog((prev) => `${prev}\n${msg.data.chunk}`);
           } else if (msg.event === 'state:timeline_sync') {
-            setProject((prev) => (prev ? { ...prev, activeCut: { ...prev.activeCut, ...msg.data.activeCut } } : prev));
+            setProject((prev) =>
+              prev ? { ...prev, activeCut: { ...prev.activeCut, ...msg.data.activeCut } } : prev
+            );
           }
         } catch {
           // ignore parse errors
@@ -71,7 +110,7 @@ export default function App() {
     return () => {
       ws?.close();
     };
-  }, []);
+  }, [project?.id]);
 
   const handleBranchNode = async (parentNodeId: string) => {
     if (!project) return;
@@ -79,7 +118,7 @@ export default function App() {
     const versionLabel = `v${Object.keys(project.nodes).length + 1}.0 Alternate`;
 
     try {
-      const res = await fetch('/api/tree/branch', {
+      const res = await fetch('http://localhost:3030/api/tree/branch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -87,6 +126,7 @@ export default function App() {
           versionLabel,
           prompt: `Iterate on: ${parent.prompt}`,
           modelEngine: parent.modelEngine,
+          projectId: project.id,
         }),
       });
       const data = await res.json();
@@ -100,11 +140,12 @@ export default function App() {
   };
 
   const handleSetActiveCut = async (sceneId: string, nodeId: string) => {
+    if (!project) return;
     try {
-      const res = await fetch('/api/tree/active-cut', {
+      const res = await fetch('http://localhost:3030/api/tree/active-cut', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sceneId, nodeId }),
+        body: JSON.stringify({ sceneId, nodeId, projectId: project.id }),
       });
       const data = await res.json();
       if (data.success && project) {
@@ -116,11 +157,11 @@ export default function App() {
   };
 
   const handleExecuteSkill = async (skillId: string, modelEngine: ModelEngine, input: any) => {
-    if (!selectedNodeId) return;
+    if (!selectedNodeId || !project) return;
     setStreamingLog(`[Dispatching ${modelEngine}...]`);
 
     try {
-      const res = await fetch('/api/skills/execute', {
+      const res = await fetch('http://localhost:3030/api/skills/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -128,12 +169,13 @@ export default function App() {
           modelEngine,
           input,
           targetNodeId: selectedNodeId,
+          projectId: project.id,
         }),
       });
       const data = await res.json();
       if (data.success) {
         // Refresh project
-        const pRes = await fetch('/api/project');
+        const pRes = await fetch(`http://localhost:3030/api/projects/${project.id}`);
         const pData = await pRes.json();
         setProject(pData);
       } else {
@@ -155,8 +197,22 @@ export default function App() {
 
   if (!project) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[#0A0D14] text-slate-400 font-mono text-xs">
-        Loading Visual AI Video Studio...
+      <div className="flex flex-col items-center justify-center h-screen bg-[#0A0D14] text-slate-400 font-mono text-xs gap-3">
+        <div className="w-8 h-8 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+          <Video className="w-4 h-4 animate-pulse" />
+        </div>
+        <span>Loading Visual AI Video Studio...</span>
+        <button
+          onClick={() => setIsProjectHubOpen(true)}
+          className="mt-2 px-3 py-1.5 bg-sky-500 text-slate-950 font-bold rounded-lg text-xs"
+        >
+          Open Project Manager
+        </button>
+        <ProjectHubModal
+          isOpen={isProjectHubOpen}
+          onClose={() => setIsProjectHubOpen(false)}
+          onSelectProject={(p) => setProject(p)}
+        />
       </div>
     );
   }
@@ -173,19 +229,26 @@ export default function App() {
             <div className="p-1 rounded bg-sky-500/20 text-sky-400 border border-sky-500/30">
               <Video className="w-4 h-4" />
             </div>
-            <span className="font-extrabold text-xs tracking-wide text-white">
-              VISUAL AI STUDIO
-            </span>
+            <span className="font-extrabold text-xs tracking-wide text-white">VISUAL AI STUDIO</span>
           </div>
 
           <span className="text-slate-600">|</span>
 
-          <span className="text-xs font-semibold text-slate-300">
-            {project.name}
-          </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-400">
-            {project.aspectRatio} • {totalDuration}s
-          </span>
+          {/* Project Hub Switcher Button */}
+          <button
+            onClick={() => setIsProjectHubOpen(true)}
+            className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/50 text-slate-200 transition group"
+            title="Switch Project (Cmd+O)"
+          >
+            <Folder className="w-3.5 h-3.5 text-sky-400" />
+            <span className="text-xs font-bold text-white group-hover:text-sky-300 transition truncate max-w-[200px]">
+              {project.name}
+            </span>
+            <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-slate-900 text-slate-400">
+              {project.aspectRatio} • {totalDuration}s
+            </span>
+            <ChevronDown className="w-3 h-3 text-slate-400 group-hover:text-slate-200" />
+          </button>
         </div>
 
         {/* Center / Right Control Strip */}
@@ -264,16 +327,29 @@ export default function App() {
         )}
       </main>
 
-      {/* Modals & Dialogs */}
-      <TasteMixerModal
-        isOpen={isTasteMixerOpen}
-        onClose={() => setIsTasteMixerOpen(false)}
-        styleMarkdown={project.styleMarkdown}
-        onSaveStyle={(styleMd) => {
-          setProject({ ...project, styleMarkdown: styleMd });
+      {/* DaVinci-Style Project Hub Modal (Cmd+O) */}
+      <ProjectHubModal
+        isOpen={isProjectHubOpen}
+        onClose={() => setIsProjectHubOpen(false)}
+        currentProjectId={project.id}
+        onSelectProject={(newProj) => {
+          setProject(newProj);
+          setSelectedNodeId(Object.keys(newProj.nodes)[0] || null);
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set('projectId', newProj.id);
+          window.history.pushState({}, '', newUrl.toString());
         }}
       />
 
+      {/* Cascading Taste Mixer Modal */}
+      <TasteMixerModal
+        isOpen={isTasteMixerOpen}
+        onClose={() => setIsTasteMixerOpen(false)}
+        project={project}
+        onUpdateProject={(updatedProject) => setProject(updatedProject)}
+      />
+
+      {/* DaVinci Multi-Track Export Modal */}
       <DaVinciExportModal
         isOpen={isDaVinciExportOpen}
         onClose={() => setIsDaVinciExportOpen(false)}
@@ -281,6 +357,7 @@ export default function App() {
         totalDurationSec={totalDuration}
       />
 
+      {/* Media Trimmer Modal */}
       {trimmerData && (
         <MediaTrimmerModal
           isOpen={trimmerData.isOpen}
@@ -293,6 +370,7 @@ export default function App() {
         />
       )}
 
+      {/* Command Palette */}
       <CommandPalette
         isOpen={isCmdPaletteOpen}
         onClose={() => setIsCmdPaletteOpen(false)}

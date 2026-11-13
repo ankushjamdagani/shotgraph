@@ -44,8 +44,64 @@ export interface FilmProject {
   }>;
   activeCut: Record<string, string>; // sceneId -> versionNodeId
   nodes: Record<string, VersionNode>;
+  basePresetId?: string;
+  styleOverrides?: Record<string, any>;
+  additionalConstraints?: string[];
   styleMarkdown: string;
   styleTokens: Record<string, any>;
+}
+
+export interface ProjectRegistryEntry {
+  id: string;
+  name: string;
+  path: string;
+  aspectRatio: '9:16' | '16:9' | '1:1';
+  fps: number;
+  targetDurationSec: number;
+  lastOpenedAt: number;
+  createdAt: number;
+  previewThumbnailUrl?: string;
+  basePresetId?: string;
+  styleOverrides?: Record<string, any>;
+  additionalConstraints?: string[];
+}
+
+export interface GlobalStylePreset {
+  id: string;
+  name: string;
+  description: string;
+  archetype: 'liquid_glass' | 'kinetic_type' | 'editorial_grain' | 'pop_bold';
+  tokens: {
+    palette: {
+      background: string;
+      card: string;
+      accent: string;
+      text: string;
+    };
+    typography: {
+      displayFont: string;
+      bodyFont: string;
+      headingCase: 'uppercase' | 'sentence_case' | 'mixed';
+    };
+    pacing: {
+      avgCutDurationSec: number;
+      rhythm: 'fast_snappy' | 'conversational' | 'cinematic_unhurried';
+      usefulPauses: boolean;
+    };
+    motion: {
+      easingCurve: string;
+      overshoot: boolean;
+      primaryMoves: string[];
+    };
+    audioRules: {
+      targetLufs: number;
+      musicDuckingDb: number;
+      sfxSignature: string[];
+    };
+    negativeConstraints: string[];
+  };
+  styleDocMarkdown: string;
+  updatedAt: number;
 }
 
 export interface AgentPresence {
