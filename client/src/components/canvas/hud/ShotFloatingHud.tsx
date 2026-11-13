@@ -65,12 +65,12 @@ export const ShotFloatingHud: React.FC<ShotFloatingHudProps> = ({
   };
 
   return (
-    <div className="w-88 rounded-2xl bg-[#121215]/95 backdrop-blur-xl border border-amber-500/80 shadow-2xl p-4 text-[#FAFAFA] space-y-3 z-30 select-none animate-in fade-in zoom-in-95 duration-150">
+    <div className="w-88 rounded-2xl bg-surface/95 backdrop-blur-xl border border-subtle shadow-2xl p-4 text-text-primary space-y-3 z-30 select-none animate-in fade-in zoom-in-95 duration-150 ring-1 ring-subtle">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[#27272A] pb-2">
+      <div className="flex items-center justify-between border-b border-subtle pb-2">
         <div className="flex items-center gap-1.5">
-          <span className="text-xs font-bold font-mono text-amber-400">Shot Director & Optics HUD</span>
-          <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono font-bold">
+          <span className="text-xs font-bold font-mono text-accent-primary">Shot Director & Optics HUD</span>
+          <span className="text-[9px] px-1.5 py-0.2 rounded bg-card text-accent-primary border border-subtle font-mono font-bold">
             ATTACHED
           </span>
         </div>
@@ -78,13 +78,13 @@ export const ShotFloatingHud: React.FC<ShotFloatingHudProps> = ({
           {onTogglePin && (
             <button
               onClick={onTogglePin}
-              className={`p-1 rounded text-xs transition ${isPinned ? 'text-amber-400 bg-[#27272A]' : 'text-[#71717A] hover:text-white'}`}
+              className={`p-1 rounded text-xs transition ${isPinned ? 'text-amber-400 bg-card' : 'text-text-muted hover:text-text-primary'}`}
               title={isPinned ? 'Unpin HUD' : 'Pin HUD Open'}
             >
               <Pin className="w-3.5 h-3.5" />
             </button>
           )}
-          <button onClick={onClose} className="p-1 rounded text-[#71717A] hover:text-white transition">
+          <button onClick={onClose} className="p-1 rounded text-text-muted hover:text-text-primary transition">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -92,7 +92,7 @@ export const ShotFloatingHud: React.FC<ShotFloatingHudProps> = ({
 
       {/* Camera Motion Trajectory (rossark-motion / huashu-motion inspired) */}
       <div>
-        <label className="block text-[10px] uppercase font-mono text-[#71717A] mb-1.5">
+        <label className="block text-[10px] uppercase font-mono text-text-muted mb-1.5">
           Camera Motion Trajectory (rossark-motion)
         </label>
         <div className="grid grid-cols-2 gap-1.5 text-xs font-mono">
@@ -107,8 +107,8 @@ export const ShotFloatingHud: React.FC<ShotFloatingHudProps> = ({
               onClick={() => handleUpdateOverride('cameraMovement', m.id)}
               className={`p-2 rounded-lg border text-left transition ${
                 cameraMove === m.id
-                  ? 'bg-amber-950/60 border-amber-500 text-white font-bold'
-                  : 'bg-[#18181B] border-[#27272A] text-[#A1A1AA] hover:text-white hover:border-[#3F3F46]'
+                  ? 'bg-card border-accent-primary text-text-primary font-bold ring-1 ring-accent-primary/40'
+                  : 'bg-card border-subtle text-text-muted hover:text-text-primary hover:border-text-muted/40'
               }`}
             >
               {m.label}
@@ -120,11 +120,11 @@ export const ShotFloatingHud: React.FC<ShotFloatingHudProps> = ({
       {/* Optics Controls */}
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div>
-          <label className="block text-[10px] uppercase font-mono text-[#71717A] mb-1">Focal Length</label>
+          <label className="block text-[10px] uppercase font-mono text-text-muted mb-1">Focal Length</label>
           <select
             value={lens}
             onChange={(e) => handleUpdateOverride('lensFocalLength', e.target.value)}
-            className="w-full p-2 rounded-lg bg-[#09090B] border border-[#27272A] text-xs text-white font-mono focus:outline-none focus:border-amber-500"
+            className="w-full p-2 rounded-lg bg-card border border-subtle text-xs text-text-primary font-mono focus:outline-none focus:border-accent-primary"
           >
             <option value="24mm Wide">24mm (Wide Establishing)</option>
             <option value="35mm Anamorphic">35mm (Cinematic Natural)</option>
@@ -133,11 +133,11 @@ export const ShotFloatingHud: React.FC<ShotFloatingHudProps> = ({
           </select>
         </div>
         <div>
-          <label className="block text-[10px] uppercase font-mono text-[#71717A] mb-1">Aperture</label>
+          <label className="block text-[10px] uppercase font-mono text-text-muted mb-1">Aperture</label>
           <select
             value={aperture}
             onChange={(e) => handleUpdateOverride('aperture', e.target.value)}
-            className="w-full p-2 rounded-lg bg-[#09090B] border border-[#27272A] text-xs text-white font-mono focus:outline-none focus:border-amber-500"
+            className="w-full p-2 rounded-lg bg-card border border-subtle text-xs text-text-primary font-mono focus:outline-none focus:border-accent-primary"
           >
             <option value="f/1.4">f/1.4 (Dreamy Bokeh)</option>
             <option value="f/1.8">f/1.8 (Soft Defocus)</option>
@@ -149,18 +149,18 @@ export const ShotFloatingHud: React.FC<ShotFloatingHudProps> = ({
 
       {/* Target Platform Tabs */}
       <div>
-        <label className="block text-[10px] uppercase font-mono text-[#71717A] mb-1">
+        <label className="block text-[10px] uppercase font-mono text-text-muted mb-1">
           Generation Target Platform
         </label>
-        <div className="flex items-center gap-1 bg-[#09090B] p-1 rounded-lg border border-[#27272A] text-[10px] font-mono">
+        <div className="flex items-center gap-1 bg-card p-1 rounded-lg border border-subtle text-[10px] font-mono">
           {(['runway', 'kling', 'comfyui', 'luma'] as const).map((p) => (
             <button
               key={p}
               onClick={() => setPlatform(p)}
               className={`flex-1 py-1 rounded text-center transition ${
                 platform === p
-                  ? 'bg-amber-500 text-black font-bold'
-                  : 'text-[#A1A1AA] hover:text-white'
+                  ? 'bg-accent-primary text-app font-bold'
+                  : 'text-text-muted hover:text-text-primary'
               }`}
             >
               {p.toUpperCase()}
@@ -172,7 +172,7 @@ export const ShotFloatingHud: React.FC<ShotFloatingHudProps> = ({
       {/* Rich Prompt Copy Button */}
       <button
         onClick={handleCopyPrompt}
-        className="w-full py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs flex items-center justify-center gap-1.5 shadow-lg transition font-mono"
+        className="w-full py-2 px-3 rounded-xl bg-accent-primary hover:opacity-90 text-app font-bold text-xs flex items-center justify-center gap-1.5 shadow-lg transition font-mono"
       >
         {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
         <span>{copied ? 'Copied with --sref Continuity!' : `Copy for ${platform.toUpperCase()}`}</span>

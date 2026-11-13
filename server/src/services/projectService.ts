@@ -125,6 +125,7 @@ export interface ProjectInitOptions {
   preset?: 'reel_9_16' | 'youtube_16_9' | 'ad_1_1';
   basePresetId?: string;
   initGit?: boolean;
+  ideaPrompt?: string;
 }
 
 export class ProjectService {
@@ -191,23 +192,202 @@ export class ProjectService {
             { id: 'scene_04', name: 'Scene 4: Call to Action', order: 4, targetDurationSec: Math.max(4, targetDurationSec - 3 - Math.floor(targetDurationSec * 0.35) - Math.floor(targetDurationSec * 0.45)) },
           ];
 
-    // Create root nodes for each scene
+    // Create complete 8-stage video production DAG starting from Idea
     const initialNodes: Record<string, VersionNode> = {};
     const activeCut: Record<string, string> = {};
 
-    scenes.forEach((scene) => {
+    const ideaPrompt =
+      options?.ideaPrompt?.trim() ||
+      `Launch concept for "${name}": High-energy premise with dynamic visual storytelling, rhythmic pacing, and cinematic punch.`;
+
+    // 1. Stage: Ideation Root Node
+    initialNodes['node_idea_01'] = {
+      id: 'node_idea_01',
+      parentId: null,
+      versionLabel: 'v1.0 (Premise)',
+      stage: 'ideation',
+      title: 'Idea Concept & Thesis',
+      modelEngine: 'antigravity-cli',
+      prompt: ideaPrompt,
+      position: { x: 60, y: 120 },
+      artifacts: {
+        textContent: `Core Premise: ${ideaPrompt}\n\nAudience: Modern creative professionals & trendsetters\nPacing: Fast hook (0-3s), narrative immersion (3-20s), high-impact CTA (20-30s).`,
+      },
+      metadata: {
+        createdAt: new Date().toISOString(),
+        status: 'ready',
+      },
+    };
+
+    // 2. Stage: Taste & Style DNA Node
+    initialNodes['node_taste_01'] = {
+      id: 'node_taste_01',
+      parentId: 'node_idea_01',
+      versionLabel: 'v1.0 (Director Taste)',
+      stage: 'taste',
+      title: 'Visual Identity & Film DNA',
+      modelEngine: 'antigravity-cli',
+      prompt: 'Editorial 35mm aesthetic, Kodak Portra 400 warmth, balanced daylight, subtle organic halation, restrained palette #F5EFEB and #C2412D.',
+      position: { x: 60, y: 380 },
+      artifacts: {
+        textContent: 'Visual Signature: Editorial grain with natural skin tones, soft anamorphic roll-off, and architectural lighting.',
+      },
+      metadata: {
+        createdAt: new Date().toISOString(),
+        status: 'ready',
+      },
+    };
+
+    // 3. Stage: Scene 1 Master Script Node
+    initialNodes['node_scene_01_v1'] = {
+      id: 'node_scene_01_v1',
+      parentId: 'node_idea_01',
+      sceneId: 'scene_01',
+      versionLabel: 'v1.0 (Hook Script)',
+      stage: 'script',
+      title: 'Scene 1: The Hook Screenplay',
+      modelEngine: 'antigravity-cli',
+      prompt: 'Opening hook: High-stakes confrontation of the core premise within first 3 seconds.',
+      position: { x: 420, y: 120 },
+      boundSubjectAnchorIds: ['subj_lead'],
+      artifacts: {
+        textContent: 'Look closely. Everything you thought was impossible about video creation just changed.',
+      },
+      metadata: {
+        createdAt: new Date().toISOString(),
+        status: 'ready',
+      },
+    };
+
+    // 4. Stage: Subject Consistency Anchor
+    initialNodes['node_asset_01'] = {
+      id: 'node_asset_01',
+      parentId: 'node_taste_01',
+      versionLabel: 'v1.0 (Master Anchor)',
+      stage: 'assets',
+      title: 'Lead Presenter (Style Anchor)',
+      modelEngine: 'antigravity-cli',
+      prompt: 'Photorealistic character turnaround of charismatic lead presenter in bespoke modern attire, 35mm portrait, natural daylight.',
+      position: { x: 780, y: 120 },
+      subjectAnchorId: 'subj_lead',
+      assetMetadata: {
+        isMasterStyleAnchor: true,
+        turnaroundAngle: 'three_quarter',
+        styleReferenceAssetUrl: 'assets/subjects/lead/three_quarter.png',
+      },
+      artifacts: {
+        mediaUrl: 'assets/subjects/lead/three_quarter.png',
+      },
+      metadata: {
+        createdAt: new Date().toISOString(),
+        status: 'ready',
+      },
+    };
+
+    // 5. Stage: Shot Director & Optics
+    initialNodes['node_shot_01'] = {
+      id: 'node_shot_01',
+      parentId: 'node_scene_01_v1',
+      sceneId: 'scene_01',
+      versionLabel: 'v1.0 (Framing)',
+      stage: 'shot',
+      title: 'Shot 1.1: Slow Push-In Z',
+      modelEngine: 'external',
+      prompt: 'Medium close-up, subject turns to camera with focused gaze, anamorphic 35mm at f/1.8, warm morning lighting.',
+      position: { x: 1140, y: 120 },
+      boundSubjectAnchorIds: ['subj_lead'],
+      shotContextOverrides: {
+        lensFocalLength: '35mm Anamorphic',
+        aperture: 'f/1.8',
+        cameraMovement: 'Slow Push-In Z-Axis',
+      },
+      artifacts: {},
+      metadata: {
+        createdAt: new Date().toISOString(),
+        status: 'ready',
+      },
+    };
+
+    // 6. Stage: Video Take Candidate
+    initialNodes['node_footage_01'] = {
+      id: 'node_footage_01',
+      parentId: 'node_shot_01',
+      sceneId: 'scene_01',
+      versionLabel: 'v1.0 (Active Cut)',
+      stage: 'footage',
+      title: 'Take 1: Runway Gen-3 4K',
+      modelEngine: 'external',
+      prompt: 'Cinematic 4K 24fps live cut, organic grain, high fidelity',
+      position: { x: 1500, y: 120 },
+      artifacts: {
+        mediaUrl: 'assets/video_clips/scene_01_take_01.mp4',
+      },
+      metadata: {
+        createdAt: new Date().toISOString(),
+        status: 'ready',
+      },
+    };
+    activeCut['scene_01'] = 'node_footage_01';
+
+    // 7. Stage: VFX & Overlays
+    initialNodes['node_vfx_01'] = {
+      id: 'node_vfx_01',
+      parentId: 'node_footage_01',
+      sceneId: 'scene_01',
+      versionLabel: 'v1.0 (Kinetic VFX)',
+      stage: 'vfx',
+      title: 'VFX: Kinetic Title & Stat Badge',
+      modelEngine: 'antigravity-cli',
+      prompt: 'Clean typography overlay with motion blur, tracking with camera push-in',
+      position: { x: 1860, y: 120 },
+      vfxMetadata: {
+        overlayType: 'kinetic_text',
+        inPointSec: 0.5,
+        durationSec: 2.0,
+        blendMode: 'screen',
+      },
+      artifacts: {
+        textContent: '01 // THE PARADIGM SHIFT',
+      },
+      metadata: {
+        createdAt: new Date().toISOString(),
+        status: 'ready',
+      },
+    };
+
+    // 8. Stage: Master Timeline Assembly (NLE)
+    initialNodes['node_assembly_01'] = {
+      id: 'node_assembly_01',
+      parentId: 'node_vfx_01',
+      versionLabel: 'v1.0 (Master Cut)',
+      stage: 'assembly',
+      title: 'Master Timeline Assembly (NLE)',
+      modelEngine: 'antigravity-cli',
+      prompt: 'Full multi-track timeline assembly ready for DaVinci Resolve export',
+      position: { x: 2220, y: 120 },
+      artifacts: {},
+      metadata: {
+        createdAt: new Date().toISOString(),
+        status: 'ready',
+      },
+    };
+
+    // For remaining scenes (Scene 2, 3, etc.), create connected script beats branching from Idea
+    scenes.slice(1).forEach((scene, idx) => {
       const nodeId = `node_${scene.id}_v1`;
       initialNodes[nodeId] = {
         id: nodeId,
-        parentId: null,
+        parentId: 'node_idea_01',
         sceneId: scene.id,
-        versionLabel: 'v1.0 (Initial Draft)',
+        versionLabel: `v1.0 (${scene.name})`,
         stage: 'script',
         title: `${scene.name} v1`,
         modelEngine: 'antigravity-cli',
-        prompt: `Draft ${scene.name} for video ${name}`,
+        prompt: `Screenplay beat for ${scene.name} of ${name}`,
+        position: { x: 420, y: 360 + idx * 240 },
+        boundSubjectAnchorIds: ['subj_lead'],
         artifacts: {
-          textContent: `Initial draft for ${scene.name}`,
+          textContent: `Screenplay narrative for ${scene.name}. Target duration: ${scene.targetDurationSec}s.`,
         },
         metadata: {
           createdAt: new Date().toISOString(),

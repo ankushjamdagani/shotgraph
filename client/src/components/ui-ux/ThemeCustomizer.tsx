@@ -2,13 +2,10 @@ import React, { useEffect } from 'react';
 import { Palette } from 'lucide-react';
 
 export type StudioTheme = 'studio-dark' | 'film-lab-mono' | 'midnight-navy';
-export type StudioLayout = 'canvas-spatial' | 'balanced-nle' | 'canvas-focus' | 'script-focus';
 
 interface ThemeCustomizerProps {
   currentTheme: StudioTheme;
   onThemeChange: (theme: StudioTheme) => void;
-  currentLayout?: StudioLayout;
-  onLayoutChange?: (layout: StudioLayout) => void;
 }
 
 export const ThemeCustomizer: React.FC<ThemeCustomizerProps> = ({
@@ -28,16 +25,16 @@ export const ThemeCustomizer: React.FC<ThemeCustomizerProps> = ({
   }, [currentTheme]);
 
   return (
-    <div className="flex items-center gap-1.5 bg-[#18181B] px-2 py-1 rounded-xl border border-[#27272A] text-xs">
-      <Palette className="w-3.5 h-3.5 text-[#A1A1AA]" />
+    <div className="flex items-center gap-1.5 bg-card px-2 py-1 rounded-xl border border-subtle text-xs shadow-sm">
+      <Palette className="w-3.5 h-3.5 text-text-muted" />
       <select
         value={currentTheme}
         onChange={(e) => onThemeChange(e.target.value as StudioTheme)}
-        className="bg-transparent text-[11px] font-mono font-medium text-[#FAFAFA] focus:outline-none cursor-pointer"
+        className="bg-transparent text-[11px] font-mono font-medium text-text-primary focus:outline-none cursor-pointer"
       >
-        <option value="studio-dark" className="bg-[#121215] text-white">Obsidian Dark</option>
-        <option value="film-lab-mono" className="bg-[#0A0A0A] text-white">Film Lab Mono</option>
-        <option value="midnight-navy" className="bg-[#0F172A] text-white">Midnight Navy</option>
+        <option value="studio-dark" className="bg-surface text-text-primary">Obsidian Dark</option>
+        <option value="film-lab-mono" className="bg-surface text-text-primary">Film Lab Mono</option>
+        <option value="midnight-navy" className="bg-surface text-text-primary">Midnight Navy</option>
       </select>
     </div>
   );

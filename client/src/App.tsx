@@ -40,7 +40,25 @@ export default function App() {
   } | null>(null);
 
   // Meta UI/UX
-  const [theme, setTheme] = useState<StudioTheme>('studio-dark');
+  const [theme, setTheme] = useState<StudioTheme>(() => {
+    try {
+      const saved = localStorage.getItem('studio_theme');
+      if (saved === 'film-lab-mono' || saved === 'midnight-navy' || saved === 'studio-dark') {
+        return saved;
+      }
+    } catch {}
+    return 'studio-dark';
+  });
+
+  // Apply theme to documentElement
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove('theme-studio-dark', 'theme-film-lab-mono', 'theme-midnight-navy');
+    root.classList.add(`theme-${theme}`);
+    try {
+      localStorage.setItem('studio_theme', theme);
+    } catch {}
+  }, [theme]);
 
   // Load project by ID (only when requested via query param or user selection)
   const loadProjectById = useCallback(async (projectId: string) => {
@@ -236,6 +254,8 @@ export default function App() {
         isOpen={true}
         isStandalonePage={true}
         onSelectProject={handleSelectProject}
+        currentTheme={theme}
+        onThemeChange={setTheme}
       />
     );
   }
@@ -243,9 +263,9 @@ export default function App() {
   const totalDuration = project.scenes.reduce((acc, s) => acc + s.targetDurationSec, 0);
 
   return (
-    <div className={`flex flex-col h-screen w-screen bg-[#09090B] text-[#FAFAFA] overflow-hidden theme-${theme}`}>
+    <div className={`flex flex-col h-screen w-screen bg-app text-text-primary overflow-hidden theme-${theme}`}>
       {/* Top Studio Navbar */}
-      <header className="flex items-center justify-between px-4 h-12 bg-[#121215] border-b border-[#27272A] shrink-0 z-40 select-none">
+      <header className="flex items-center justify-between px-4 h-12 bg-surface border-b border-subtle shrink-0 z-40 select-none">
         <div className="flex items-center gap-3">
           {/* Logo & Return to Projects Page button */}
           <button
@@ -253,40 +273,40 @@ export default function App() {
             className="flex items-center gap-2 hover:opacity-80 transition group"
             title="Return to Projects Hub"
           >
-            <div className="w-6 h-6 rounded-md bg-white text-black font-extrabold text-[11px] flex items-center justify-center font-mono">
+            <div className="w-6 h-6 rounded-md bg-text-primary text-app font-extrabold text-[11px] flex items-center justify-center font-mono">
               VS
             </div>
-            <span className="font-extrabold text-xs tracking-wider text-white group-hover:text-slate-300 transition">
+            <span className="font-extrabold text-xs tracking-wider text-text-primary group-hover:opacity-80 transition">
               SPATIAL DIRECTOR STUDIO
             </span>
           </button>
 
-          <span className="text-[#3F3F46]">|</span>
+          <span className="text-subtle">|</span>
 
           {/* All Projects Hub Link */}
           <button
             onClick={handleExitToProjects}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold text-[#A1A1AA] hover:text-white hover:bg-[#18181B] transition"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold text-text-muted hover:text-text-primary hover:bg-card transition"
             title="Go to Projects Page"
           >
-            <LayoutGrid className="w-3.5 h-3.5 text-[#A1A1AA]" />
+            <LayoutGrid className="w-3.5 h-3.5 text-text-muted" />
             <span>Projects</span>
           </button>
 
           {/* Active Project Switcher Pill */}
           <button
             onClick={() => setIsProjectHubOpen(true)}
-            className="flex items-center gap-2 px-3 py-1 rounded-xl bg-[#18181B] hover:bg-[#27272A] border border-[#27272A] text-white transition group"
+            className="flex items-center gap-2 px-3 py-1 rounded-xl bg-card hover:bg-subtle border border-subtle text-text-primary transition group"
             title="Switch Project (Cmd+O)"
           >
             <Folder className="w-3.5 h-3.5 text-amber-400" />
-            <span className="text-xs font-bold text-white transition truncate max-w-[200px]">
+            <span className="text-xs font-bold text-text-primary transition truncate max-w-[200px]">
               {project.name}
             </span>
-            <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-[#09090B] text-[#A1A1AA] border border-[#27272A]">
+            <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-app text-text-muted border border-subtle">
               {project.aspectRatio} • {totalDuration}s
             </span>
-            <ChevronDown className="w-3 h-3 text-[#71717A] group-hover:text-white" />
+            <ChevronDown className="w-3 h-3 text-text-muted group-hover:text-text-primary" />
           </button>
         </div>
 
@@ -299,18 +319,18 @@ export default function App() {
 
           <button
             onClick={() => setIsSubjectManagerOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-[#18181B] border border-[#27272A] hover:border-[#3F3F46] text-[#FAFAFA] transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-card border border-subtle hover:bg-subtle text-text-primary transition"
           >
             <User className="w-3.5 h-3.5 text-purple-400" />
             <span>Subject Anchors</span>
-            <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-[#27272A] text-purple-300">
+            <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-subtle text-purple-300">
               {project.subjectAnchors?.length || 0}
             </span>
           </button>
 
           <button
             onClick={() => setIsTasteMixerOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-[#18181B] border border-[#27272A] hover:border-[#3F3F46] text-[#FAFAFA] transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-card border border-subtle hover:bg-subtle text-text-primary transition"
           >
             <Sliders className="w-3.5 h-3.5 text-amber-400" />
             <span>Taste & Style (`STYLE.md`)</span>
@@ -318,15 +338,15 @@ export default function App() {
 
           <button
             onClick={() => setIsDaVinciExportOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-slate-200 text-black shadow transition font-mono"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-text-primary text-app hover:opacity-90 shadow transition font-mono"
           >
-            <Film className="w-3.5 h-3.5 fill-black" />
+            <Film className="w-3.5 h-3.5 fill-current" />
             <span>Export DaVinci Bundle</span>
           </button>
 
           <button
             onClick={() => setIsCmdPaletteOpen(true)}
-            className="p-1.5 rounded-xl bg-[#18181B] border border-[#27272A] text-[#A1A1AA] hover:text-white transition"
+            className="p-1.5 rounded-xl bg-card border border-subtle text-text-muted hover:text-text-primary transition"
             title="Command Palette (Cmd+K)"
           >
             <CmdIcon className="w-3.5 h-3.5" />
@@ -369,6 +389,8 @@ export default function App() {
           setIsProjectHubOpen(false);
         }}
         isStandalonePage={false}
+        currentTheme={theme}
+        onThemeChange={setTheme}
       />
 
       {/* Cascading Taste Mixer Modal */}

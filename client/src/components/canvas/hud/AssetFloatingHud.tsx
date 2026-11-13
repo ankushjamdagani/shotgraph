@@ -102,12 +102,12 @@ export const AssetFloatingHud: React.FC<AssetFloatingHudProps> = ({
   };
 
   return (
-    <div className="w-84 rounded-2xl bg-[#121215]/95 backdrop-blur-xl border border-purple-500/80 shadow-2xl p-4 text-[#FAFAFA] space-y-3 z-30 select-none animate-in fade-in zoom-in-95 duration-150">
+    <div className="w-84 rounded-2xl bg-surface/95 backdrop-blur-xl border border-subtle shadow-2xl p-4 text-text-primary space-y-3 z-30 select-none animate-in fade-in zoom-in-95 duration-150 ring-1 ring-subtle">
       {/* HUD Header */}
-      <div className="flex items-center justify-between border-b border-[#27272A] pb-2">
+      <div className="flex items-center justify-between border-b border-subtle pb-2">
         <div className="flex items-center gap-1.5">
-          <span className="text-xs font-bold font-mono text-purple-300">Asset & Character HUD</span>
-          <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40 font-mono font-bold">
+          <span className="text-xs font-bold font-mono text-accent-primary">Asset & Character HUD</span>
+          <span className="text-[9px] px-1.5 py-0.2 rounded bg-card text-accent-primary border border-subtle font-mono font-bold">
             IN-PLACE
           </span>
         </div>
@@ -115,7 +115,7 @@ export const AssetFloatingHud: React.FC<AssetFloatingHudProps> = ({
           {onTogglePin && (
             <button
               onClick={onTogglePin}
-              className={`p-1 rounded text-xs transition ${isPinned ? 'text-amber-400 bg-[#27272A]' : 'text-[#71717A] hover:text-white'}`}
+              className={`p-1 rounded text-xs transition ${isPinned ? 'text-amber-400 bg-card' : 'text-text-muted hover:text-text-primary'}`}
               title={isPinned ? 'Unpin HUD' : 'Pin HUD Open'}
             >
               <Pin className="w-3.5 h-3.5" />
@@ -123,7 +123,7 @@ export const AssetFloatingHud: React.FC<AssetFloatingHudProps> = ({
           )}
           <button
             onClick={onClose}
-            className="p-1 rounded text-[#71717A] hover:text-white transition"
+            className="p-1 rounded text-text-muted hover:text-text-primary transition"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -133,15 +133,15 @@ export const AssetFloatingHud: React.FC<AssetFloatingHudProps> = ({
       {/* Master Visual Style Anchor Banner */}
       <div className={`p-2.5 rounded-xl border flex items-center justify-between transition ${
         isMasterAnchor
-          ? 'bg-purple-950/40 border-purple-500/80'
-          : 'bg-[#18181B] border-[#27272A]'
+          ? 'bg-card border-accent-primary ring-1 ring-accent-primary/40'
+          : 'bg-card border-subtle'
       }`}>
         <div>
-          <div className="flex items-center gap-1.5 text-xs font-bold text-white">
-            <Star className={`w-3.5 h-3.5 ${isMasterAnchor ? 'fill-purple-400 text-purple-400' : 'text-slate-500'}`} />
+          <div className="flex items-center gap-1.5 text-xs font-bold text-text-primary">
+            <Star className={`w-3.5 h-3.5 ${isMasterAnchor ? 'fill-accent-primary text-accent-primary' : 'text-text-muted'}`} />
             <span>{isMasterAnchor ? '⭐️ Project Master Style Anchor' : 'Style Parity Sync'}</span>
           </div>
-          <p className="text-[10px] text-[#A1A1AA] mt-0.5 leading-snug">
+          <p className="text-[10px] text-text-muted mt-0.5 leading-snug">
             {isMasterAnchor
               ? 'Defines visual DNA, lighting & grain for the entire cast.'
               : 'Inherits visual style from Master Anchor via --sref --sw 100.'}
@@ -151,8 +151,8 @@ export const AssetFloatingHud: React.FC<AssetFloatingHudProps> = ({
           onClick={handleToggleMasterAnchor}
           className={`px-2 py-1 rounded text-[10px] font-mono font-bold transition border ${
             isMasterAnchor
-              ? 'bg-purple-500 text-black border-purple-400'
-              : 'bg-[#27272A] text-white border-[#3F3F46] hover:bg-[#3F3F46]'
+              ? 'bg-accent-primary text-app border-accent-primary'
+              : 'bg-surface text-text-primary border-subtle hover:bg-subtle/50'
           }`}
         >
           {isMasterAnchor ? 'Anchor Set' : 'Set as Anchor'}
@@ -161,7 +161,7 @@ export const AssetFloatingHud: React.FC<AssetFloatingHudProps> = ({
 
       {/* Turnaround Angle Selector */}
       <div>
-        <label className="block text-[10px] uppercase font-mono text-[#71717A] mb-1.5">
+        <label className="block text-[10px] uppercase font-mono text-text-muted mb-1.5">
           Turnaround Framing Angle
         </label>
         <div className="grid grid-cols-2 gap-1.5 text-xs font-mono">
@@ -176,8 +176,8 @@ export const AssetFloatingHud: React.FC<AssetFloatingHudProps> = ({
               onClick={() => handleSelectAngle(angle.id as any)}
               className={`p-2 rounded-lg border text-left transition ${
                 activeAngle === angle.id
-                  ? 'bg-purple-950/60 border-purple-500 text-white font-bold'
-                  : 'bg-[#18181B] border-[#27272A] text-[#A1A1AA] hover:text-white hover:border-[#3F3F46]'
+                  ? 'bg-card border-accent-primary text-text-primary font-bold ring-1 ring-accent-primary/40'
+                  : 'bg-card border-subtle text-text-muted hover:text-text-primary hover:border-text-muted/40'
               }`}
             >
               {angle.label}
@@ -187,17 +187,17 @@ export const AssetFloatingHud: React.FC<AssetFloatingHudProps> = ({
       </div>
 
       {/* Prompt Card with --sref Lock */}
-      <div className="p-2.5 rounded-xl bg-[#09090B] border border-[#27272A] space-y-1.5">
-        <div className="flex items-center justify-between text-[10px] font-mono text-[#71717A]">
+      <div className="p-2.5 rounded-xl bg-card border border-subtle space-y-1.5">
+        <div className="flex items-center justify-between text-[10px] font-mono text-text-muted">
           <span>LOCKED TURNAROUND PROMPT</span>
-          <span className="text-purple-400 font-bold">--sref ACTIVE</span>
+          <span className="text-accent-primary font-bold">--sref ACTIVE</span>
         </div>
-        <p className="text-[11px] font-mono text-slate-200 select-all leading-relaxed line-clamp-3">
+        <p className="text-[11px] font-mono text-text-primary select-all leading-relaxed line-clamp-3">
           {fullSrefPrompt}
         </p>
         <button
           onClick={handleCopyPrompt}
-          className="w-full py-1.5 px-3 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow transition"
+          className="w-full py-1.5 px-3 rounded-lg bg-accent-primary hover:opacity-90 text-app font-bold text-xs flex items-center justify-center gap-1.5 shadow transition"
         >
           {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
           <span>{copied ? 'Copied with --sref Parity!' : 'Copy for Midjourney / Flux'}</span>
@@ -205,10 +205,10 @@ export const AssetFloatingHud: React.FC<AssetFloatingHudProps> = ({
       </div>
 
       {/* Turnaround Dropzone */}
-      <div className="p-3 rounded-xl border border-dashed border-[#27272A] hover:border-purple-500/60 bg-[#09090B]/60 text-center cursor-pointer transition">
-        <Upload className="w-4 h-4 mx-auto mb-1 text-purple-400" />
-        <div className="text-[11px] font-bold text-slate-300">Drop Generated PNG Turnaround</div>
-        <div className="text-[9px] font-mono text-[#71717A]">Auto-attaches to assets/subjects/</div>
+      <div className="p-3 rounded-xl border border-dashed border-subtle hover:border-accent-primary bg-card/40 text-center cursor-pointer transition">
+        <Upload className="w-4 h-4 mx-auto mb-1 text-accent-primary" />
+        <div className="text-[11px] font-bold text-text-primary">Drop Generated PNG Turnaround</div>
+        <div className="text-[9px] font-mono text-text-muted">Auto-attaches to assets/subjects/</div>
       </div>
     </div>
   );

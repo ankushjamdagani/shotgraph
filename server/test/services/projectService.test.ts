@@ -16,7 +16,10 @@ describe('ProjectService DAG and Folder Management', () => {
 
     expect(project.name).toBe('Test Video Project');
     expect(project.scenes.length).toBe(4);
-    expect(Object.keys(project.nodes).length).toBe(4);
+    expect(project.nodes['node_idea_01']).toBeDefined();
+    expect(project.nodes['node_idea_01'].stage).toBe('ideation');
+    expect(project.nodes['node_taste_01'].stage).toBe('taste');
+    expect(Object.keys(project.nodes).length).toBe(11);
     expect(project.styleMarkdown).toContain('PROJECT STYLE GUIDE');
 
     // Verify subdirectories exist

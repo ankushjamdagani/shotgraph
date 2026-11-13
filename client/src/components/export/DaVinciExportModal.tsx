@@ -47,30 +47,30 @@ export const DaVinciExportModal: React.FC<DaVinciExportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-[#0E131F] border border-slate-700 shadow-2xl p-6">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-          <div className="flex items-center gap-2 text-sm font-bold text-white">
-            <Film className="w-4 h-4 text-sky-400" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+      <div className="w-full max-w-lg rounded-2xl bg-surface border border-subtle shadow-2xl p-6 text-text-primary">
+        <div className="flex items-center justify-between pb-3 border-b border-subtle">
+          <div className="flex items-center gap-2 text-sm font-bold text-text-primary">
+            <Film className="w-4 h-4 text-accent-primary" />
             <span>DaVinci Resolve Multi-Track Export Bundle</span>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
+            className="p-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-card transition"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         <div className="py-4 space-y-4">
-          <div className="flex justify-between items-center text-xs text-slate-300">
-            <span>Project: <strong className="text-white">{projectName}</strong></span>
-            <span>Duration: <strong className="font-mono text-sky-400">{totalDurationSec.toFixed(1)}s</strong></span>
+          <div className="flex justify-between items-center text-xs text-text-muted">
+            <span>Project: <strong className="text-text-primary">{projectName}</strong></span>
+            <span>Duration: <strong className="font-mono text-accent-primary">{totalDurationSec.toFixed(1)}s</strong></span>
           </div>
 
           {/* Frame Rate Selector */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-text-primary mb-1.5">
               Timeline Frame Rate (FPS)
             </label>
             <div className="grid grid-cols-4 gap-2">
@@ -80,8 +80,8 @@ export const DaVinciExportModal: React.FC<DaVinciExportModalProps> = ({
                   onClick={() => setFps(rate)}
                   className={`py-1.5 rounded-lg text-xs font-bold border transition ${
                     fps === rate
-                      ? 'bg-sky-500 text-slate-950 border-sky-400'
-                      : 'bg-[#0A0D14] text-slate-300 border-slate-800 hover:border-slate-700'
+                      ? 'bg-accent-primary text-app border-accent-primary'
+                      : 'bg-card text-text-muted border-subtle hover:border-text-muted/40 hover:text-text-primary'
                   }`}
                 >
                   {rate} fps
@@ -91,17 +91,17 @@ export const DaVinciExportModal: React.FC<DaVinciExportModalProps> = ({
           </div>
 
           {/* Stems Manifest Preview */}
-          <div className="p-3.5 rounded-xl bg-[#0A0D14] border border-slate-800 text-xs space-y-2">
-            <span className="font-bold text-slate-300 block">Export Bundle Stems:</span>
-            <div className="space-y-1 font-mono text-[11px] text-slate-400">
-              <div>📹 <span className="text-slate-200">timeline.fcpxml</span> (FCPXML v1.10)</div>
-              <div>📼 <span className="text-slate-200">timeline.edl</span> (Universal EDL)</div>
-              <div>🎞️ <span className="text-slate-200">V1_footage/</span> (Cut background video clips)</div>
-              <div>✨ <span className="text-slate-200">V2_motion_overlays/</span> (ProRes 4444 with alpha)</div>
-              <div>🎙️ <span className="text-slate-200">A1_dialogue/</span> (Normalized voiceover master)</div>
-              <div>🔔 <span className="text-slate-200">A2_sfx/</span> (Exact frame SFX stems)</div>
-              <div>🎵 <span className="text-slate-200">A3_music/</span> (Ducked bed at -14 LUFS)</div>
-              <div>💬 <span className="text-slate-200">subtitles.srt</span> (Word-level SRT)</div>
+          <div className="p-3.5 rounded-xl bg-card border border-subtle text-xs space-y-2">
+            <span className="font-bold text-text-primary block">Export Bundle Stems:</span>
+            <div className="space-y-1 font-mono text-[11px] text-text-muted">
+              <div>📹 <span className="text-text-primary">timeline.fcpxml</span> (FCPXML v1.10)</div>
+              <div>📼 <span className="text-text-primary">timeline.edl</span> (Universal EDL)</div>
+              <div>🎞️ <span className="text-text-primary">V1_footage/</span> (Cut background video clips)</div>
+              <div>✨ <span className="text-text-primary">V2_motion_overlays/</span> (ProRes 4444 with alpha)</div>
+              <div>🎙️ <span className="text-text-primary">A1_dialogue/</span> (Normalized voiceover master)</div>
+              <div>🔔 <span className="text-text-primary">A2_sfx/</span> (Exact frame SFX stems)</div>
+              <div>🎵 <span className="text-text-primary">A3_music/</span> (Ducked bed at -14 LUFS)</div>
+              <div>💬 <span className="text-text-primary">subtitles.srt</span> (Word-level SRT)</div>
             </div>
           </div>
 
@@ -111,7 +111,7 @@ export const DaVinciExportModal: React.FC<DaVinciExportModalProps> = ({
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 <span>Export Complete!</span>
               </div>
-              <div className="font-mono text-[11px] text-slate-300 break-all">
+              <div className="font-mono text-[11px] text-text-primary break-all">
                 {exportResult.bundlePath}
               </div>
               <div className="text-[11px] text-emerald-200 pt-1">
@@ -121,19 +121,19 @@ export const DaVinciExportModal: React.FC<DaVinciExportModalProps> = ({
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+        <div className="flex items-center justify-end gap-2 pt-3 border-t border-subtle">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition"
+            className="px-3 py-1.5 rounded-lg text-xs font-medium text-text-muted hover:text-text-primary transition"
           >
             Close
           </button>
           <button
             onClick={handleExport}
             disabled={isExporting}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-slate-950 font-bold text-xs shadow transition"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent-primary hover:opacity-90 disabled:opacity-50 text-app font-bold text-xs shadow transition"
           >
-            {isExporting ? <Loader2 className="w-4 h-4 animate-spin text-slate-950" /> : <FolderCheck className="w-4 h-4 text-slate-950" />}
+            {isExporting ? <Loader2 className="w-4 h-4 animate-spin text-app" /> : <FolderCheck className="w-4 h-4 text-app" />}
             {isExporting ? 'Generating Bundle...' : 'Export DaVinci Bundle'}
           </button>
         </div>

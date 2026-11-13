@@ -93,12 +93,12 @@ export const ScriptFloatingHud: React.FC<ScriptFloatingHudProps> = ({
   };
 
   return (
-    <div className="w-84 rounded-2xl bg-[#121215]/95 backdrop-blur-xl border border-sky-500/80 shadow-2xl p-4 text-[#FAFAFA] space-y-3 z-30 select-none animate-in fade-in zoom-in-95 duration-150">
+    <div className="w-84 rounded-2xl bg-surface/95 backdrop-blur-xl border border-subtle shadow-2xl p-4 text-text-primary space-y-3 z-30 select-none animate-in fade-in zoom-in-95 duration-150 ring-1 ring-subtle">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[#27272A] pb-2">
+      <div className="flex items-center justify-between border-b border-subtle pb-2">
         <div className="flex items-center gap-1.5">
-          <span className="text-xs font-bold font-mono text-sky-400">Screenplay & Voiceover HUD</span>
-          <span className="text-[9px] px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40 font-mono font-bold">
+          <span className="text-xs font-bold font-mono text-accent-primary">Screenplay & Voiceover HUD</span>
+          <span className="text-[9px] px-1.5 py-0.2 rounded bg-card text-accent-primary border border-subtle font-mono font-bold">
             IN-PLACE
           </span>
         </div>
@@ -106,13 +106,13 @@ export const ScriptFloatingHud: React.FC<ScriptFloatingHudProps> = ({
           {onTogglePin && (
             <button
               onClick={onTogglePin}
-              className={`p-1 rounded text-xs transition ${isPinned ? 'text-amber-400 bg-[#27272A]' : 'text-[#71717A] hover:text-white'}`}
+              className={`p-1 rounded text-xs transition ${isPinned ? 'text-amber-400 bg-card' : 'text-text-muted hover:text-text-primary'}`}
               title={isPinned ? 'Unpin HUD' : 'Pin HUD Open'}
             >
               <Pin className="w-3.5 h-3.5" />
             </button>
           )}
-          <button onClick={onClose} className="p-1 rounded text-[#71717A] hover:text-white transition">
+          <button onClick={onClose} className="p-1 rounded text-text-muted hover:text-text-primary transition">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -120,7 +120,7 @@ export const ScriptFloatingHud: React.FC<ScriptFloatingHudProps> = ({
 
       {/* Action & Scene Setting */}
       <div>
-        <label className="block text-[10px] uppercase font-mono text-[#71717A] mb-1">
+        <label className="block text-[10px] uppercase font-mono text-text-muted mb-1">
           Scene Visual Action
         </label>
         <textarea
@@ -128,13 +128,13 @@ export const ScriptFloatingHud: React.FC<ScriptFloatingHudProps> = ({
           value={actionText}
           onChange={(e) => setActionText(e.target.value)}
           placeholder="e.g. Anya walks across concrete atrium in morning light..."
-          className="w-full p-2 rounded-xl bg-[#09090B] border border-[#27272A] text-xs text-white placeholder-[#52525B] focus:outline-none focus:border-sky-500 font-mono resize-none leading-relaxed"
+          className="w-full p-2 rounded-xl bg-card border border-subtle text-xs text-text-primary placeholder:text-text-muted/60 focus:outline-none focus:border-accent-primary font-mono resize-none leading-relaxed"
         />
       </div>
 
       {/* Spoken Dialogue Line */}
       <div>
-        <label className="block text-[10px] uppercase font-mono text-[#71717A] mb-1">
+        <label className="block text-[10px] uppercase font-mono text-text-muted mb-1">
           Spoken Dialogue / Voiceover Line
         </label>
         <textarea
@@ -142,18 +142,18 @@ export const ScriptFloatingHud: React.FC<ScriptFloatingHudProps> = ({
           value={dialogueText}
           onChange={(e) => setDialogueText(e.target.value)}
           placeholder="e.g. 'Style isn't what is added. It's what cannot be stripped away.'"
-          className="w-full p-2 rounded-xl bg-[#09090B] border border-[#27272A] text-xs text-sky-300 placeholder-[#52525B] focus:outline-none focus:border-sky-500 font-mono resize-none leading-relaxed italic"
+          className="w-full p-2 rounded-xl bg-card border border-subtle text-xs text-accent-primary placeholder:text-text-muted/60 focus:outline-none focus:border-accent-primary font-mono resize-none leading-relaxed italic"
         />
       </div>
 
       {/* Speaker Casting Dropdown */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1">
-          <label className="block text-[10px] uppercase font-mono text-[#71717A] mb-1">Speaker Cast</label>
+          <label className="block text-[10px] uppercase font-mono text-text-muted mb-1">Speaker Cast</label>
           <select
             value={selectedSpeaker}
             onChange={(e) => setSelectedSpeaker(e.target.value)}
-            className="w-full p-1.5 rounded-lg bg-[#09090B] border border-[#27272A] text-xs text-white font-mono focus:outline-none focus:border-sky-500 cursor-pointer"
+            className="w-full p-1.5 rounded-lg bg-card border border-subtle text-xs text-text-primary font-mono focus:outline-none focus:border-accent-primary cursor-pointer"
           >
             {subjects.length > 0 ? (
               subjects.map((s) => (
@@ -174,7 +174,7 @@ export const ScriptFloatingHud: React.FC<ScriptFloatingHudProps> = ({
         <div className="pt-4">
           <button
             onClick={handleSaveBeat}
-            className="px-3 py-1.5 rounded-lg bg-[#27272A] hover:bg-[#3F3F46] text-white text-xs font-bold font-mono transition flex items-center gap-1"
+            className="px-3 py-1.5 rounded-lg bg-card hover:bg-subtle/50 text-text-primary border border-subtle text-xs font-bold font-mono transition flex items-center gap-1"
           >
             {isSaved ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : null}
             <span>{isSaved ? 'Saved' : 'Save Beat'}</span>
@@ -183,14 +183,14 @@ export const ScriptFloatingHud: React.FC<ScriptFloatingHudProps> = ({
       </div>
 
       {/* Local Kokoro Speech Synthesis Trigger (0 API keys) */}
-      <div className="pt-2 border-t border-[#27272A] flex items-center justify-between">
-        <div className="text-[10px] font-mono text-[#71717A]">
-          Engine: <span className="text-white font-bold">Kokoro (Local TTS)</span>
+      <div className="pt-2 border-t border-subtle flex items-center justify-between">
+        <div className="text-[10px] font-mono text-text-muted">
+          Engine: <span className="text-text-primary font-bold">Kokoro (Local TTS)</span>
         </div>
         <button
           onClick={handleSynthesizeKokoro}
           disabled={isSynthesizingVoice || !dialogueText.trim()}
-          className="px-3 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-black font-bold text-xs flex items-center gap-1.5 shadow-md transition font-mono"
+          className="px-3 py-1.5 rounded-xl bg-accent-primary hover:opacity-90 disabled:opacity-50 text-app font-bold text-xs flex items-center gap-1.5 shadow-md transition font-mono"
         >
           <Volume2 className="w-3.5 h-3.5" />
           <span>{isSynthesizingVoice ? 'Synthesizing...' : 'Generate Voice 🔊'}</span>

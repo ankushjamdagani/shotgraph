@@ -22,31 +22,31 @@ export const MediaTrimmerModal: React.FC<MediaTrimmerModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-[#0E131F] border border-slate-700 shadow-2xl p-5">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-          <div className="flex items-center gap-2 text-sm font-bold text-white">
-            <Scissors className="w-4 h-4 text-sky-400" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+      <div className="w-full max-w-lg rounded-2xl bg-surface border border-subtle shadow-2xl p-5 text-text-primary">
+        <div className="flex items-center justify-between pb-3 border-b border-subtle">
+          <div className="flex items-center gap-2 text-sm font-bold text-text-primary">
+            <Scissors className="w-4 h-4 text-accent-primary" />
             <span>Visual Media Trimmer</span>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
+            className="p-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-card transition"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         <div className="py-4 space-y-4">
-          <div className="text-xs text-slate-300">
-            Imported file <span className="font-mono text-sky-400">"{fileName}"</span> is{' '}
+          <div className="text-xs text-text-muted">
+            Imported file <span className="font-mono text-accent-primary">"{fileName}"</span> is{' '}
             <span className="font-bold text-amber-400">{clipDurationSec.toFixed(1)}s</span>, but this shot target is{' '}
-            <span className="font-bold text-sky-400">{targetDurationSec.toFixed(1)}s</span>.
+            <span className="font-bold text-accent-primary">{targetDurationSec.toFixed(1)}s</span>.
           </div>
 
           {/* Visual Scrubber Track */}
-          <div className="p-4 rounded-xl bg-[#0A0D14] border border-slate-800 space-y-3">
-            <div className="flex justify-between text-xs text-slate-400 font-mono">
+          <div className="p-4 rounded-xl bg-card border border-subtle space-y-3">
+            <div className="flex justify-between text-xs text-text-muted font-mono">
               <span>In-Point: {startSec.toFixed(1)}s</span>
               <span>Duration: {targetDurationSec.toFixed(1)}s</span>
               <span>Out-Point: {(startSec + targetDurationSec).toFixed(1)}s</span>
@@ -59,16 +59,16 @@ export const MediaTrimmerModal: React.FC<MediaTrimmerModalProps> = ({
               step={0.1}
               value={startSec}
               onChange={(e) => setStartSec(parseFloat(e.target.value))}
-              className="w-full accent-sky-400 cursor-pointer"
+              className="w-full accent-accent-primary cursor-pointer"
             />
 
-            <div className="h-6 w-full bg-slate-900 rounded-md relative overflow-hidden flex items-center">
+            <div className="h-6 w-full bg-app rounded-md relative overflow-hidden flex items-center border border-subtle">
               <div
                 style={{
                   left: `${(startSec / clipDurationSec) * 100}%`,
                   width: `${(targetDurationSec / clipDurationSec) * 100}%`,
                 }}
-                className="absolute h-full bg-sky-500/30 border-2 border-sky-400 rounded flex items-center justify-center text-[10px] font-bold text-sky-200"
+                className="absolute h-full bg-accent-primary/20 border-2 border-accent-primary rounded flex items-center justify-center text-[10px] font-bold text-accent-primary"
               >
                 ACTIVE CUT ({targetDurationSec}s)
               </div>
@@ -76,10 +76,10 @@ export const MediaTrimmerModal: React.FC<MediaTrimmerModalProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+        <div className="flex items-center justify-end gap-2 pt-3 border-t border-subtle">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition"
+            className="px-3 py-1.5 rounded-lg text-xs font-medium text-text-muted hover:text-text-primary transition"
           >
             Cancel
           </button>
@@ -88,7 +88,7 @@ export const MediaTrimmerModal: React.FC<MediaTrimmerModalProps> = ({
               onConfirmTrim(startSec, targetDurationSec);
               onClose();
             }}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs shadow transition"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent-primary hover:opacity-90 text-app font-bold text-xs shadow transition"
           >
             <Check className="w-3.5 h-3.5" />
             Trim & Attach to Shot

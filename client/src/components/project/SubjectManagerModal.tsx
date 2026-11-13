@@ -78,6 +78,7 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
 
   const handleStartNewSubject = () => {
     setIsCreatingNew(true);
+    setSelectedSubjectId('');
   };
 
   const handleSelectSubject = (id: string) => {
@@ -90,24 +91,17 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
     const newVariant: SubjectVariant = {
       id: newVarId,
       label: `Variant ${variants.length + 1}`,
-      promptDescription: coreDescription,
-      isDefault: variants.length === 0,
+      promptDescription: '',
+      isDefault: false,
       createdAt: Date.now(),
     };
     setVariants([...variants, newVariant]);
-    if (variants.length === 0) {
-      setActiveVariantId(newVarId);
-    }
+    setActiveVariantId(newVarId);
   };
 
-  const handleUpdateVariant = (varId: string, updates: Partial<SubjectVariant>) => {
+  const handleUpdateVariant = (varId: string, partial: Partial<SubjectVariant>) => {
     setVariants(
-      variants.map((v) => {
-        if (v.id === varId) {
-          return { ...v, ...updates };
-        }
-        return v;
-      })
+      variants.map((v) => (v.id === varId ? { ...v, ...partial } : v))
     );
   };
 
@@ -116,7 +110,7 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
     const remaining = variants.filter((v) => v.id !== varId);
     setVariants(remaining);
     if (activeVariantId === varId) {
-      setActiveVariantId(remaining[0]?.id || '');
+      setActiveVariantId(remaining[0].id);
     }
   };
 
@@ -193,7 +187,7 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
   const getCategoryIcon = (cat: string) => {
     switch (cat) {
       case 'character':
-        return <User className="w-3.5 h-3.5 text-sky-400" />;
+        return <User className="w-3.5 h-3.5 text-accent-primary" />;
       case 'product':
         return <Box className="w-3.5 h-3.5 text-amber-400" />;
       case 'environment':
@@ -204,29 +198,29 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="flex flex-col w-full max-w-4xl h-[85vh] bg-[#0E131F] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150">
+      <div className="flex flex-col w-full max-w-4xl h-[85vh] bg-surface border border-subtle rounded-2xl shadow-2xl overflow-hidden text-text-primary">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-[#0A0D14]/80">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-subtle bg-surface">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400">
+            <div className="p-2 rounded-xl bg-card border border-subtle text-accent-primary">
               <User className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold text-white tracking-tight">Project Subject Anchors & Asset Manager</h2>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-sky-950/60 border border-sky-800/60 text-sky-300">
+                <h2 className="text-sm font-bold text-text-primary tracking-tight">Project Subject Anchors & Asset Manager</h2>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-card border border-subtle text-accent-primary">
                   {subjects.length} Anchors
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Preserve characters, presenters, and products across scenes. Turnarounds stored in <code className="font-mono text-slate-300">assets/subjects/</code>.
+              <p className="text-xs text-text-muted mt-0.5">
+                Preserve characters, presenters, and products across scenes. Turnarounds stored in <code className="font-mono text-text-primary">assets/subjects/</code>.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-card transition"
           >
             <X className="w-4 h-4" />
           </button>
@@ -235,25 +229,25 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
         {/* Body Split */}
         <div className="flex flex-1 min-h-0">
           {/* Left: Subjects Roster */}
-          <div className="w-72 border-r border-slate-800/80 bg-[#0A0D14]/40 flex flex-col p-3 space-y-2 overflow-y-auto">
+          <div className="w-72 border-r border-subtle bg-surface/50 flex flex-col p-3 space-y-2 overflow-y-auto">
             <button
               onClick={handleStartNewSubject}
               className={`w-full py-2 px-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-semibold transition ${
                 isCreatingNew
-                  ? 'bg-sky-500 text-slate-950 border-sky-400 shadow-sm'
-                  : 'bg-[#111726] border-slate-800 text-slate-300 hover:border-slate-700 hover:text-white'
+                  ? 'bg-accent-primary text-app border-accent-primary shadow-sm font-bold'
+                  : 'bg-card border-subtle text-text-muted hover:border-text-muted/40 hover:text-text-primary'
               }`}
             >
               <Plus className="w-3.5 h-3.5" />
               New Subject Anchor
             </button>
 
-            <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400 px-1 pt-2">
+            <div className="text-[10px] uppercase font-mono tracking-wider text-text-muted px-1 pt-2">
               Project Roster
             </div>
 
             {subjects.length === 0 && !isCreatingNew ? (
-              <div className="p-4 text-center text-xs text-slate-400 rounded-xl border border-dashed border-slate-800">
+              <div className="p-4 text-center text-xs text-text-muted rounded-xl border border-dashed border-subtle">
                 No subjects defined yet. Add a presenter, character, or hero product anchor to lock consistency across shots.
               </div>
             ) : (
@@ -266,25 +260,25 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
                     onClick={() => handleSelectSubject(sub.id)}
                     className={`p-3 rounded-xl border cursor-pointer transition text-left relative group ${
                       isSelected
-                        ? 'bg-sky-950/40 border-sky-500/80 text-white shadow-sm'
-                        : 'bg-[#111726]/60 border-slate-800/80 text-slate-300 hover:border-slate-700'
+                        ? 'bg-card border-accent-primary text-text-primary shadow-sm ring-1 ring-accent-primary/40'
+                        : 'bg-card border-subtle text-text-muted hover:border-text-muted/40 hover:text-text-primary'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-1.5 font-bold text-xs truncate">
+                      <div className="flex items-center gap-1.5 font-bold text-xs truncate text-text-primary">
                         {getCategoryIcon(sub.category)}
                         <span className="truncate">{sub.name}</span>
                       </div>
-                      <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-800/80 text-slate-400">
+                      <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded bg-surface text-text-muted border border-subtle">
                         {sub.variants.length} var
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
+                    <p className="text-[11px] text-text-muted line-clamp-2 leading-relaxed">
                       {sub.coreDescription}
                     </p>
                     {activeVar && (
-                      <div className="mt-2 flex items-center gap-1.5 text-[10px] text-sky-400 font-mono">
-                        <span className="w-1.5 h-1.5 rounded-full bg-sky-400"></span>
+                      <div className="mt-2 flex items-center gap-1.5 text-[10px] text-accent-primary font-mono">
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent-primary"></span>
                         <span className="truncate">{activeVar.label}</span>
                       </div>
                     )}
@@ -295,11 +289,11 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
           </div>
 
           {/* Right: Anchor Details & Variant Editor */}
-          <div className="flex-1 flex flex-col p-6 overflow-y-auto space-y-6">
+          <div className="flex-1 flex flex-col p-6 overflow-y-auto space-y-6 bg-surface">
             {(isCreatingNew || selectedSubjectId) ? (
               <>
-                <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                  <div className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                <div className="flex items-center justify-between pb-3 border-b border-subtle">
+                  <div className="text-xs font-bold text-text-primary uppercase tracking-wider">
                     {isCreatingNew ? 'Create New Anchor' : 'Edit Subject Anchor'}
                   </div>
                   {!isCreatingNew && (
@@ -316,7 +310,7 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
                 {/* Core Anchor Info */}
                 <div className="grid grid-cols-3 gap-4">
                   <div className="col-span-2">
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    <label className="block text-xs font-semibold text-text-primary mb-1.5">
                       Anchor Name
                     </label>
                     <input
@@ -324,18 +318,18 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="e.g. Anya - Lead Presenter, Liquid Glass Server"
-                      className="w-full p-2.5 rounded-lg bg-[#0A0D14] border border-slate-800 text-xs text-white focus:outline-none focus:border-sky-500"
+                      className="w-full p-2.5 rounded-lg bg-card border border-subtle text-xs text-text-primary focus:outline-none focus:border-accent-primary"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    <label className="block text-xs font-semibold text-text-primary mb-1.5">
                       Category
                     </label>
                     <select
                       value={category}
                       onChange={(e) => setCategory(e.target.value as any)}
-                      className="w-full p-2.5 rounded-lg bg-[#0A0D14] border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
+                      className="w-full p-2.5 rounded-lg bg-card border border-subtle text-xs text-text-primary focus:outline-none focus:border-accent-primary"
                     >
                       <option value="character">Character / Presenter</option>
                       <option value="product">Hero Product</option>
@@ -346,7 +340,7 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  <label className="block text-xs font-semibold text-text-primary mb-1.5">
                     Core Physical Traits & Materials
                   </label>
                   <textarea
@@ -354,9 +348,9 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
                     onChange={(e) => setCoreDescription(e.target.value)}
                     rows={2}
                     placeholder="e.g. Female tech founder, early 30s, sharp features, short dark hair, natural studio makeup, minimalist professional demeanor"
-                    className="w-full p-2.5 rounded-lg bg-[#0A0D14] border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-sky-500 resize-none font-mono"
+                    className="w-full p-2.5 rounded-lg bg-card border border-subtle text-xs text-text-primary focus:outline-none focus:border-accent-primary resize-none font-mono"
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">
+                  <p className="text-[10px] text-text-muted mt-1">
                     This core identity description is auto-injected into every scene referencing this subject.
                   </p>
                 </div>
@@ -365,19 +359,19 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
                 <div className="space-y-3 pt-2">
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <ImageIcon className="w-3.5 h-3.5 text-sky-400" />
+                      <div className="text-xs font-bold text-text-primary flex items-center gap-1.5">
+                        <ImageIcon className="w-3.5 h-3.5 text-accent-primary" />
                         Visual Variants & Turnarounds
                       </div>
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-[11px] text-text-muted">
                         Different costumes, angles, or states for this subject. Active variant is passed to Image-to-Video models.
                       </p>
                     </div>
                     <button
                       onClick={handleAddVariant}
-                      className="px-2.5 py-1.5 rounded-lg bg-[#111726] border border-slate-700 hover:border-sky-400 text-xs font-medium text-slate-200 flex items-center gap-1.5 transition"
+                      className="px-2.5 py-1.5 rounded-lg bg-card border border-subtle hover:border-accent-primary text-xs font-medium text-text-primary flex items-center gap-1.5 transition"
                     >
-                      <Plus className="w-3 h-3 text-sky-400" />
+                      <Plus className="w-3 h-3 text-accent-primary" />
                       Add Variant
                     </button>
                   </div>
@@ -390,8 +384,8 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
                           key={v.id}
                           className={`p-3.5 rounded-xl border transition ${
                             isActive
-                              ? 'bg-[#111726] border-sky-500/80 shadow-sm'
-                              : 'bg-[#0A0D14]/60 border-slate-800'
+                              ? 'bg-card border-accent-primary shadow-sm ring-1 ring-accent-primary/40'
+                              : 'bg-card border-subtle'
                           }`}
                         >
                           <div className="flex items-center justify-between mb-2">
@@ -400,14 +394,14 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
                                 onClick={() => handleSetActiveVariant(v.id)}
                                 className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 transition ${
                                   isActive
-                                    ? 'bg-sky-500 text-slate-950'
-                                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                                    ? 'bg-accent-primary text-app'
+                                    : 'bg-surface text-text-muted hover:text-text-primary border border-subtle'
                                 }`}
                               >
                                 {isActive && <Check className="w-2.5 h-2.5" />}
                                 {isActive ? 'ACTIVE VARIANT' : 'Set as Active'}
                               </button>
-                              <span className="text-xs font-semibold text-slate-300">
+                              <span className="text-xs font-semibold text-text-primary">
                                 Variant {idx + 1}
                               </span>
                             </div>
@@ -415,7 +409,7 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
                             {variants.length > 1 && (
                               <button
                                 onClick={() => handleRemoveVariant(v.id)}
-                                className="text-slate-400 hover:text-rose-400 p-1 transition"
+                                className="text-text-muted hover:text-rose-400 p-1 transition"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -424,7 +418,7 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
 
                           <div className="grid grid-cols-3 gap-3 mb-2">
                             <div className="col-span-1">
-                              <label className="block text-[10px] uppercase font-mono text-slate-400 mb-1">
+                              <label className="block text-[10px] uppercase font-mono text-text-muted mb-1">
                                 Variant Label
                               </label>
                               <input
@@ -432,12 +426,12 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
                                 value={v.label}
                                 onChange={(e) => handleUpdateVariant(v.id, { label: e.target.value })}
                                 placeholder="e.g. Charcoal Blazer, Casual Tee"
-                                className="w-full p-2 rounded bg-[#070A0F] border border-slate-800 text-xs text-white focus:outline-none focus:border-sky-500"
+                                className="w-full p-2 rounded bg-app border border-subtle text-xs text-text-primary focus:outline-none focus:border-accent-primary"
                               />
                             </div>
 
                             <div className="col-span-2">
-                              <label className="block text-[10px] uppercase font-mono text-slate-400 mb-1">
+                              <label className="block text-[10px] uppercase font-mono text-text-muted mb-1">
                                 Reference Image / Turnaround Path
                               </label>
                               <input
@@ -445,13 +439,13 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
                                 value={v.mediaUrl || ''}
                                 onChange={(e) => handleUpdateVariant(v.id, { mediaUrl: e.target.value })}
                                 placeholder="e.g. assets/subjects/anya/var_01.png"
-                                className="w-full p-2 rounded bg-[#070A0F] border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-sky-500 font-mono"
+                                className="w-full p-2 rounded bg-app border border-subtle text-xs text-text-primary focus:outline-none focus:border-accent-primary font-mono"
                               />
                             </div>
                           </div>
 
                           <div>
-                            <label className="block text-[10px] uppercase font-mono text-slate-400 mb-1">
+                            <label className="block text-[10px] uppercase font-mono text-text-muted mb-1">
                               Variant Costume & Specific Features
                             </label>
                             <input
@@ -459,7 +453,7 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
                               value={v.promptDescription}
                               onChange={(e) => handleUpdateVariant(v.id, { promptDescription: e.target.value })}
                               placeholder="e.g. Wearing tailored charcoal wool blazer over crisp white silk collarless shirt"
-                              className="w-full p-2 rounded bg-[#070A0F] border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-sky-500 font-mono"
+                              className="w-full p-2 rounded bg-app border border-subtle text-xs text-text-primary focus:outline-none focus:border-accent-primary font-mono"
                             />
                           </div>
                         </div>
@@ -469,11 +463,11 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
                 </div>
 
                 {/* Footer Save Button */}
-                <div className="pt-4 border-t border-slate-800 flex justify-end gap-2">
+                <div className="pt-4 border-t border-subtle flex justify-end gap-2">
                   <button
                     onClick={handleSaveSubject}
                     disabled={isSaving || !name.trim() || !coreDescription.trim()}
-                    className="px-5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-lg transition"
+                    className="px-5 py-2.5 rounded-xl bg-accent-primary hover:opacity-90 disabled:opacity-50 text-app font-bold text-xs flex items-center gap-1.5 shadow-lg transition"
                   >
                     <Check className="w-4 h-4" />
                     {isSaving ? 'Preserving...' : 'Save Subject Anchor'}
@@ -481,8 +475,8 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
                 </div>
               </>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-slate-400 text-xs text-center p-8">
-                <User className="w-10 h-10 mb-2 text-slate-700" />
+              <div className="flex flex-col items-center justify-center h-full text-text-muted text-xs text-center p-8">
+                <User className="w-10 h-10 mb-2 text-text-muted/40" />
                 Select a subject from the project roster or create a new anchor.
               </div>
             )}

@@ -38,32 +38,32 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 bg-black/70 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-[#0E131F] border border-slate-700 shadow-2xl overflow-hidden animate-scale-up">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150">
+      <div className="w-full max-w-lg rounded-2xl bg-surface border border-subtle shadow-2xl overflow-hidden animate-scale-up text-text-primary">
         <Command label="Global Command Menu" className="w-full">
-          <div className="flex items-center px-4 border-b border-slate-800">
-            <Sparkles className="w-4 h-4 text-sky-400 mr-2" />
+          <div className="flex items-center px-4 border-b border-subtle bg-surface">
+            <Sparkles className="w-4 h-4 text-accent-primary mr-2" />
             <Command.Input
               autoFocus
               placeholder="Type a command or search action (Cmd+K)..."
-              className="w-full py-3 bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
+              className="w-full py-3 bg-transparent text-sm text-text-primary placeholder:text-text-muted/60 focus:outline-none"
             />
           </div>
 
-          <Command.List className="p-2 max-h-72 overflow-y-auto space-y-1 text-xs">
-            <Command.Empty className="py-6 text-center text-slate-500 text-xs">
+          <Command.List className="p-2 max-h-72 overflow-y-auto space-y-1 text-xs bg-surface">
+            <Command.Empty className="py-6 text-center text-text-muted text-xs">
               No matching actions found.
             </Command.Empty>
 
-            <Command.Group heading="Studio Actions" className="text-[10px] font-bold text-slate-500 px-2 py-1">
+            <Command.Group heading="Studio Actions" className="text-[10px] font-bold text-text-muted px-2 py-1 font-mono uppercase">
               <Command.Item
                 onSelect={() => {
                   onBranchSelected();
                   onClose();
                 }}
-                className="flex items-center gap-2 p-2 rounded-lg text-slate-200 hover:bg-sky-950/60 hover:text-sky-300 cursor-pointer transition"
+                className="flex items-center gap-2 p-2 rounded-lg text-text-primary hover:bg-card hover:text-accent-primary cursor-pointer transition"
               >
-                <GitBranch className="w-4 h-4 text-sky-400" />
+                <GitBranch className="w-4 h-4 text-accent-primary" />
                 <span>Branch Current Node</span>
               </Command.Item>
 
@@ -72,7 +72,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                   onOpenTasteMixer();
                   onClose();
                 }}
-                className="flex items-center gap-2 p-2 rounded-lg text-slate-200 hover:bg-sky-950/60 hover:text-sky-300 cursor-pointer transition"
+                className="flex items-center gap-2 p-2 rounded-lg text-text-primary hover:bg-card hover:text-accent-primary cursor-pointer transition"
               >
                 <Sliders className="w-4 h-4 text-amber-400" />
                 <span>Open Taste & Style Mixer (`STYLE.md`)</span>
@@ -83,9 +83,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                   onOpenDaVinciExport();
                   onClose();
                 }}
-                className="flex items-center gap-2 p-2 rounded-lg text-slate-200 hover:bg-sky-950/60 hover:text-sky-300 cursor-pointer transition"
+                className="flex items-center gap-2 p-2 rounded-lg text-text-primary hover:bg-card hover:text-accent-primary cursor-pointer transition"
               >
-                <Film className="w-4 h-4 text-sky-400" />
+                <Film className="w-4 h-4 text-accent-primary" />
                 <span>Export DaVinci Resolve Multi-Track Bundle</span>
               </Command.Item>
 
@@ -94,22 +94,22 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                   onToggleSafeAreas();
                   onClose();
                 }}
-                className="flex items-center gap-2 p-2 rounded-lg text-slate-200 hover:bg-sky-950/60 hover:text-sky-300 cursor-pointer transition"
+                className="flex items-center gap-2 p-2 rounded-lg text-text-primary hover:bg-card hover:text-accent-primary cursor-pointer transition"
               >
                 <ShieldAlert className="w-4 h-4 text-amber-400" />
                 <span>Toggle 9:16 Safe Area Overlay</span>
               </Command.Item>
             </Command.Group>
 
-            <Command.Group heading="Switch Default AI Model" className="text-[10px] font-bold text-slate-500 px-2 py-1 pt-2">
+            <Command.Group heading="Switch Default AI Model" className="text-[10px] font-bold text-text-muted px-2 py-1 pt-2 font-mono uppercase">
               <Command.Item
                 onSelect={() => {
                   onSelectModel('antigravity-cli');
                   onClose();
                 }}
-                className="flex items-center gap-2 p-2 rounded-lg text-slate-200 hover:bg-sky-950/60 hover:text-sky-300 cursor-pointer transition"
+                className="flex items-center gap-2 p-2 rounded-lg text-text-primary hover:bg-card hover:text-accent-primary cursor-pointer transition"
               >
-                <Cpu className="w-4 h-4 text-cyan-400" />
+                <Cpu className="w-4 h-4 text-accent-primary" />
                 <span>Switch to Antigravity CLI</span>
               </Command.Item>
 
@@ -118,7 +118,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                   onSelectModel('claude-cli');
                   onClose();
                 }}
-                className="flex items-center gap-2 p-2 rounded-lg text-slate-200 hover:bg-sky-950/60 hover:text-sky-300 cursor-pointer transition"
+                className="flex items-center gap-2 p-2 rounded-lg text-text-primary hover:bg-card hover:text-accent-primary cursor-pointer transition"
               >
                 <Cpu className="w-4 h-4 text-purple-400" />
                 <span>Switch to Claude Code CLI</span>
@@ -129,7 +129,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                   onSelectModel('ollama');
                   onClose();
                 }}
-                className="flex items-center gap-2 p-2 rounded-lg text-slate-200 hover:bg-sky-950/60 hover:text-sky-300 cursor-pointer transition"
+                className="flex items-center gap-2 p-2 rounded-lg text-text-primary hover:bg-card hover:text-accent-primary cursor-pointer transition"
               >
                 <Cpu className="w-4 h-4 text-emerald-400" />
                 <span>Switch to Local Ollama</span>

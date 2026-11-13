@@ -11,39 +11,53 @@
   --bg-app: #09090B;
   --bg-surface: #121215;
   --bg-card: #18181B;
+  --bg-hover: #222226;
   --border-subtle: #27272A;
+  --border-focus: #52525B;
   --text-primary: #FAFAFA;
   --text-muted: #A1A1AA;
-  --accent-primary: #E4E4E7;
+  --accent-primary: #FAFAFA;
   --dot-color: #27272A;
 }
 
 .theme-film-lab-mono {
   --bg-app: #000000;
   --bg-surface: #0A0A0A;
-  --bg-card: #121212;
-  --border-subtle: #1F1F1F;
+  --bg-card: #141414;
+  --bg-hover: #1E1E1E;
+  --border-subtle: #242424;
+  --border-focus: #444444;
   --text-primary: #FFFFFF;
   --text-muted: #888888;
-  --accent-primary: #D4D4D8;
-  --dot-color: #1F1F1F;
+  --accent-primary: #FFFFFF;
+  --dot-color: #222222;
 }
 
 .theme-midnight-navy {
-  --bg-app: #060913;
-  --bg-surface: #0B1120;
+  --bg-app: #050811;
+  --bg-surface: #0A0F1D;
   --bg-card: #0F172A;
+  --bg-hover: #1E293B;
   --border-subtle: #1E293B;
+  --border-focus: #38BDF8;
   --text-primary: #F8FAFC;
   --text-muted: #94A3B8;
   --accent-primary: #38BDF8;
   --dot-color: #1E293B;
 }
 
+html {
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
 body {
   background-color: var(--bg-app);
   color: var(--text-primary);
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 0;
 }
 
 code, .font-mono {
@@ -59,11 +73,11 @@ code, .font-mono {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #27272A;
+  background: var(--border-subtle);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3F3F46;
+  background: var(--text-muted);
 }
 
 /* Tactile button active push */
@@ -93,15 +107,15 @@ button:active:not(:disabled) {
 .react-flow__handle {
   width: 9px;
   height: 9px;
-  background: #E4E4E7;
+  background: var(--accent-primary);
   border: 2px solid var(--bg-app);
 }
 .react-flow__edge-path {
-  stroke: #27272A;
+  stroke: var(--border-subtle);
   stroke-width: 2;
 }
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #FAFAFA;
+  stroke: var(--text-primary);
 }
 
 /* Animated Active Cut Wire */
@@ -117,4 +131,26 @@ button:active:not(:disabled) {
 /* Glow effects */
 .glow-accent {
   box-shadow: 0 0 20px -5px rgba(234, 179, 8, 0.3);
+}
+
+/* MiniMap & Controls Dark Theme Integration */
+.react-flow__minimap {
+  background-color: var(--bg-surface) !important;
+  border: 1px solid var(--border-subtle) !important;
+}
+.react-flow__minimap svg {
+  background-color: var(--bg-surface) !important;
+}
+.react-flow__minimap-mask {
+  fill: rgba(0, 0, 0, 0.7) !important;
+  stroke: var(--border-subtle) !important;
+}
+.react-flow__controls button {
+  background-color: var(--bg-surface) !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+  fill: var(--text-primary) !important;
+}
+.react-flow__controls button:hover {
+  background-color: var(--bg-card) !important;
 }

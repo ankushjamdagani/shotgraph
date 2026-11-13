@@ -101,12 +101,12 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
         return 'border-amber-500';
       default:
         return isSelected
-          ? 'border-[#FAFAFA] ring-2 ring-white/20'
+          ? 'border-accent-primary ring-2 ring-accent-primary/20'
           : isActiveCut
           ? 'border-amber-500/80'
           : isHudOpen
           ? 'border-sky-400 ring-2 ring-sky-500/30'
-          : 'border-[#27272A] hover:border-[#3F3F46]';
+          : 'border-subtle hover:border-text-muted';
     }
   };
 
@@ -139,15 +139,15 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
           onMediaDrop(node.id, e.dataTransfer.files[0]);
         }
       }}
-      className={`group relative w-72 rounded-2xl bg-[#121215] transition-all duration-150 cursor-pointer shadow-2xl p-3.5 border ${getColorTagBorder(
+      className={`group relative w-72 rounded-2xl bg-surface transition-all duration-150 cursor-pointer shadow-2xl p-3.5 border ${getColorTagBorder(
         node.colorTag
       )} ${isDragOver ? 'ring-2 ring-emerald-500 bg-emerald-950/20' : ''}`}
     >
-      <Handle type="target" position={Position.Left} className="!bg-[#E4E4E7] !w-2 !h-2" />
-      <Handle type="target" position={Position.Top} className="!bg-[#E4E4E7] !w-2 !h-2" id="top" />
+      <Handle type="target" position={Position.Left} className="!bg-accent-primary !w-2 !h-2" />
+      <Handle type="target" position={Position.Top} className="!bg-accent-primary !w-2 !h-2" id="top" />
 
       {/* ON-NODE HOVER QUICK ACTION TOOLBAR */}
-      <div className="absolute -top-4 right-2 hidden group-hover:flex items-center gap-1 bg-[#18181B] px-1.5 py-0.5 rounded-lg border border-[#27272A] shadow-xl z-20 animate-in fade-in duration-100">
+      <div className="absolute -top-4 right-2 hidden group-hover:flex items-center gap-1 bg-card px-1.5 py-0.5 rounded-lg border border-subtle shadow-xl z-20 animate-in fade-in duration-100">
         {/* Toggle Floating In-Place HUD */}
         {onToggleHud && (
           <button
@@ -155,7 +155,7 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
               e.stopPropagation();
               onToggleHud(node.id);
             }}
-            className="p-1 rounded text-[#A1A1AA] hover:text-white hover:bg-[#27272A] transition"
+            className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-subtle transition"
             title="Open in-place floating HUD"
           >
             <Maximize2 className="w-3 h-3" />
@@ -170,7 +170,7 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
               if (node.sceneId) onSetActiveCut(node.sceneId, node.id);
             }}
             className={`p-1 rounded transition ${
-              isActiveCut ? 'text-amber-400 bg-amber-950/50' : 'text-[#A1A1AA] hover:text-amber-400 hover:bg-[#27272A]'
+              isActiveCut ? 'text-amber-400 bg-amber-950/50' : 'text-text-muted hover:text-amber-400 hover:bg-subtle'
             }`}
             title="Star as Active Cut"
           >
@@ -186,13 +186,13 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
                 e.stopPropagation();
                 setShowColorPicker(!showColorPicker);
               }}
-              className="p-1 rounded text-[#A1A1AA] hover:text-white hover:bg-[#27272A] transition"
+              className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-subtle transition"
               title="Set Color Tag"
             >
               <Tag className="w-3 h-3" />
             </button>
             {showColorPicker && (
-              <div className="absolute top-6 left-0 flex items-center gap-1 bg-[#121215] p-1.5 rounded-lg border border-[#27272A] shadow-2xl z-30">
+              <div className="absolute top-6 left-0 flex items-center gap-1 bg-surface p-1.5 rounded-lg border border-subtle shadow-2xl z-30">
                 {(['default', 'white', 'blue', 'purple', 'emerald', 'amber'] as const).map((color) => (
                   <button
                     key={color}
@@ -203,7 +203,7 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
                     }}
                     className={`w-3 h-3 rounded-full border border-black/40 ${
                       color === 'default'
-                        ? 'bg-[#27272A]'
+                        ? 'bg-subtle'
                         : color === 'white'
                         ? 'bg-white'
                         : color === 'blue'
@@ -228,7 +228,7 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
               e.stopPropagation();
               setIsEditingTitle(true);
             }}
-            className="p-1 rounded text-[#A1A1AA] hover:text-white hover:bg-[#27272A] transition"
+            className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-subtle transition"
             title="Rename version"
           >
             <Edit2 className="w-3 h-3" />
@@ -241,7 +241,7 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
             e.stopPropagation();
             onBranch(node.id);
           }}
-          className="p-1 rounded text-[#A1A1AA] hover:text-sky-400 hover:bg-[#27272A] transition"
+          className="p-1 rounded text-text-muted hover:text-sky-400 hover:bg-subtle transition"
           title="Branch this version"
         >
           <GitBranch className="w-3 h-3" />
@@ -256,7 +256,7 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
                 onDelete(node.id);
               }
             }}
-            className="p-1 rounded text-[#A1A1AA] hover:text-red-400 hover:bg-[#27272A] transition"
+            className="p-1 rounded text-text-muted hover:text-red-400 hover:bg-subtle transition"
             title="Delete node (auto-relink edges)"
           >
             <Trash2 className="w-3 h-3" />
@@ -268,7 +268,7 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-1.5">
           {stageInfo.icon}
-          <span className="text-[10px] font-mono font-bold tracking-wider text-[#A1A1AA] uppercase truncate">
+          <span className="text-[10px] font-mono font-bold tracking-wider text-text-muted uppercase truncate">
             {stageInfo.label}
           </span>
         </div>
@@ -286,7 +286,7 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
             </span>
           )}
           {isHudOpen && (
-            <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-white text-black">
+            <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-text-primary text-app">
               HUD
             </span>
           )}
@@ -306,7 +306,7 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
                 if (e.key === 'Escape') setIsEditingTitle(false);
               }}
               autoFocus
-              className="w-full p-1 rounded bg-[#09090B] border border-sky-500 text-xs text-white font-mono focus:outline-none"
+              className="w-full p-1 rounded bg-app border border-sky-500 text-xs text-text-primary font-mono focus:outline-none"
             />
             <button
               onClick={handleCommitRename}
@@ -316,9 +316,9 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
             </button>
           </div>
         ) : (
-          <div className="text-xs font-bold text-white truncate">{node.title}</div>
+          <div className="text-xs font-bold text-text-primary truncate">{node.title}</div>
         )}
-        <div className="text-[10px] font-mono text-[#71717A] flex items-center justify-between mt-0.5">
+        <div className="text-[10px] font-mono text-text-muted flex items-center justify-between mt-0.5">
           <span>{node.versionLabel}</span>
           {node.sceneId && <span className="opacity-75">{node.sceneId}</span>}
         </div>
@@ -326,7 +326,7 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
 
       {/* Artifact Thumbnail / Text Preview */}
       {node.artifacts?.mediaUrl ? (
-        <div className="relative rounded-lg overflow-hidden border border-[#27272A] mb-2 h-20 bg-black/60 flex items-center justify-center">
+        <div className="relative rounded-lg overflow-hidden border border-subtle mb-2 h-20 bg-app flex items-center justify-center">
           <img
             src={`http://localhost:3030/media/${node.artifacts.mediaUrl.replace(/^\//, '')}`}
             alt={node.title}
@@ -335,25 +335,25 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
               (e.target as HTMLElement).style.display = 'none';
             }}
           />
-          <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-mono text-[#A1A1AA]">
+          <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-mono text-text-muted">
             Media Asset
           </div>
         </div>
       ) : (
-        <div className="bg-[#09090B] rounded-lg p-2 border border-[#27272A] mb-2 text-[10px] text-[#A1A1AA] font-mono line-clamp-2 leading-relaxed">
+        <div className="bg-app rounded-lg p-2 border border-subtle mb-2 text-[10px] text-text-muted font-mono line-clamp-2 leading-relaxed">
           {node.artifacts?.textContent || node.prompt || 'No content generated yet.'}
         </div>
       )}
 
       {/* Footer Details */}
-      <div className="flex items-center justify-between pt-1 border-t border-[#27272A] text-[10px] font-mono text-[#71717A]">
+      <div className="flex items-center justify-between pt-1 border-t border-subtle text-[10px] font-mono text-text-muted">
         <span>Click to edit HUD</span>
         <button
           onClick={(e) => {
             e.stopPropagation();
             onToggleHud && onToggleHud(node.id);
           }}
-          className="text-white font-bold hover:underline"
+          className="text-text-primary font-bold hover:underline"
         >
           {isHudOpen ? 'Close HUD ✕' : 'Edit ↗'}
         </button>

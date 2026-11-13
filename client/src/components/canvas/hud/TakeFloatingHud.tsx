@@ -51,12 +51,12 @@ export const TakeFloatingHud: React.FC<TakeFloatingHudProps> = ({
   };
 
   return (
-    <div className="w-84 rounded-2xl bg-[#121215]/95 backdrop-blur-xl border border-emerald-500/80 shadow-2xl p-4 text-[#FAFAFA] space-y-3 z-30 select-none animate-in fade-in zoom-in-95 duration-150">
+    <div className="w-84 rounded-2xl bg-surface/95 backdrop-blur-xl border border-subtle shadow-2xl p-4 text-text-primary space-y-3 z-30 select-none animate-in fade-in zoom-in-95 duration-150 ring-1 ring-subtle">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[#27272A] pb-2">
+      <div className="flex items-center justify-between border-b border-subtle pb-2">
         <div className="flex items-center gap-1.5">
-          <span className="text-xs font-bold font-mono text-emerald-400">Video Take Review HUD</span>
-          <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-mono font-bold">
+          <span className="text-xs font-bold font-mono text-accent-primary">Video Take Review HUD</span>
+          <span className="text-[9px] px-1.5 py-0.2 rounded bg-card text-accent-primary border border-subtle font-mono font-bold">
             TAKE-ONE
           </span>
         </div>
@@ -64,20 +64,20 @@ export const TakeFloatingHud: React.FC<TakeFloatingHudProps> = ({
           {onTogglePin && (
             <button
               onClick={onTogglePin}
-              className={`p-1 rounded text-xs transition ${isPinned ? 'text-amber-400 bg-[#27272A]' : 'text-[#71717A] hover:text-white'}`}
+              className={`p-1 rounded text-xs transition ${isPinned ? 'text-amber-400 bg-card' : 'text-text-muted hover:text-text-primary'}`}
               title={isPinned ? 'Unpin HUD' : 'Pin HUD Open'}
             >
               <Pin className="w-3.5 h-3.5" />
             </button>
           )}
-          <button onClick={onClose} className="p-1 rounded text-[#71717A] hover:text-white transition">
+          <button onClick={onClose} className="p-1 rounded text-text-muted hover:text-text-primary transition">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
       {/* Video Preview Monitor */}
-      <div className="w-full h-36 rounded-xl bg-[#09090B] border border-[#27272A] relative overflow-hidden flex flex-col justify-end p-2.5">
+      <div className="w-full h-36 rounded-xl bg-card border border-subtle relative overflow-hidden flex flex-col justify-end p-2.5">
         <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-black/80 via-black/30 to-transparent">
           <button
             onClick={() => setIsPlaying(!isPlaying)}
@@ -89,22 +89,22 @@ export const TakeFloatingHud: React.FC<TakeFloatingHudProps> = ({
 
         {/* Video Scrubber & Timecode */}
         <div className="relative z-10 space-y-1">
-          <div className="flex items-center justify-between text-[9px] font-mono text-[#A1A1AA]">
+          <div className="flex items-center justify-between text-[9px] font-mono text-text-muted">
             <span>{isPlaying ? 'PLAYING...' : 'PAUSED'}</span>
             <span>00:00:02:18 / 00:00:05:00</span>
           </div>
-          <div className="w-full h-1 bg-[#27272A] rounded-full overflow-hidden">
-            <div className="w-1/2 h-full bg-emerald-500"></div>
+          <div className="w-full h-1 bg-subtle rounded-full overflow-hidden">
+            <div className="w-1/2 h-full bg-accent-primary"></div>
           </div>
         </div>
       </div>
 
       {/* Take Metadata & Status */}
-      <div className="p-2 rounded-xl bg-[#09090B] border border-[#27272A] text-[10px] font-mono grid grid-cols-2 gap-1.5 text-[#A1A1AA]">
-        <div>Engine: <span className="text-white">Runway Gen-3</span></div>
-        <div>Duration: <span className="text-white">5.0s</span></div>
-        <div>Format: <span className="text-white">4K 24fps</span></div>
-        <div>Resolution: <span className="text-white">2160x3840</span></div>
+      <div className="p-2 rounded-xl bg-card border border-subtle text-[10px] font-mono grid grid-cols-2 gap-1.5 text-text-muted">
+        <div>Engine: <span className="text-text-primary">Runway Gen-3</span></div>
+        <div>Duration: <span className="text-text-primary">5.0s</span></div>
+        <div>Format: <span className="text-text-primary">4K 24fps</span></div>
+        <div>Resolution: <span className="text-text-primary">2160x3840</span></div>
       </div>
 
       {/* Active Cut Button */}
@@ -112,18 +112,18 @@ export const TakeFloatingHud: React.FC<TakeFloatingHudProps> = ({
         onClick={handleMakeActiveCut}
         className={`w-full py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-lg transition font-mono ${
           isActiveCut
-            ? 'bg-amber-500 text-black border border-amber-400'
-            : 'bg-[#18181B] hover:bg-[#27272A] text-white border border-[#27272A]'
+            ? 'bg-accent-primary text-app border border-accent-primary'
+            : 'bg-card hover:bg-subtle/50 text-text-primary border border-subtle'
         }`}
       >
-        <Star className={`w-3.5 h-3.5 ${isActiveCut ? 'fill-black' : 'text-amber-400'}`} />
+        <Star className={`w-3.5 h-3.5 ${isActiveCut ? 'fill-app' : 'text-accent-primary'}`} />
         <span>{isActiveCut ? '⭐ Currently Active Cut (Live Edit)' : 'Star as Active Cut'}</span>
       </button>
 
       {/* Replacement Dropzone */}
-      <div className="p-2.5 rounded-xl border border-dashed border-[#27272A] hover:border-emerald-500/60 bg-[#09090B]/60 text-center cursor-pointer transition">
-        <Upload className="w-3.5 h-3.5 mx-auto mb-1 text-emerald-400" />
-        <div className="text-[10px] font-bold text-slate-300">Drop MP4 Video File to Replace</div>
+      <div className="p-2.5 rounded-xl border border-dashed border-subtle hover:border-accent-primary bg-card/40 text-center cursor-pointer transition">
+        <Upload className="w-3.5 h-3.5 mx-auto mb-1 text-accent-primary" />
+        <div className="text-[10px] font-bold text-text-primary">Drop MP4 Video File to Replace</div>
       </div>
     </div>
   );

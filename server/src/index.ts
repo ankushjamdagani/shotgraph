@@ -201,6 +201,7 @@ server.post('/api/projects/create', async (req, reply) => {
     aspectRatio,
     targetDurationSec,
     basePresetId = 'liquid_glass',
+    ideaPrompt,
   } = (req.body as any) || {};
 
   if (!name || !dirPath) {
@@ -215,6 +216,7 @@ server.post('/api/projects/create', async (req, reply) => {
       aspectRatio,
       targetDurationSec,
       basePresetId,
+      ideaPrompt,
       initGit: true,
     });
 

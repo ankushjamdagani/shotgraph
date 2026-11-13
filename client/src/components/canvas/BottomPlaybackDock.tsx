@@ -94,13 +94,13 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
 
   return (
     <div
-      className={`w-full bg-[#09090B]/95 backdrop-blur-xl border-t border-[#27272A] z-30 flex flex-col select-none transition-all duration-200 ${
+      className={`w-full bg-app/95 backdrop-blur-xl border-t border-subtle z-30 flex flex-col select-none transition-all duration-200 ${
         isExpanded ? 'h-24' : 'h-11'
       }`}
     >
       {/* Top Scrubber Line */}
       <div
-        className="w-full h-1 bg-[#18181B] hover:h-2 cursor-pointer transition-all relative group"
+        className="w-full h-1 bg-card hover:h-2 cursor-pointer transition-all relative group"
         onClick={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
           const clickPercent = (e.clientX - rect.left) / rect.width;
@@ -121,34 +121,34 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
         <div className="flex items-center gap-3">
           <button
             onClick={() => setCurrentSec(0)}
-            className="p-1 rounded text-[#A1A1AA] hover:text-white transition"
+            className="p-1 rounded text-text-muted hover:text-text-primary transition"
             title="Return to start (00:00:00:00)"
           >
             <SkipBack className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => setIsPlaying(!isPlaying)}
-            className="w-7 h-7 rounded-lg bg-white text-black hover:bg-slate-200 flex items-center justify-center font-bold shadow transition"
+            className="w-7 h-7 rounded-lg bg-text-primary text-app hover:opacity-90 flex items-center justify-center font-bold shadow transition"
             title="Play / Pause (Space)"
           >
-            {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 ml-0.5 fill-black" />}
+            {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 ml-0.5 fill-current" />}
           </button>
           <button
             onClick={() => setCurrentSec(totalDuration)}
-            className="p-1 rounded text-[#A1A1AA] hover:text-white transition"
+            className="p-1 rounded text-text-muted hover:text-text-primary transition"
             title="Go to end"
           >
             <SkipForward className="w-3.5 h-3.5" />
           </button>
 
-          <span className="text-[#3F3F46]">|</span>
+          <span className="text-subtle">|</span>
 
           {/* Timecode Readout */}
           <div className="flex items-center gap-1.5">
-            <span className="text-white font-bold tracking-wider">{formatTimecode(currentSec)}</span>
-            <span className="text-[#71717A]">/</span>
-            <span className="text-[#71717A]">{formatTimecode(totalDuration)}</span>
-            <span className="text-[10px] px-1 py-0.2 rounded bg-[#18181B] text-[#A1A1AA] border border-[#27272A]">
+            <span className="text-text-primary font-bold tracking-wider">{formatTimecode(currentSec)}</span>
+            <span className="text-text-muted">/</span>
+            <span className="text-text-muted">{formatTimecode(totalDuration)}</span>
+            <span className="text-[10px] px-1 py-0.2 rounded bg-card text-text-muted border border-subtle">
               {project.fps || 30} FPS
             </span>
           </div>
@@ -157,27 +157,27 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
         {/* Current Chapter Beat */}
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-          <span className="text-white font-bold truncate max-w-[260px]">{activeSceneName}</span>
-          <span className="text-[10px] text-[#71717A]">({project.aspectRatio})</span>
+          <span className="text-text-primary font-bold truncate max-w-[260px]">{activeSceneName}</span>
+          <span className="text-[10px] text-text-muted">({project.aspectRatio})</span>
         </div>
 
         {/* Audio Meter & DaVinci Export Action */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 text-[10px] text-[#A1A1AA]">
+          <div className="flex items-center gap-1.5 text-[10px] text-text-muted">
             <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
             <span>-15 LUFS</span>
-            <div className="w-12 h-1.5 bg-[#18181B] rounded-full overflow-hidden flex gap-0.5">
+            <div className="w-12 h-1.5 bg-card rounded-full overflow-hidden flex gap-0.5">
               <div className="w-8 h-full bg-emerald-500"></div>
               <div className="w-2 h-full bg-amber-400"></div>
             </div>
           </div>
 
-          <span className="text-[#3F3F46]">|</span>
+          <span className="text-subtle">|</span>
 
           {onOpenDaVinciExport && (
             <button
               onClick={onOpenDaVinciExport}
-              className="px-3 py-1 rounded-lg text-xs font-bold bg-[#18181B] hover:bg-[#27272A] border border-[#27272A] text-white flex items-center gap-1.5 transition"
+              className="px-3 py-1 rounded-lg text-xs font-bold bg-card hover:bg-subtle border border-subtle text-text-primary flex items-center gap-1.5 transition"
             >
               <Film className="w-3.5 h-3.5 text-sky-400" />
               <span>Export DaVinci</span>
@@ -186,7 +186,7 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
 
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="p-1 rounded text-[#71717A] hover:text-white transition"
+            className="p-1 rounded text-text-muted hover:text-text-primary transition"
             title={isExpanded ? 'Collapse Timeline' : 'Expand Timeline Strip'}
           >
             {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
@@ -196,7 +196,7 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
 
       {/* Expanded Detailed Track Lane Scrubber */}
       {isExpanded && (
-        <div className="px-4 pb-2 pt-1 border-t border-[#18181B] flex items-center gap-1.5 overflow-x-auto text-[10px] font-mono">
+        <div className="px-4 pb-2 pt-1 border-t border-subtle flex items-center gap-1.5 overflow-x-auto text-[10px] font-mono">
           {project.scenes.map((scene) => {
             const cutNodeId = project.activeCut[scene.id];
             const cutNode = cutNodeId ? project.nodes[cutNodeId] : null;
@@ -204,13 +204,13 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
               <div
                 key={scene.id}
                 style={{ flex: scene.targetDurationSec }}
-                className="p-1.5 rounded-lg bg-[#121215] border border-[#27272A] flex flex-col justify-between truncate"
+                className="p-1.5 rounded-lg bg-surface border border-subtle flex flex-col justify-between truncate"
               >
-                <div className="flex items-center justify-between text-[#A1A1AA]">
-                  <span className="font-bold text-white truncate">{scene.name}</span>
+                <div className="flex items-center justify-between text-text-muted">
+                  <span className="font-bold text-text-primary truncate">{scene.name}</span>
                   <span>{scene.targetDurationSec}s</span>
                 </div>
-                <div className="text-[#71717A] truncate mt-0.5">
+                <div className="text-text-muted opacity-75 truncate mt-0.5">
                   Cut: {cutNode?.title || 'Default'}
                 </div>
               </div>

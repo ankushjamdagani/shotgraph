@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { ProjectRegistryEntry, FilmProject } from '../../types';
 import { NewProjectWizard } from './NewProjectWizard';
+import { ThemeCustomizer, StudioTheme } from '../ui-ux/ThemeCustomizer';
 
 interface ProjectHubModalProps {
   isOpen: boolean;
@@ -25,6 +26,8 @@ interface ProjectHubModalProps {
   currentProjectId?: string;
   onSelectProject: (project: FilmProject) => void;
   isStandalonePage?: boolean;
+  currentTheme?: StudioTheme;
+  onThemeChange?: (theme: StudioTheme) => void;
 }
 
 export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
@@ -33,6 +36,8 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
   currentProjectId,
   onSelectProject,
   isStandalonePage = false,
+  currentTheme = 'studio-dark',
+  onThemeChange,
 }) => {
   const [projects, setProjects] = useState<ProjectRegistryEntry[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -149,8 +154,8 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
   };
 
   const containerClasses = isStandalonePage
-    ? 'flex flex-col h-screen w-screen bg-[#0A0D14] text-[#F8FAFC] overflow-hidden'
-    : 'relative w-full max-w-5xl bg-[#0B0F19] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[85vh]';
+    ? 'flex flex-col h-screen w-screen bg-app text-text-primary overflow-hidden'
+    : 'relative w-full max-w-5xl bg-surface border border-subtle rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[85vh] text-text-primary';
 
   const modalWrapperClasses = isStandalonePage
     ? ''
@@ -159,41 +164,45 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
   const content = (
     <div className={containerClasses}>
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-[#0E131F] shrink-0">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-subtle bg-surface shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-sky-500/20 text-sky-400 border border-sky-500/30">
+            <div className="p-2 rounded-xl bg-card text-accent-primary border border-subtle">
               <Video className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-sm tracking-wide text-white">VISUAL AI STUDIO</span>
-                <span className="text-slate-600">|</span>
-                <span className="text-xs font-bold text-sky-400">PROJECTS</span>
+                <span className="font-extrabold text-sm tracking-wide text-text-primary">VISUAL AI STUDIO</span>
+                <span className="text-text-muted">|</span>
+                <span className="text-xs font-bold text-accent-primary">PROJECTS</span>
               </div>
-              <p className="text-[11px] text-slate-400">DaVinci-style project manager & workspace hub</p>
+              <p className="text-[11px] text-text-muted">DaVinci-style project manager & workspace hub</p>
             </div>
           </div>
         </div>
 
-        {/* Actions */}
+        {/* Actions & Theme Customizer */}
         <div className="flex items-center gap-2.5">
+          {onThemeChange && (
+            <ThemeCustomizer currentTheme={currentTheme} onThemeChange={onThemeChange} />
+          )}
+
           <button
             onClick={handleOpenFolderFromFinder}
             disabled={isOpeningNativeFinder}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-semibold border border-slate-700 transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-card hover:bg-subtle/50 text-text-primary rounded-xl text-xs font-semibold border border-subtle transition"
           >
             {isOpeningNativeFinder ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
-              <FolderOpen className="w-3.5 h-3.5 text-sky-400" />
+              <FolderOpen className="w-3.5 h-3.5 text-accent-primary" />
             )}
             <span>Open Folder...</span>
           </button>
 
           <button
             onClick={() => setIsWizardOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-sky-500/20 transition"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-accent-primary hover:opacity-90 text-app font-bold text-xs rounded-xl shadow-lg transition"
           >
             <Plus className="w-4 h-4" />
             <span>New Project</span>
@@ -202,7 +211,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
           {!isStandalonePage && onClose && (
             <button
               onClick={onClose}
-              className="p-1.5 ml-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              className="p-1.5 ml-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-card transition"
             >
               <X className="w-5 h-5" />
             </button>
@@ -211,18 +220,18 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
       </div>
 
       {/* Subheader Toolbar */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-slate-800/80 bg-[#0B0F19] shrink-0">
+      <div className="flex items-center justify-between px-6 py-3 border-b border-subtle bg-surface/50 shrink-0">
         <div className="relative w-80">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+          <Search className="w-4 h-4 text-text-muted absolute left-3 top-2.5" />
           <input
             type="text"
             placeholder="Search projects by name or directory..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-[#111827] border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition"
+            className="w-full pl-9 pr-3 py-1.5 bg-card border border-subtle rounded-lg text-xs text-text-primary placeholder:text-text-muted/60 focus:outline-none focus:border-accent-primary transition"
           />
         </div>
-        <div className="text-xs text-slate-400 font-mono">
+        <div className="text-xs text-text-muted font-mono">
           {filteredProjects.length} {filteredProjects.length === 1 ? 'project' : 'projects'} found
         </div>
       </div>
@@ -238,17 +247,17 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
       {/* Project Cards Grid */}
       <div className="flex-1 p-6 overflow-y-auto">
         {isLoading && projects.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-slate-500 gap-2">
-            <Loader2 className="w-6 h-6 animate-spin text-sky-400" />
+          <div className="h-full flex flex-col items-center justify-center text-text-muted gap-2">
+            <Loader2 className="w-6 h-6 animate-spin text-accent-primary" />
             <span className="text-xs">Loading studio projects...</span>
           </div>
         ) : filteredProjects.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center p-8 border border-dashed border-slate-800 rounded-2xl bg-[#0E1424]/40">
-            <div className="w-12 h-12 rounded-2xl bg-slate-800/60 flex items-center justify-center text-slate-400 mb-3">
+          <div className="h-full flex flex-col items-center justify-center text-center p-8 border border-dashed border-subtle rounded-2xl bg-card/40">
+            <div className="w-12 h-12 rounded-2xl bg-card flex items-center justify-center text-text-muted mb-3 border border-subtle">
               <Folder className="w-6 h-6" />
             </div>
-            <h3 className="text-sm font-bold text-white mb-1">No Projects Found</h3>
-            <p className="text-xs text-slate-400 max-w-sm mb-4">
+            <h3 className="text-sm font-bold text-text-primary mb-1">No Projects Found</h3>
+            <p className="text-xs text-text-muted max-w-sm mb-4">
               {searchQuery
                 ? `No projects matching "${searchQuery}"`
                 : 'Create a new project using format presets or point to an existing folder on your Mac.'}
@@ -256,16 +265,16 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsWizardOpen(true)}
-                className="flex items-center gap-1.5 px-4 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl transition"
+                className="flex items-center gap-1.5 px-4 py-2 bg-accent-primary hover:opacity-90 text-app font-bold text-xs rounded-xl transition"
               >
                 <Plus className="w-4 h-4" />
                 <span>Create Project</span>
               </button>
               <button
                 onClick={handleOpenFolderFromFinder}
-                className="flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-xl border border-slate-700 transition"
+                className="flex items-center gap-1.5 px-4 py-2 bg-card hover:bg-subtle/50 text-text-primary font-semibold text-xs rounded-xl border border-subtle transition"
               >
-                <FolderOpen className="w-4 h-4 text-sky-400" />
+                <FolderOpen className="w-4 h-4 text-accent-primary" />
                 <span>Open Existing Folder</span>
               </button>
             </div>
@@ -281,39 +290,39 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
                   onClick={() => handleOpenProject(p.id)}
                   className={`group relative p-3.5 rounded-2xl border text-left cursor-pointer transition-all duration-200 flex flex-col justify-between ${
                     isCurrent
-                      ? 'bg-[#11192E] border-sky-500/80 shadow-lg shadow-sky-950/50 ring-1 ring-sky-500/40'
-                      : 'bg-[#0E1526] border-slate-800/80 hover:border-slate-700 hover:bg-[#11192E] hover:-translate-y-0.5'
+                      ? 'bg-card border-accent-primary shadow-lg ring-1 ring-accent-primary/40'
+                      : 'bg-card border-subtle hover:border-text-muted/40 hover:bg-surface hover:-translate-y-0.5'
                   }`}
                 >
                   <div>
                     {/* Visual Aspect Ratio Viewport Simulation */}
-                    <div className="w-full h-32 mb-3 rounded-xl bg-[#070A10] border border-slate-800/70 flex items-center justify-center relative overflow-hidden group-hover:border-slate-700 transition">
+                    <div className="w-full h-32 mb-3 rounded-xl bg-app border border-subtle flex items-center justify-center relative overflow-hidden group-hover:border-subtle/80 transition">
                       {p.aspectRatio === '9:16' ? (
-                        <div className="w-[50px] h-[90px] rounded-lg border border-slate-700/80 bg-slate-900/90 relative flex flex-col items-center justify-between p-1 shadow-inner">
-                          <div className="w-3 h-0.5 rounded-full bg-slate-700" />
-                          <div className="w-full flex-1 my-1 border border-dashed border-sky-500/25 rounded flex items-center justify-center">
-                            <Smartphone className="w-3.5 h-3.5 text-sky-400" />
+                        <div className="w-[50px] h-[90px] rounded-lg border border-subtle bg-surface relative flex flex-col items-center justify-between p-1 shadow-inner">
+                          <div className="w-3 h-0.5 rounded-full bg-subtle" />
+                          <div className="w-full flex-1 my-1 border border-dashed border-subtle rounded flex items-center justify-center">
+                            <Smartphone className="w-3.5 h-3.5 text-accent-primary" />
                           </div>
-                          <div className="w-3 h-0.5 rounded-full bg-slate-800" />
+                          <div className="w-3 h-0.5 rounded-full bg-subtle" />
                         </div>
                       ) : p.aspectRatio === '16:9' ? (
-                        <div className="w-[104px] h-[58px] rounded-lg border border-slate-700/80 bg-slate-900/90 relative flex items-center justify-center shadow-inner">
-                          <div className="w-full h-full border border-dashed border-sky-500/25 rounded flex items-center justify-center">
-                            <Monitor className="w-4 h-4 text-sky-400" />
+                        <div className="w-[104px] h-[58px] rounded-lg border border-subtle bg-surface relative flex items-center justify-center shadow-inner">
+                          <div className="w-full h-full border border-dashed border-subtle rounded flex items-center justify-center">
+                            <Monitor className="w-4 h-4 text-accent-primary" />
                           </div>
                         </div>
                       ) : (
-                        <div className="w-[66px] h-[66px] rounded-lg border border-slate-700/80 bg-slate-900/90 relative flex items-center justify-center shadow-inner">
-                          <div className="w-full h-full border border-dashed border-sky-500/25 rounded flex items-center justify-center">
-                            <Square className="w-4 h-4 text-sky-400" />
+                        <div className="w-[66px] h-[66px] rounded-lg border border-subtle bg-surface relative flex items-center justify-center shadow-inner">
+                          <div className="w-full h-full border border-dashed border-subtle rounded flex items-center justify-center">
+                            <Square className="w-4 h-4 text-accent-primary" />
                           </div>
                         </div>
                       )}
 
                       {/* Active Status Badge in Top Right */}
                       {isCurrent && (
-                        <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-950/90 text-sky-300 border border-sky-700/80 backdrop-blur-sm">
-                          <CheckCircle2 className="w-3 h-3 text-sky-400" />
+                        <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-app/90 text-accent-primary border border-accent-primary/80 backdrop-blur-sm">
+                          <CheckCircle2 className="w-3 h-3 text-accent-primary" />
                           <span>Active</span>
                         </div>
                       )}
@@ -322,7 +331,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
                       <button
                         title="Remove from recent list"
                         onClick={(e) => handleRemoveProject(e, p.id, p.name)}
-                        className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 p-1 rounded-lg bg-black/60 text-slate-400 hover:text-red-400 transition"
+                        className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 p-1 rounded-lg bg-app/80 text-text-muted hover:text-red-400 border border-subtle transition"
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
@@ -330,35 +339,35 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
 
                     {/* Project Information */}
                     <div className="mb-2.5">
-                      <h4 className="text-sm font-bold text-white group-hover:text-sky-300 transition truncate">
+                      <h4 className="text-sm font-bold text-text-primary group-hover:text-accent-primary transition truncate">
                         {p.name}
                       </h4>
-                      <p className="text-[11px] text-slate-500 truncate font-mono mt-0.5">
+                      <p className="text-[11px] text-text-muted truncate font-mono mt-0.5">
                         {p.path}
                       </p>
                     </div>
 
                     {/* Format Badges */}
                     <div className="flex flex-wrap items-center gap-1.5 mb-3">
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-800/80 text-slate-300 border border-slate-700/60 font-mono">
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-surface text-text-primary border border-subtle font-mono">
                         {p.aspectRatio === '9:16' ? '9:16 REEL' : p.aspectRatio === '16:9' ? '16:9 WIDE' : '1:1 SQUARE'}
                       </span>
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-800/80 text-slate-300 border border-slate-700/60 font-mono">
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-surface text-text-primary border border-subtle font-mono">
                         {p.fps || 30} FPS
                       </span>
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-800/80 text-slate-300 border border-slate-700/60 font-mono">
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-surface text-text-primary border border-subtle font-mono">
                         {p.targetDurationSec || 30}s
                       </span>
                     </div>
                   </div>
 
                   {/* Card Footer */}
-                  <div className="pt-2.5 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-500">
+                  <div className="pt-2.5 border-t border-subtle flex items-center justify-between text-[11px] text-text-muted">
                     <div className="flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-slate-500" />
+                      <Clock className="w-3 h-3 text-text-muted" />
                       <span>{formatRelativeTime(p.lastOpenedAt)}</span>
                     </div>
-                    <span className="text-sky-400 font-semibold group-hover:translate-x-0.5 transition flex items-center gap-0.5 text-xs">
+                    <span className="text-accent-primary font-semibold group-hover:translate-x-0.5 transition flex items-center gap-0.5 text-xs">
                       Open <ExternalLink className="w-3 h-3 inline" />
                     </span>
                   </div>
@@ -370,13 +379,13 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
       </div>
 
       {/* Bottom Bar */}
-      <div className="px-6 py-3 border-t border-slate-800 bg-[#0E131F] flex items-center justify-between text-xs text-slate-400 shrink-0">
+      <div className="px-6 py-3 border-t border-subtle bg-surface flex items-center justify-between text-xs text-text-muted shrink-0">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
           <span>Multi-tab concurrency enabled: open different projects in separate tabs</span>
         </div>
-        <div className="text-[11px] text-slate-500">
-          Shortcut: press <kbd className="px-1.5 py-0.5 bg-slate-800 rounded border border-slate-700 text-slate-300 font-mono">Cmd+O</kbd> in editor
+        <div className="text-[11px] text-text-muted">
+          Shortcut: press <kbd className="px-1.5 py-0.5 bg-card rounded border border-subtle text-text-primary font-mono">Cmd+O</kbd> in editor
         </div>
       </div>
     </div>

@@ -81,12 +81,12 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
 
   const handleAddConstraint = () => {
     if (!newConstraintInput.trim()) return;
-    setAdditionalConstraints((prev) => [...prev, newConstraintInput.trim()]);
+    setAdditionalConstraints([...additionalConstraints, newConstraintInput.trim()]);
     setNewConstraintInput('');
   };
 
   const handleRemoveConstraint = (index: number) => {
-    setAdditionalConstraints((prev) => prev.filter((_, i) => i !== index));
+    setAdditionalConstraints(additionalConstraints.filter((_, i) => i !== index));
   };
 
   const handleApplyCascadingStyles = async () => {
@@ -94,24 +94,25 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
     setErrorMsg('');
 
     try {
-      const res = await fetch(`http://localhost:3030/api/projects/${project.id}/style/resolve`, {
+      const payload = {
+        basePresetId: selectedBasePresetId,
+        styleOverrides: {
+          palette: { accent: overrideAccent },
+          typography: { displayFont: overrideDisplayFont },
+          pacing: { avgCutDurationSec: overrideCutDuration },
+        },
+        additionalConstraints,
+      };
+
+      const res = await fetch(`http://localhost:3030/api/projects/${project.id}/styles/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          basePresetId: selectedBasePresetId,
-          styleOverrides: {
-            palette: { accent: overrideAccent },
-            typography: { displayFont: overrideDisplayFont },
-            pacing: { avgCutDurationSec: overrideCutDuration },
-          },
-          additionalConstraints,
-          applyToProject: true,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to resolve cascading styles');
+        throw new Error(data.error || 'Failed to update style system');
       }
 
       onUpdateProject(data.project);
@@ -178,33 +179,33 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-3xl rounded-2xl bg-[#0B0F19] border border-slate-800 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-150">
+      <div className="w-full max-w-3xl rounded-2xl bg-surface border border-subtle shadow-2xl flex flex-col max-h-[90vh] overflow-hidden text-text-primary">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-[#0F172A]/70">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-subtle bg-surface">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+            <div className="w-10 h-10 rounded-xl bg-card border border-subtle flex items-center justify-center text-accent-primary">
               <Sliders className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white leading-tight">
+              <h2 className="text-base font-bold text-text-primary leading-tight">
                 Taste & Cascading Style System
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-text-muted">
                 Global Presets + Local Overrides + Project Negative Constraints
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-card transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="p-6 space-y-6 overflow-y-auto flex-1">
+        <div className="p-6 space-y-6 overflow-y-auto flex-1 bg-surface">
           {errorMsg && (
             <div className="p-3 bg-red-950/60 border border-red-800 rounded-xl text-xs text-red-200">
               {errorMsg}
@@ -214,14 +215,14 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
           {/* 1. Global Base Preset */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                <Palette className="w-4 h-4 text-sky-400" />
+              <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+                <Palette className="w-4 h-4 text-accent-primary" />
                 <span>1. Global Base Preset (Inherited Defaults)</span>
               </label>
               <button
                 type="button"
                 onClick={() => setShowSavePresetInput(!showSavePresetInput)}
-                className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1 transition"
+                className="text-xs text-accent-primary hover:opacity-80 flex items-center gap-1 transition"
               >
                 <BookmarkPlus className="w-3.5 h-3.5" />
                 <span>Save Current Look as New Preset...</span>
@@ -229,18 +230,18 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
             </div>
 
             {showSavePresetInput && (
-              <div className="p-3 mb-3 bg-[#111827] border border-sky-500/40 rounded-xl flex items-center gap-2">
+              <div className="p-3 mb-3 bg-card border border-accent-primary/40 rounded-xl flex items-center gap-2">
                 <input
                   type="text"
                   placeholder="New Preset Name (e.g. Acme Tech Vibrant)"
                   value={newPresetName}
                   onChange={(e) => setNewPresetName(e.target.value)}
-                  className="flex-1 px-3 py-1.5 bg-[#0B0F19] border border-slate-700 rounded-lg text-xs text-white"
+                  className="flex-1 px-3 py-1.5 bg-app border border-subtle rounded-lg text-xs text-text-primary"
                 />
                 <button
                   onClick={handleSaveAsGlobalPreset}
                   disabled={isSavingPreset || !newPresetName.trim()}
-                  className="px-3 py-1.5 bg-sky-500 text-slate-950 font-bold text-xs rounded-lg transition disabled:opacity-50"
+                  className="px-3 py-1.5 bg-accent-primary text-app font-bold text-xs rounded-lg transition disabled:opacity-50"
                 >
                   {isSavingPreset ? 'Saving...' : 'Save Global'}
                 </button>
@@ -262,19 +263,19 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
                     }}
                     className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
                       isSelected
-                        ? 'bg-sky-950/60 border-sky-500 text-white shadow-md'
-                        : 'bg-[#111827] border-slate-800 text-slate-400 hover:border-slate-700'
+                        ? 'bg-card border-accent-primary text-text-primary shadow-md ring-1 ring-accent-primary/40'
+                        : 'bg-card border-subtle text-text-muted hover:border-text-muted/40 hover:text-text-primary'
                     }`}
                   >
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-bold text-white truncate">{sp.name}</span>
+                        <span className="text-xs font-bold text-text-primary truncate">{sp.name}</span>
                         <div
-                          className="w-3 h-3 rounded-full border border-white/20 shrink-0"
+                          className="w-3 h-3 rounded-full border border-subtle shrink-0"
                           style={{ backgroundColor: sp.tokens.palette.accent }}
                         />
                       </div>
-                      <p className="text-[10px] text-slate-400 line-clamp-2 leading-tight">
+                      <p className="text-[10px] text-text-muted line-clamp-2 leading-tight">
                         {sp.description}
                       </p>
                     </div>
@@ -285,13 +286,13 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
           </div>
 
           {/* 2. Project-Level Local Overrides */}
-          <div className="p-4 rounded-xl bg-[#0E1526] border border-slate-800/90 space-y-4">
+          <div className="p-4 rounded-xl bg-card border border-subtle space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                <Sliders className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-xs font-bold text-text-primary flex items-center gap-1.5">
+                <Sliders className="w-3.5 h-3.5 text-accent-primary" />
                 2. Project Local Overrides (Selective Customization)
               </span>
-              <span className="text-[10px] text-slate-400 font-mono">
+              <span className="text-[10px] text-text-muted font-mono">
                 Overrides preset for this project only
               </span>
             </div>
@@ -299,30 +300,30 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
             <div className="grid grid-cols-3 gap-4 text-xs">
               {/* Accent Color Override */}
               <div>
-                <label className="block text-[11px] text-slate-400 mb-1">Brand Accent Color</label>
+                <label className="block text-[11px] text-text-muted mb-1">Brand Accent Color</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="color"
                     value={overrideAccent}
                     onChange={(e) => setOverrideAccent(e.target.value)}
-                    className="w-8 h-8 rounded-lg border border-slate-700 bg-transparent cursor-pointer"
+                    className="w-8 h-8 rounded-lg border border-subtle bg-transparent cursor-pointer"
                   />
                   <input
                     type="text"
                     value={overrideAccent}
                     onChange={(e) => setOverrideAccent(e.target.value)}
-                    className="flex-1 p-2 bg-[#111827] border border-slate-800 rounded-lg text-xs text-white font-mono"
+                    className="flex-1 p-2 bg-app border border-subtle rounded-lg text-xs text-text-primary font-mono"
                   />
                 </div>
               </div>
 
               {/* Display Font Override */}
               <div>
-                <label className="block text-[11px] text-slate-400 mb-1">Display Headings Font</label>
+                <label className="block text-[11px] text-text-muted mb-1">Display Headings Font</label>
                 <select
                   value={overrideDisplayFont}
                   onChange={(e) => setOverrideDisplayFont(e.target.value)}
-                  className="w-full p-2 bg-[#111827] border border-slate-800 rounded-lg text-xs text-white"
+                  className="w-full p-2 bg-app border border-subtle rounded-lg text-xs text-text-primary"
                 >
                   <option value="Inter-700">Inter (700 Bold)</option>
                   <option value="ArchivoBlack-400">Archivo Black (Impact Heavy)</option>
@@ -335,8 +336,8 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
               {/* Cut Cadence Slider Override */}
               <div>
                 <div className="flex justify-between items-center mb-1">
-                  <label className="text-[11px] text-slate-400">Target Cut Cadence</label>
-                  <span className="font-mono text-sky-400 font-bold">{overrideCutDuration}s</span>
+                  <label className="text-[11px] text-text-muted">Target Cut Cadence</label>
+                  <span className="font-mono text-accent-primary font-bold">{overrideCutDuration}s</span>
                 </div>
                 <input
                   type="range"
@@ -345,9 +346,9 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
                   step={0.1}
                   value={overrideCutDuration}
                   onChange={(e) => setOverrideCutDuration(Number(e.target.value))}
-                  className="w-full accent-sky-500 cursor-pointer"
+                  className="w-full accent-accent-primary cursor-pointer"
                 />
-                <div className="flex justify-between text-[9px] text-slate-500">
+                <div className="flex justify-between text-[9px] text-text-muted">
                   <span>0.8s (Ultra-Rapid)</span>
                   <span>1.6s (Balanced)</span>
                   <span>3.5s (Unhurried)</span>
@@ -357,13 +358,13 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
           </div>
 
           {/* 3. Additional Negative Constraints */}
-          <div className="p-4 rounded-xl bg-[#0E1526] border border-slate-800/90 space-y-3">
+          <div className="p-4 rounded-xl bg-card border border-subtle space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+              <span className="text-xs font-bold text-text-primary flex items-center gap-1.5">
                 <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
                 3. Additional Project Negative Guards (Banned Elements)
               </span>
-              <span className="text-[10px] text-slate-400">
+              <span className="text-[10px] text-text-muted">
                 {additionalConstraints.length} active custom rules
               </span>
             </div>
@@ -373,7 +374,7 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
               {additionalConstraints.map((rule, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center justify-between p-2 rounded-lg bg-[#111827] border border-slate-800 text-xs text-slate-300"
+                  className="flex items-center justify-between p-2 rounded-lg bg-app border border-subtle text-xs text-text-primary"
                 >
                   <span className="flex items-center gap-1.5">
                     <span className="text-rose-400 font-bold">✕</span>
@@ -382,7 +383,7 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
                   <button
                     type="button"
                     onClick={() => handleRemoveConstraint(idx)}
-                    className="p-1 rounded text-slate-500 hover:text-rose-400 transition"
+                    className="p-1 rounded text-text-muted hover:text-rose-400 transition"
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
@@ -398,14 +399,14 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
                 value={newConstraintInput}
                 onChange={(e) => setNewConstraintInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddConstraint()}
-                className="flex-1 p-2 bg-[#111827] border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+                className="flex-1 p-2 bg-app border border-subtle rounded-lg text-xs text-text-primary placeholder:text-text-muted/60 focus:outline-none focus:border-accent-primary"
               />
               <button
                 type="button"
                 onClick={handleAddConstraint}
-                className="flex items-center gap-1 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-lg border border-slate-700 transition"
+                className="flex items-center gap-1 px-3 py-2 bg-surface hover:bg-subtle/50 text-text-primary font-semibold text-xs rounded-lg border border-subtle transition"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-3.5 h-3.5 text-accent-primary" />
                 <span>Add Guard</span>
               </button>
             </div>
@@ -413,15 +414,15 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-800 bg-[#0F172A]/70">
-          <span className="text-[11px] text-slate-500">
-            Compiles resolved tokens into portable <code className="text-slate-400">STYLE.md</code>
+        <div className="flex items-center justify-between px-6 py-4 border-t border-subtle bg-surface">
+          <span className="text-[11px] text-text-muted">
+            Compiles resolved tokens into portable <code className="text-text-primary">STYLE.md</code>
           </span>
           <div className="flex items-center gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 text-xs text-slate-400 hover:text-white transition"
+              className="px-3 py-1.5 text-xs text-text-muted hover:text-text-primary transition"
             >
               Cancel
             </button>
@@ -429,7 +430,7 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
               type="button"
               onClick={handleApplyCascadingStyles}
               disabled={isApplying}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs shadow-lg shadow-sky-500/20 transition disabled:opacity-50"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent-primary hover:opacity-90 text-app font-bold text-xs shadow-lg transition disabled:opacity-50"
             >
               {isApplying ? (
                 <>

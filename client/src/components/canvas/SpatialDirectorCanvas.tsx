@@ -14,6 +14,8 @@ import {
 import { CustomVersionNode } from '../tree/CustomVersionNode.js';
 import { AgentCursorOverlay } from '../tree/AgentCursorOverlay.js';
 import { FilmProject, AgentPresence, VersionNode } from '../../types.js';
+import { IdeaFloatingHud } from './hud/IdeaFloatingHud.js';
+import { TasteFloatingHud } from './hud/TasteFloatingHud.js';
 import { AssetFloatingHud } from './hud/AssetFloatingHud.js';
 import { ScriptFloatingHud } from './hud/ScriptFloatingHud.js';
 import { ShotFloatingHud } from './hud/ShotFloatingHud.js';
@@ -203,9 +205,12 @@ function SpatialDirectorCanvasInner({
     Object.values(updatedNodes).forEach((n) => {
       const stage = n.stage || 'script';
       const defaultX = STAGE_DEFAULT_X[stage] || 600;
+      if (stage === 'taste' && !stageYOffsets['taste']) {
+        stageYOffsets['taste'] = 380;
+      }
       const curY = stageYOffsets[stage] || 120;
       n.position = { x: defaultX, y: curY };
-      stageYOffsets[stage] = curY + 230;
+      stageYOffsets[stage] = curY + 240;
 
       // fire patch async
       fetch(`http://localhost:3030/api/projects/${project.id}/nodes/${n.id}`, {
@@ -232,8 +237,11 @@ function SpatialDirectorCanvasInner({
 
       if (posX === undefined || posY === undefined) {
         posX = STAGE_DEFAULT_X[stage] || 600;
+        if (stage === 'taste' && !stageYCounter['taste']) {
+          stageYCounter['taste'] = 380;
+        }
         posY = stageYCounter[stage] || 120;
-        stageYCounter[stage] = posY + 230;
+        stageYCounter[stage] = posY + 240;
       }
 
       const isActiveCut = n.sceneId ? project.activeCut[n.sceneId] === n.id : false;
@@ -351,11 +359,13 @@ function SpatialDirectorCanvasInner({
     };
 
     switch (node.stage) {
+      case 'ideation':
+        return <IdeaFloatingHud key={node.id} {...commonProps} />;
+      case 'taste':
+        return <TasteFloatingHud key={node.id} {...commonProps} />;
       case 'assets':
         return <AssetFloatingHud key={node.id} {...commonProps} />;
       case 'script':
-      case 'ideation':
-      case 'taste':
         return <ScriptFloatingHud key={node.id} {...commonProps} />;
       case 'shot':
       case 'storyboard':
@@ -374,24 +384,24 @@ function SpatialDirectorCanvasInner({
           />
         );
       default:
-        return <ShotFloatingHud key={node.id} {...commonProps} />;
+        return <IdeaFloatingHud key={node.id} {...commonProps} />;
     }
   };
 
   return (
-    <div className="relative w-full h-full bg-[#09090B] overflow-hidden select-none flex flex-col">
+    <div className="relative w-full h-full bg-app overflow-hidden select-none flex flex-col">
       {/* Top Floating Mini-Nav Strip */}
-      <div className="absolute top-3 left-4 z-20 flex items-center gap-2 bg-[#121215]/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-[#27272A] shadow-xl text-xs font-mono">
-        <span className="text-white font-bold flex items-center gap-1.5">
-          <Compass className="w-3.5 h-3.5 text-white" />
+      <div className="absolute top-3 left-4 z-20 flex items-center gap-2 bg-surface/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-subtle shadow-xl text-xs font-mono">
+        <span className="text-text-primary font-bold flex items-center gap-1.5">
+          <Compass className="w-3.5 h-3.5 text-accent-primary" />
           <span>SPATIAL CANVAS</span>
         </span>
-        <span className="text-[#3F3F46]">|</span>
-        <span className="text-[#A1A1AA]">{Object.keys(project.nodes).length} Nodes</span>
+        <span className="text-subtle">|</span>
+        <span className="text-text-muted">{Object.keys(project.nodes).length} Nodes</span>
 
         <button
           onClick={handleBeautifyFlow}
-          className="ml-2 px-2 py-0.5 rounded text-[10px] font-bold bg-[#18181B] hover:bg-[#27272A] border border-[#27272A] text-white flex items-center gap-1 transition"
+          className="ml-2 px-2 py-0.5 rounded text-[10px] font-bold bg-card hover:bg-subtle border border-subtle text-text-primary flex items-center gap-1 transition"
           title="Auto-align and resolve overlapping nodes"
         >
           <Sparkles className="w-3 h-3 text-amber-400" />
@@ -401,7 +411,7 @@ function SpatialDirectorCanvasInner({
         {onOpenSubjectManager && (
           <button
             onClick={onOpenSubjectManager}
-            className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#18181B] hover:bg-[#27272A] border border-[#27272A] text-[#A1A1AA] hover:text-white flex items-center gap-1 transition"
+            className="px-2 py-0.5 rounded text-[10px] font-bold bg-card hover:bg-subtle border border-subtle text-text-muted hover:text-text-primary flex items-center gap-1 transition"
             title="Manage Subject Consistency Anchors"
           >
             <User className="w-3 h-3 text-purple-400" />
@@ -412,7 +422,7 @@ function SpatialDirectorCanvasInner({
         {onOpenTasteMixer && (
           <button
             onClick={onOpenTasteMixer}
-            className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#18181B] hover:bg-[#27272A] border border-[#27272A] text-[#A1A1AA] hover:text-white flex items-center gap-1 transition"
+            className="px-2 py-0.5 rounded text-[10px] font-bold bg-card hover:bg-subtle border border-subtle text-text-muted hover:text-text-primary flex items-center gap-1 transition"
             title="Director Taste DNA Settings"
           >
             <Sliders className="w-3 h-3 text-cyan-400" />
@@ -434,16 +444,16 @@ function SpatialDirectorCanvasInner({
           fitView
           minZoom={0.15}
           maxZoom={1.5}
-          className="bg-[#09090B] canvas-dots"
+          className="bg-app canvas-dots"
         >
-          <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#27272A" />
-          <Controls className="!bg-[#121215] !border-[#27272A] !text-[#FAFAFA] !rounded-xl overflow-hidden" />
+          <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="var(--dot-color)" />
+          <Controls className="!bg-surface !border-subtle !text-text-primary !rounded-xl overflow-hidden" />
           <MiniMap
             nodeColor={(n: any) =>
-              n.data?.isActiveCut ? '#EAB308' : n.data?.node?.stage === 'assets' ? '#A855F7' : '#27272A'
+              n.data?.isActiveCut ? '#EAB308' : n.data?.node?.stage === 'assets' ? '#A855F7' : 'var(--border-subtle)'
             }
-            maskColor="rgba(9, 9, 11, 0.85)"
-            className="!bg-[#121215] !border-[#27272A] rounded-xl overflow-hidden shadow-2xl"
+            maskColor="rgba(0, 0, 0, 0.75)"
+            className="!bg-surface !border-subtle rounded-xl overflow-hidden shadow-2xl"
           />
         </ReactFlow>
 
