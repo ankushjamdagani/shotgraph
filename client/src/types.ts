@@ -1,5 +1,24 @@
 export type ModelEngine = 'antigravity-cli' | 'claude-cli' | 'ollama' | 'hyperframes' | 'external';
 
+export interface SubjectVariant {
+  id: string;
+  label: string; // e.g. "Formal Charcoal Blazer (Default)", "Casual Black Tee"
+  promptDescription: string;
+  mediaUrl?: string; // e.g. "assets/subjects/anya/var_01.png"
+  isDefault: boolean;
+  createdAt: number;
+}
+
+export interface ProjectSubjectAnchor {
+  id: string;
+  name: string; // e.g. "Anya - Lead Presenter"
+  category: 'character' | 'product' | 'environment' | 'prop';
+  coreDescription: string; // Base physical traits, face, hair, materials
+  variants: SubjectVariant[];
+  activeVariantId: string;
+  createdAt: number;
+}
+
 export interface VersionNode {
   id: string;
   parentId: string | null;
@@ -10,6 +29,14 @@ export interface VersionNode {
   modelEngine: ModelEngine;
   modelName?: string;
   prompt: string;
+  boundSubjectAnchorIds?: string[];
+  shotContextOverrides?: {
+    lensFocalLength?: string;
+    aperture?: string;
+    cameraMovement?: string;
+    motionSpeed?: 'slow_cinematic' | 'normal' | 'high_energy' | 'time_lapse';
+    continuityNotes?: string;
+  };
   externalFallback?: {
     platform: string;
     synthesizedPrompt: string;
@@ -44,6 +71,7 @@ export interface FilmProject {
   }>;
   activeCut: Record<string, string>; // sceneId -> versionNodeId
   nodes: Record<string, VersionNode>;
+  subjectAnchors?: ProjectSubjectAnchor[];
   basePresetId?: string;
   styleOverrides?: Record<string, any>;
   additionalConstraints?: string[];

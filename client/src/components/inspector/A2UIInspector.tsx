@@ -1,35 +1,119 @@
-import React, { useState } from 'react';
-import { VersionNode, ModelEngine } from '../../types.js';
-import { Sparkles, Copy, Check, Sliders, Terminal, Cpu } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { VersionNode, FilmProject, ModelEngine, ProjectSubjectAnchor } from '../../types.js';
+import {
+  Sparkles,
+  Copy,
+  Check,
+  Sliders,
+  Terminal,
+  Cpu,
+  Camera,
+  Film,
+  User,
+  Clock,
+  Upload,
+  Image as ImageIcon,
+  ChevronRight,
+  ShieldCheck,
+} from 'lucide-react';
 
 interface A2UIInspectorProps {
   node: VersionNode | null;
+  project?: FilmProject | null;
+  onUpdateProject?: (updated: FilmProject) => void;
   onUpdatePrompt: (nodeId: string, newPrompt: string) => void;
   onExecuteSkill: (skillId: string, modelEngine: ModelEngine, input: any) => Promise<void>;
+  onOpenSubjectManager?: () => void;
+  onMediaDrop?: (nodeId: string, file: File) => void;
   streamingLog: string;
 }
 
 export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
   node,
+  project,
+  onUpdateProject,
   onUpdatePrompt,
   onExecuteSkill,
+  onOpenSubjectManager,
+  onMediaDrop,
   streamingLog,
 }) => {
   const [copied, setCopied] = useState(false);
+  const [copiedImage, setCopiedImage] = useState(false);
   const [selectedEngine, setSelectedEngine] = useState<ModelEngine>(node?.modelEngine || 'antigravity-cli');
-  const [targetPlatform, setTargetPlatform] = useState<'midjourney' | 'flux' | 'kling' | 'runway' | 'elevenlabs'>('midjourney');
+  const [targetPlatform, setTargetPlatform] = useState<
+    'runway' | 'kling' | 'luma' | 'minimax' | 'comfyui' | 'flux' | 'midjourney' | 'elevenlabs'
+  >('runway');
   const [promptText, setPromptText] = useState(node?.prompt || '');
   const [refinementInput, setRefinementInput] = useState('');
-  const [overshoot, setOvershoot] = useState(15);
-  const [surfaceStyle, setSurfaceStyle] = useState('liquid_glass');
   const [isExecuting, setIsExecuting] = useState(false);
+  const [isSynthesizing, setIsSynthesizing] = useState(false);
+  const [synthesisCache, setSynthesisCache] = useState<any>(null);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
 
-  React.useEffect(() => {
+  // Derive scene timing & context
+  const currentScene = useMemo(() => {
+    if (!project || !node) return null;
+    return project.scenes.find((s) => s.id === node.sceneId);
+  }, [project, node]);
+
+  const sceneDuration = currentScene?.targetDurationSec || 4;
+
+  // Active overrides from node
+  const overrides = node?.shotContextOverrides || {};
+  const lens = overrides.lensFocalLength || '35mm';
+  const aperture = overrides.aperture || 'f/1.8';
+  const cameraMove = overrides.cameraMovement || 'slow_dolly_in';
+  const motionSpeed = overrides.motionSpeed || 'slow_cinematic';
+  const boundAnchorIds = node?.boundSubjectAnchorIds || [];
+
+  const projectSubjects: ProjectSubjectAnchor[] = project?.subjectAnchors || [];
+
+  // Update prompt on node change
+  useEffect(() => {
     if (node) {
       setSelectedEngine(node.modelEngine);
       setPromptText(node.prompt);
+      setSynthesisCache(null);
     }
-  }, [node]);
+  }, [node?.id]);
+
+  // Auto-synthesize when platform or parameters change
+  const triggerSynthesize = async (platform = targetPlatform) => {
+    if (!project || !node) return;
+    setIsSynthesizing(true);
+    try {
+      const res = await fetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}/synthesize-prompt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetPlatform: platform }),
+      });
+      const data = await res.json();
+      if (data.success && data.result) {
+        setSynthesisCache(data.result);
+        if (data.node && onUpdateProject) {
+          onUpdateProject({
+            ...project,
+            nodes: {
+              ...project.nodes,
+              [node.id]: data.node,
+            },
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Failed to synthesize prompt:', err);
+    } finally {
+      setIsSynthesizing(false);
+    }
+  };
+
+  // Trigger initial synthesis on node selection if not cached
+  useEffect(() => {
+    if (node && project && !synthesisCache && !isSynthesizing) {
+      triggerSynthesize(targetPlatform);
+    }
+  }, [node?.id, targetPlatform]);
 
   if (!node) {
     return (
@@ -40,20 +124,92 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
     );
   }
 
-  const handleCopyExternalPrompt = () => {
-    const externalPrompt = `${node.prompt}, ${surfaceStyle} visual style, cinematic lighting, photorealistic 8k detail --ar 9:16 --v 6.1`;
-    navigator.clipboard.writeText(externalPrompt);
+  // Handle Shot Overrides update
+  const handleUpdateOverride = async (key: string, value: string) => {
+    if (!project || !node) return;
+    const newOverrides = {
+      ...(node.shotContextOverrides || {}),
+      [key]: value,
+    };
+
+    try {
+      const res = await fetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}/shot-overrides`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ overrides: newOverrides }),
+      });
+      const data = await res.json();
+      if (data.success && onUpdateProject) {
+        onUpdateProject({
+          ...project,
+          nodes: {
+            ...project.nodes,
+            [node.id]: data.node,
+          },
+        });
+        setTimeout(() => triggerSynthesize(targetPlatform), 100);
+      }
+    } catch (err) {
+      console.error('Failed to update shot override:', err);
+    }
+  };
+
+  // Toggle bound subject anchor
+  const handleToggleAnchor = async (subjectId: string) => {
+    if (!project || !node) return;
+    const currentBound = node.boundSubjectAnchorIds || [];
+    const newBound = currentBound.includes(subjectId)
+      ? currentBound.filter((id) => id !== subjectId)
+      : [...currentBound, subjectId];
+
+    try {
+      const res = await fetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}/subject-bindings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subjectAnchorIds: newBound }),
+      });
+      const data = await res.json();
+      if (data.success && onUpdateProject) {
+        onUpdateProject({
+          ...project,
+          nodes: {
+            ...project.nodes,
+            [node.id]: data.node,
+          },
+        });
+        setTimeout(() => triggerSynthesize(targetPlatform), 100);
+      }
+    } catch (err) {
+      console.error('Failed to toggle subject anchor binding:', err);
+    }
+  };
+
+  // Copy Platform Prompt
+  const handleCopyPrompt = () => {
+    const textToCopy =
+      synthesisCache?.allPlatformPrompts?.[targetPlatform]?.fullString ||
+      synthesisCache?.copyableFullString ||
+      node.prompt;
+    navigator.clipboard.writeText(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Copy reference image URL
+  const handleCopyImageUrl = (url: string) => {
+    navigator.clipboard.writeText(url);
+    setCopiedImage(true);
+    setTimeout(() => setCopiedImage(false), 2000);
+  };
+
+  // Plain-English refinement execution
   const handleRunGeneration = async () => {
     setIsExecuting(true);
     try {
       await onExecuteSkill('skill-beat-scriptwriter', selectedEngine, {
         selectedHook: promptText,
-        targetDurationSec: 30,
-        topicOrProduct: promptText,
+        targetDurationSec: sceneDuration,
+        topicOrProduct: refinementInput || promptText,
         keyPoints: ['Speed', 'Simplicity', 'Power'],
         callToAction: 'Try it free',
       });
@@ -62,13 +218,38 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
     }
   };
 
+  // Video Drag & Drop
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDraggingOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      if (onMediaDrop) {
+        onMediaDrop(node.id, file);
+      }
+    }
+  };
+
+  const activePromptDetail = synthesisCache?.allPlatformPrompts?.[targetPlatform];
+  const refImages = activePromptDetail?.referenceImageUrls || synthesisCache?.referenceImageUrls || [];
+
   return (
     <div className="flex flex-col h-full bg-[#0E131F] border-l border-slate-800 overflow-y-auto">
-      {/* Header */}
-      <div className="p-4 border-b border-slate-800/80 bg-[#0A0D14]/40">
+      {/* 1. Header */}
+      <div className="p-4 border-b border-slate-800/80 bg-[#0A0D14]/60">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider">
-            {node.stage} Inspector
+          <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+            <Camera className="w-3.5 h-3.5" />
+            Shot Director & Inspector
           </span>
           <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-300">
             {node.versionLabel}
@@ -78,11 +259,294 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
       </div>
 
       <div className="p-4 space-y-5 flex-1">
-        {/* 1. Model Engine Selector */}
+        {/* 2. Live Context Badges Bar */}
+        <div className="flex flex-wrap gap-1.5 p-2.5 rounded-xl bg-[#0A0D14] border border-slate-800/80 text-[10px] font-mono">
+          <div className="px-2 py-1 rounded-md bg-slate-900 border border-slate-800 text-sky-300 flex items-center gap-1">
+            <Clock className="w-3 h-3 text-sky-400" />
+            <span>{sceneDuration}s Duration</span>
+          </div>
+          <div className="px-2 py-1 rounded-md bg-slate-900 border border-slate-800 text-slate-300 flex items-center gap-1">
+            <Film className="w-3 h-3 text-amber-400" />
+            <span>{project?.aspectRatio || '9:16'} ({project?.fps || 30} FPS)</span>
+          </div>
+          <div className="px-2 py-1 rounded-md bg-slate-900 border border-slate-800 text-slate-300 flex items-center gap-1">
+            <Camera className="w-3 h-3 text-purple-400" />
+            <span>{lens} {aperture}</span>
+          </div>
+          <div className="px-2 py-1 rounded-md bg-slate-900 border border-slate-800 text-emerald-300 flex items-center gap-1">
+            <ShieldCheck className="w-3 h-3 text-emerald-400" />
+            <span>2-Layer Guards</span>
+          </div>
+        </div>
+
+        {/* 3. Interactive Shot Director Knobs */}
+        <div className="p-3.5 rounded-xl bg-[#111726]/80 border border-slate-800 space-y-3.5">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-200">
+            <div className="flex items-center gap-1.5">
+              <Camera className="w-3.5 h-3.5 text-sky-400" />
+              <span>Camera & Optics Overrides</span>
+            </div>
+            <span className="text-[10px] font-mono text-slate-400">Scene {currentScene?.order || 1}</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            {/* Focal Length */}
+            <div>
+              <label className="block text-[10px] uppercase font-mono text-slate-400 mb-1">
+                Focal Length
+              </label>
+              <select
+                value={lens}
+                onChange={(e) => handleUpdateOverride('lensFocalLength', e.target.value)}
+                className="w-full p-2 rounded-lg bg-[#0A0D14] border border-slate-800 text-xs text-white focus:outline-none focus:border-sky-500"
+              >
+                <option value="24mm">24mm (Wide Establishing)</option>
+                <option value="35mm">35mm (Cinematic Natural)</option>
+                <option value="50mm">50mm (Portrait Crisp)</option>
+                <option value="85mm">85mm (Compressed Macro)</option>
+              </select>
+            </div>
+
+            {/* Aperture */}
+            <div>
+              <label className="block text-[10px] uppercase font-mono text-slate-400 mb-1">
+                Aperture & Depth
+              </label>
+              <select
+                value={aperture}
+                onChange={(e) => handleUpdateOverride('aperture', e.target.value)}
+                className="w-full p-2 rounded-lg bg-[#0A0D14] border border-slate-800 text-xs text-white focus:outline-none focus:border-sky-500"
+              >
+                <option value="f/1.4">f/1.4 (Dreamy Bokeh)</option>
+                <option value="f/1.8">f/1.8 (Soft Natural Defocus)</option>
+                <option value="f/2.8">f/2.8 (Sharp Subject & Depth)</option>
+                <option value="f/4">f/4 (Deep Field Detail)</option>
+              </select>
+            </div>
+
+            {/* Camera Movement */}
+            <div>
+              <label className="block text-[10px] uppercase font-mono text-slate-400 mb-1">
+                Camera Movement
+              </label>
+              <select
+                value={cameraMove}
+                onChange={(e) => handleUpdateOverride('cameraMovement', e.target.value)}
+                className="w-full p-2 rounded-lg bg-[#0A0D14] border border-slate-800 text-xs text-white focus:outline-none focus:border-sky-500"
+              >
+                <option value="slow_dolly_in">Slow Dolly In</option>
+                <option value="smooth_tracking_pan">Smooth Tracking Pan</option>
+                <option value="crane_up">Crane / Pedestal Up</option>
+                <option value="orbit">Orbit Around Subject</option>
+                <option value="static_lock">Static Tripod Lock</option>
+              </select>
+            </div>
+
+            {/* Motion Speed */}
+            <div>
+              <label className="block text-[10px] uppercase font-mono text-slate-400 mb-1">
+                Motion Speed
+              </label>
+              <select
+                value={motionSpeed}
+                onChange={(e) => handleUpdateOverride('motionSpeed', e.target.value)}
+                className="w-full p-2 rounded-lg bg-[#0A0D14] border border-slate-800 text-xs text-white focus:outline-none focus:border-sky-500"
+              >
+                <option value="slow_cinematic">Slow Cinematic</option>
+                <option value="normal">Normal Speed</option>
+                <option value="high_energy">Dynamic High Energy</option>
+                <option value="time_lapse">Time Lapse</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Subject Anchors Binding Selector */}
+          <div className="pt-2 border-t border-slate-800/80">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-[10px] uppercase font-mono text-slate-400 flex items-center gap-1">
+                <User className="w-3 h-3 text-sky-400" />
+                Bound Subject Anchors
+              </label>
+              {onOpenSubjectManager && (
+                <button
+                  onClick={onOpenSubjectManager}
+                  className="text-[10px] font-mono text-sky-400 hover:text-sky-300 transition flex items-center gap-0.5"
+                >
+                  Manage Roster <ChevronRight className="w-2.5 h-2.5" />
+                </button>
+              )}
+            </div>
+
+            {projectSubjects.length === 0 ? (
+              <div className="p-2 rounded-lg bg-[#0A0D14] border border-dashed border-slate-800 text-[11px] text-slate-400 text-center">
+                No subjects defined.{' '}
+                {onOpenSubjectManager && (
+                  <button onClick={onOpenSubjectManager} className="text-sky-400 underline">
+                    Add project anchors
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {projectSubjects.map((sub) => {
+                  const isBound = boundAnchorIds.includes(sub.id);
+                  const activeVar = sub.variants.find((v) => v.id === sub.activeVariantId) || sub.variants[0];
+                  return (
+                    <button
+                      key={sub.id}
+                      onClick={() => handleToggleAnchor(sub.id)}
+                      className={`px-2 py-1 rounded-lg text-[10px] font-mono flex items-center gap-1.5 border transition ${
+                        isBound
+                          ? 'bg-sky-500/15 border-sky-500 text-sky-300 font-bold'
+                          : 'bg-[#0A0D14] border-slate-800 text-slate-400 hover:border-slate-700'
+                      }`}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${isBound ? 'bg-sky-400' : 'bg-slate-600'}`} />
+                      <span>{sub.name}</span>
+                      {activeVar && <span className="text-[9px] opacity-75">({activeVar.label})</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 4. Platform-Tailored Synthesizer Tabs */}
+        <div className="p-3.5 rounded-xl bg-[#111726]/80 border border-slate-800 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-white flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+              Model-Tailored Prompt Synthesizer
+            </span>
+            <button
+              onClick={() => triggerSynthesize(targetPlatform)}
+              disabled={isSynthesizing}
+              className="text-[10px] font-mono text-sky-400 hover:text-sky-300 disabled:opacity-50"
+            >
+              {isSynthesizing ? 'Synthesizing...' : 'Re-synthesize'}
+            </button>
+          </div>
+
+          {/* Platform Tabs */}
+          <div className="grid grid-cols-4 gap-1 p-1 rounded-lg bg-[#070A0F] border border-slate-800 text-[10px] font-mono">
+            {[
+              { id: 'runway', label: 'Runway Gen-3' },
+              { id: 'kling', label: 'Kling 1.5' },
+              { id: 'luma', label: 'Luma' },
+              { id: 'minimax', label: 'Minimax' },
+              { id: 'comfyui', label: 'ComfyUI' },
+              { id: 'flux', label: 'Flux Still' },
+              { id: 'midjourney', label: 'Midjourney' },
+              { id: 'elevenlabs', label: 'ElevenLabs' },
+            ].map((p) => (
+              <button
+                key={p.id}
+                onClick={() => {
+                  setTargetPlatform(p.id as any);
+                  triggerSynthesize(p.id as any);
+                }}
+                className={`py-1 px-1.5 rounded text-center truncate transition ${
+                  targetPlatform === p.id
+                    ? 'bg-sky-500 text-slate-950 font-bold'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Live Prompt Output Preview */}
+          <div className="p-2.5 rounded-lg bg-[#070A0F] border border-slate-800/80 font-mono text-xs text-slate-200 space-y-2">
+            <div className="text-[10px] text-slate-400 flex items-center justify-between border-b border-slate-800/60 pb-1">
+              <span>{activePromptDetail?.platform || targetPlatform.toUpperCase()} PROMPT</span>
+              <span className="text-sky-400">{sceneDuration}s • {project?.aspectRatio}</span>
+            </div>
+            <div className="text-[11px] leading-relaxed select-all text-slate-100 max-h-36 overflow-y-auto">
+              {activePromptDetail?.prompt || synthesisCache?.finalPrompt || 'Synthesizing prompt...'}
+            </div>
+
+            {/* Negative Guards Box */}
+            {(activePromptDetail?.negativePrompt || synthesisCache?.negativePrompt) &&
+              ['kling', 'comfyui', 'flux', 'midjourney'].includes(targetPlatform) && (
+                <div className="pt-2 border-t border-slate-800/60">
+                  <div className="text-[9px] uppercase tracking-wider text-rose-400 font-bold mb-0.5">
+                    Two-Layer Negative Guards
+                  </div>
+                  <div className="text-[10px] text-rose-300/80 line-clamp-2 select-all">
+                    {activePromptDetail?.negativePrompt || synthesisCache?.negativePrompt}
+                  </div>
+                </div>
+              )}
+          </div>
+
+          {/* Active Reference Image for Image-to-Video models */}
+          {refImages.length > 0 && ['runway', 'kling', 'luma', 'flux', 'midjourney'].includes(targetPlatform) && (
+            <div className="p-2 rounded-lg bg-[#0A0D14] border border-slate-800 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2 text-slate-300 truncate">
+                <ImageIcon className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                <span className="text-[10px] font-mono truncate">{refImages[0]}</span>
+              </div>
+              <button
+                onClick={() => handleCopyImageUrl(refImages[0])}
+                className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 hover:bg-slate-700 text-slate-300 shrink-0 transition"
+              >
+                {copiedImage ? 'Copied Path!' : 'Copy Asset Path'}
+              </button>
+            </div>
+          )}
+
+          {/* Copy Prompt Button */}
+          <button
+            onClick={handleCopyPrompt}
+            className="w-full py-2 px-3 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow transition"
+          >
+            {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? 'Copied with Rich Context & Tokens!' : `Copy for ${targetPlatform.toUpperCase()}`}
+          </button>
+        </div>
+
+        {/* 5. In-Inspector Video Dropzone */}
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`p-4 rounded-xl border-2 border-dashed transition text-center cursor-pointer ${
+            isDraggingOver
+              ? 'bg-sky-950/40 border-sky-400 text-white'
+              : 'bg-[#0A0D14]/60 border-slate-800/80 text-slate-400 hover:border-slate-700'
+          }`}
+        >
+          <Upload className="w-5 h-5 mx-auto mb-1.5 text-sky-400" />
+          <div className="text-xs font-semibold text-slate-200">Drop Rendered Video Here</div>
+          <p className="text-[10px] text-slate-400 mt-0.5">
+            Target duration: <span className="font-mono text-sky-400">{sceneDuration}s</span>. Auto-launches trimmer if length differs.
+          </p>
+        </div>
+
+        {/* 6. Active Generation Prompt Editor */}
+        <div>
+          <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            Active Generation Concept
+          </label>
+          <textarea
+            value={promptText}
+            onChange={(e) => {
+              setPromptText(e.target.value);
+              onUpdatePrompt(node.id, e.target.value);
+            }}
+            rows={2}
+            className="w-full p-2.5 rounded-lg bg-[#0A0D14] border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-sky-500 transition resize-none font-mono"
+            placeholder="Describe what to generate for this step..."
+          />
+        </div>
+
+        {/* 7. Model Engine Runner Selector */}
         <div>
           <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-300 mb-2">
             <Cpu className="w-3.5 h-3.5 text-sky-400" />
-            Model Runner (Zero API Key)
+            Model Runner (Zero Cloud API Keys)
           </label>
           <div className="grid grid-cols-2 gap-1.5">
             {[
@@ -107,89 +571,7 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
           </div>
         </div>
 
-        {/* 2. Prompt Editor */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-            Active Generation Prompt
-          </label>
-          <textarea
-            value={promptText}
-            onChange={(e) => {
-              setPromptText(e.target.value);
-              onUpdatePrompt(node.id, e.target.value);
-            }}
-            rows={3}
-            className="w-full p-2.5 rounded-lg bg-[#0A0D14] border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-sky-500 transition resize-none font-mono"
-            placeholder="Describe what to generate for this step..."
-          />
-        </div>
-
-        {/* 3. Turn the Knobs (A2UI Controls) */}
-        <div className="p-3.5 rounded-xl bg-[#111726]/80 border border-slate-800 space-y-3">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-200">
-            <Sliders className="w-3.5 h-3.5 text-amber-400" />
-            <span>Turn the Knobs</span>
-          </div>
-
-          <div>
-            <div className="flex justify-between text-[11px] text-slate-300 mb-1">
-              <span>Motion Overshoot</span>
-              <span className="font-mono text-sky-400">{overshoot}%</span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="50"
-              value={overshoot}
-              onChange={(e) => setOvershoot(Number(e.target.value))}
-              className="w-full accent-sky-400 cursor-pointer"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] text-slate-300 mb-1">Surface Treatment</label>
-            <select
-              value={surfaceStyle}
-              onChange={(e) => setSurfaceStyle(e.target.value)}
-              className="w-full p-2 rounded-lg bg-[#0A0D14] border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-sky-500"
-            >
-              <option value="liquid_glass">Liquid Glass (Frosted Blur)</option>
-              <option value="kinetic_type">Kinetic Type (High Contrast)</option>
-              <option value="editorial_grain">Editorial Grain (Paper & Serif)</option>
-              <option value="pop_bold">Pop Bold (Neon & Chunky Borders)</option>
-            </select>
-          </div>
-        </div>
-
-        {/* 4. External Prompt Synthesizer Fallback */}
-        <div className="p-3.5 rounded-xl bg-[#111726]/80 border border-slate-800 space-y-2.5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-200">Copy Prompt for Elsewhere</span>
-            <select
-              value={targetPlatform}
-              onChange={(e) => setTargetPlatform(e.target.value as any)}
-              className="px-2 py-0.5 rounded bg-[#0A0D14] border border-slate-800 text-[10px] text-slate-300"
-            >
-              <option value="midjourney">Midjourney</option>
-              <option value="flux">Flux</option>
-              <option value="kling">Kling</option>
-              <option value="runway">Runway</option>
-              <option value="elevenlabs">ElevenLabs</option>
-            </select>
-          </div>
-          <p className="text-[11px] text-slate-400 leading-relaxed">
-            Auto-injects your project's exact camera lens, lighting, and palette rules.
-          </p>
-          <button
-            onClick={handleCopyExternalPrompt}
-            className="w-full py-2 px-3 rounded-lg bg-[#0A0D14] border border-slate-700 hover:border-sky-400 text-xs font-medium text-slate-200 flex items-center justify-center gap-1.5 transition"
-          >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-sky-400" />}
-            {copied ? 'Copied with Style Tokens!' : `Copy for ${targetPlatform.toUpperCase()}`}
-          </button>
-        </div>
-
-        {/* 5. Plain-English Refinement ("Say what feels off") */}
+        {/* 8. Plain-English Refinement ("Say what feels off") */}
         <div>
           <label className="block text-xs font-semibold text-slate-300 mb-1.5">
             Say what feels off
@@ -199,7 +581,7 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
               type="text"
               value={refinementInput}
               onChange={(e) => setRefinementInput(e.target.value)}
-              placeholder="e.g. Make hook bigger, remove zoom at 00:03..."
+              placeholder="e.g. Make hook bigger, add punch-in zoom..."
               className="flex-1 p-2 rounded-lg bg-[#0A0D14] border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-sky-500 font-mono"
             />
             <button
@@ -213,7 +595,7 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
           </div>
         </div>
 
-        {/* 6. Live Streaming Terminal Drawer */}
+        {/* 9. Live Streaming Terminal Drawer */}
         {streamingLog && (
           <div className="rounded-xl bg-[#070A0F] border border-slate-800 p-3 font-mono text-[10px] text-emerald-400 overflow-hidden">
             <div className="flex items-center gap-1.5 text-slate-400 mb-1.5 border-b border-slate-800/60 pb-1">

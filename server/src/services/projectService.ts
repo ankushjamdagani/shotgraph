@@ -7,6 +7,25 @@ import { ProjectRegistry, GlobalStylePreset } from './projectRegistry.js';
 
 const execAsync = promisify(exec);
 
+export interface SubjectVariant {
+  id: string;
+  label: string; // e.g. "Formal Charcoal Blazer (Default)", "Casual Black Tee"
+  promptDescription: string;
+  mediaUrl?: string; // e.g. "assets/subjects/anya/var_01.png"
+  isDefault: boolean;
+  createdAt: number;
+}
+
+export interface ProjectSubjectAnchor {
+  id: string;
+  name: string; // e.g. "Anya - Lead Presenter"
+  category: 'character' | 'product' | 'environment' | 'prop';
+  coreDescription: string; // Base physical traits, face, hair, materials
+  variants: SubjectVariant[];
+  activeVariantId: string;
+  createdAt: number;
+}
+
 export interface VersionNode {
   id: string;
   parentId: string | null;
@@ -17,6 +36,14 @@ export interface VersionNode {
   modelEngine: 'antigravity-cli' | 'claude-cli' | 'ollama' | 'hyperframes' | 'external';
   modelName?: string;
   prompt: string;
+  boundSubjectAnchorIds?: string[];
+  shotContextOverrides?: {
+    lensFocalLength?: string;
+    aperture?: string;
+    cameraMovement?: string;
+    motionSpeed?: 'slow_cinematic' | 'normal' | 'high_energy' | 'time_lapse';
+    continuityNotes?: string;
+  };
   externalFallback?: {
     platform: string;
     synthesizedPrompt: string;
@@ -51,6 +78,7 @@ export interface FilmProject {
   }>;
   activeCut: Record<string, string>; // sceneId -> versionNodeId
   nodes: Record<string, VersionNode>;
+  subjectAnchors?: ProjectSubjectAnchor[];
   basePresetId?: string;
   styleOverrides?: Record<string, any>;
   additionalConstraints?: string[];
@@ -80,6 +108,7 @@ export class ProjectService {
       '.studio',
       'raw_footage',
       'references',
+      'assets/subjects',
       'assets/voice',
       'assets/sfx',
       'assets/music',
@@ -170,6 +199,7 @@ export class ProjectService {
       scenes,
       activeCut,
       nodes: initialNodes,
+      subjectAnchors: [],
       basePresetId,
       styleOverrides: {},
       additionalConstraints: [],
@@ -203,6 +233,7 @@ export class ProjectService {
     try {
       const data = await fs.readFile(projectJsonPath, 'utf-8');
       const project = JSON.parse(data) as FilmProject;
+      project.subjectAnchors = project.subjectAnchors || [];
       // Register in central index as recently opened
       await ProjectRegistry.registerProject(projectRoot, project, {
         basePresetId: project.basePresetId,

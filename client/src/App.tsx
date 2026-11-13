@@ -6,6 +6,7 @@ import { A2UIInspector } from './components/inspector/A2UIInspector.js';
 import { TasteMixerModal } from './components/taste/TasteMixerModal.js';
 import { DaVinciExportModal } from './components/export/DaVinciExportModal.js';
 import { MediaTrimmerModal } from './components/trimmer/MediaTrimmerModal.js';
+import { SubjectManagerModal } from './components/project/SubjectManagerModal.js';
 import { CommandPalette } from './components/palette/CommandPalette.js';
 import { ProjectHubModal } from './components/project/ProjectHubModal.js';
 import { ThemeCustomizer, StudioTheme, StudioLayout } from './components/ui-ux/ThemeCustomizer.js';
@@ -17,6 +18,7 @@ import {
   Folder,
   ChevronDown,
   LayoutGrid,
+  User,
 } from 'lucide-react';
 
 export default function App() {
@@ -29,6 +31,7 @@ export default function App() {
   // Modals
   const [isProjectHubOpen, setIsProjectHubOpen] = useState(false);
   const [isTasteMixerOpen, setIsTasteMixerOpen] = useState(false);
+  const [isSubjectManagerOpen, setIsSubjectManagerOpen] = useState(false);
   const [isDaVinciExportOpen, setIsDaVinciExportOpen] = useState(false);
   const [isCmdPaletteOpen, setIsCmdPaletteOpen] = useState(false);
   const [trimmerData, setTrimmerData] = useState<{
@@ -333,6 +336,17 @@ export default function App() {
           />
 
           <button
+            onClick={() => setIsSubjectManagerOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#0A0D14] border border-slate-800 hover:border-sky-400/50 text-slate-200 transition"
+          >
+            <User className="w-3.5 h-3.5 text-sky-400" />
+            <span>Subject Anchors</span>
+            <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-slate-800 text-sky-300">
+              {project.subjectAnchors?.length || 0}
+            </span>
+          </button>
+
+          <button
             onClick={() => setIsTasteMixerOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#0A0D14] border border-slate-800 hover:border-amber-400/50 text-slate-200 transition"
           >
@@ -386,12 +400,16 @@ export default function App() {
             <div className="flex-1 overflow-hidden">
               <A2UIInspector
                 node={selectedNode}
+                project={project}
+                onUpdateProject={(updated) => setProject(updated)}
                 onUpdatePrompt={(id, prompt) => {
                   if (project.nodes[id]) {
                     project.nodes[id].prompt = prompt;
                   }
                 }}
                 onExecuteSkill={handleExecuteSkill}
+                onOpenSubjectManager={() => setIsSubjectManagerOpen(true)}
+                onMediaDrop={handleMediaDrop}
                 streamingLog={streamingLog}
               />
             </div>
@@ -415,6 +433,14 @@ export default function App() {
       <TasteMixerModal
         isOpen={isTasteMixerOpen}
         onClose={() => setIsTasteMixerOpen(false)}
+        project={project}
+        onUpdateProject={(updatedProject) => setProject(updatedProject)}
+      />
+
+      {/* Project Subject Anchors & Asset Manager Modal */}
+      <SubjectManagerModal
+        isOpen={isSubjectManagerOpen}
+        onClose={() => setIsSubjectManagerOpen(false)}
         project={project}
         onUpdateProject={(updatedProject) => setProject(updatedProject)}
       />

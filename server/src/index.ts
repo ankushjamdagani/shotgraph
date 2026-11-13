@@ -5,8 +5,9 @@ import fastifyStatic from '@fastify/static';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import chokidar, { FSWatcher } from 'chokidar';
+import { nanoid } from 'nanoid';
 import { initializeSkills, SkillRegistry } from './skills/index.js';
-import { ProjectService, FilmProject } from './services/projectService.js';
+import { ProjectService, FilmProject, ProjectSubjectAnchor, SubjectVariant } from './services/projectService.js';
 import { ProjectRegistry, GlobalStylePreset } from './services/projectRegistry.js';
 import { AgentManager } from './swarm/agentManager.js';
 import { AGUIServerMessage, AGUIClientMessageSchema } from './protocol/aguiEvents.js';
@@ -582,7 +583,322 @@ server.post('/api/export/davinci', async (req, reply) => {
 });
 
 // ==========================================
-// 7. Multi-Tab Scoped WebSocket AG-UI Gateway
+// 7. Project Subject Anchors & Asset Variants
+// ==========================================
+
+// List all project subject anchors
+server.get('/api/projects/:id/subjects', async (req, reply) => {
+  const { id } = req.params as { id: string };
+  const { project } = await resolveProjectRoot(id);
+  if (!project) {
+    reply.status(404);
+    return { success: false, error: 'Project not found' };
+  }
+  return { success: true, subjects: project.subjectAnchors || [] };
+});
+
+// Create or update a subject anchor
+server.post('/api/projects/:id/subjects', async (req, reply) => {
+  const { id } = req.params as { id: string };
+  const { project, projectRoot } = await resolveProjectRoot(id);
+  if (!project) {
+    reply.status(404);
+    return { success: false, error: 'Project not found' };
+  }
+
+  const {
+    id: subjectIdInput,
+    name,
+    category = 'character',
+    coreDescription,
+    variants,
+    activeVariantId,
+  } = (req.body as any) || {};
+
+  if (!name || !coreDescription) {
+    reply.status(400);
+    return { success: false, error: 'Name and core description are required' };
+  }
+
+  project.subjectAnchors = project.subjectAnchors || [];
+  const subjectId = subjectIdInput || `subj_${nanoid(6)}`;
+
+  // Ensure assets/subjects/<subjectId> directory exists
+  const subjectDir = path.join(projectRoot, 'assets', 'subjects', subjectId);
+  await fs.mkdir(subjectDir, { recursive: true });
+
+  const defaultVariant: SubjectVariant = {
+    id: `var_${nanoid(6)}`,
+    label: 'Default Visual',
+    promptDescription: coreDescription,
+    isDefault: true,
+    createdAt: Date.now(),
+  };
+
+  const existingIndex = project.subjectAnchors.findIndex((s) => s.id === subjectId);
+  if (existingIndex >= 0) {
+    const existing = project.subjectAnchors[existingIndex];
+    existing.name = name;
+    existing.category = category;
+    existing.coreDescription = coreDescription;
+    if (variants && Array.isArray(variants)) {
+      existing.variants = variants;
+    }
+    if (activeVariantId) {
+      existing.activeVariantId = activeVariantId;
+    }
+    project.subjectAnchors[existingIndex] = existing;
+  } else {
+    const newAnchor: ProjectSubjectAnchor = {
+      id: subjectId,
+      name,
+      category,
+      coreDescription,
+      variants: variants && variants.length > 0 ? variants : [defaultVariant],
+      activeVariantId: activeVariantId || (variants && variants[0]?.id) || defaultVariant.id,
+      createdAt: Date.now(),
+    };
+    project.subjectAnchors.push(newAnchor);
+  }
+
+  await ProjectService.saveProject(project);
+  return { success: true, subjectId, subjects: project.subjectAnchors };
+});
+
+// Delete a subject anchor
+server.delete('/api/projects/:id/subjects/:subjectId', async (req, reply) => {
+  const { id, subjectId } = req.params as { id: string; subjectId: string };
+  const { project } = await resolveProjectRoot(id);
+  if (!project) {
+    reply.status(404);
+    return { success: false, error: 'Project not found' };
+  }
+
+  project.subjectAnchors = (project.subjectAnchors || []).filter((s) => s.id !== subjectId);
+
+  // Clean up any references in nodes
+  for (const node of Object.values(project.nodes)) {
+    if (node.boundSubjectAnchorIds) {
+      node.boundSubjectAnchorIds = node.boundSubjectAnchorIds.filter((sid) => sid !== subjectId);
+    }
+  }
+
+  await ProjectService.saveProject(project);
+  return { success: true, subjects: project.subjectAnchors };
+});
+
+// Add or update a subject variant
+server.post('/api/projects/:id/subjects/:subjectId/variants', async (req, reply) => {
+  const { id, subjectId } = req.params as { id: string; subjectId: string };
+  const { project } = await resolveProjectRoot(id);
+  if (!project) {
+    reply.status(404);
+    return { success: false, error: 'Project not found' };
+  }
+
+  const subject = (project.subjectAnchors || []).find((s) => s.id === subjectId);
+  if (!subject) {
+    reply.status(404);
+    return { success: false, error: 'Subject anchor not found' };
+  }
+
+  const { id: variantIdInput, label, promptDescription, mediaUrl, isDefault } = (req.body as any) || {};
+  if (!label || !promptDescription) {
+    reply.status(400);
+    return { success: false, error: 'Variant label and prompt description are required' };
+  }
+
+  const variantId = variantIdInput || `var_${nanoid(6)}`;
+  const variantIndex = subject.variants.findIndex((v) => v.id === variantId);
+
+  if (isDefault) {
+    subject.variants.forEach((v) => (v.isDefault = false));
+    subject.activeVariantId = variantId;
+  }
+
+  if (variantIndex >= 0) {
+    subject.variants[variantIndex] = {
+      ...subject.variants[variantIndex],
+      label,
+      promptDescription,
+      mediaUrl: mediaUrl || subject.variants[variantIndex].mediaUrl,
+      isDefault: isDefault ?? subject.variants[variantIndex].isDefault,
+    };
+  } else {
+    subject.variants.push({
+      id: variantId,
+      label,
+      promptDescription,
+      mediaUrl,
+      isDefault: isDefault || subject.variants.length === 0,
+      createdAt: Date.now(),
+    });
+    if (subject.variants.length === 1 || isDefault) {
+      subject.activeVariantId = variantId;
+    }
+  }
+
+  await ProjectService.saveProject(project);
+  return { success: true, variantId, subject };
+});
+
+// Set active variant for a subject anchor
+server.post('/api/projects/:id/subjects/:subjectId/active-variant', async (req, reply) => {
+  const { id, subjectId } = req.params as { id: string; subjectId: string };
+  const { activeVariantId } = (req.body as any) || {};
+  const { project } = await resolveProjectRoot(id);
+  if (!project) {
+    reply.status(404);
+    return { success: false, error: 'Project not found' };
+  }
+
+  const subject = (project.subjectAnchors || []).find((s) => s.id === subjectId);
+  if (!subject) {
+    reply.status(404);
+    return { success: false, error: 'Subject anchor not found' };
+  }
+
+  const variant = subject.variants.find((v) => v.id === activeVariantId);
+  if (!variant) {
+    reply.status(400);
+    return { success: false, error: 'Variant not found on subject' };
+  }
+
+  subject.activeVariantId = activeVariantId;
+  await ProjectService.saveProject(project);
+  return { success: true, subject };
+});
+
+// Bind subject anchors to a scene node
+server.post('/api/projects/:id/nodes/:nodeId/subject-bindings', async (req, reply) => {
+  const { id, nodeId } = req.params as { id: string; nodeId: string };
+  const { subjectAnchorIds } = (req.body as any) || {};
+  const { project } = await resolveProjectRoot(id);
+  if (!project) {
+    reply.status(404);
+    return { success: false, error: 'Project not found' };
+  }
+
+  const node = project.nodes[nodeId];
+  if (!node) {
+    reply.status(404);
+    return { success: false, error: 'Node not found' };
+  }
+
+  node.boundSubjectAnchorIds = Array.isArray(subjectAnchorIds) ? subjectAnchorIds : [];
+  await ProjectService.saveProject(project);
+  return { success: true, node };
+});
+
+// Update shot context overrides for a scene node
+server.post('/api/projects/:id/nodes/:nodeId/shot-overrides', async (req, reply) => {
+  const { id, nodeId } = req.params as { id: string; nodeId: string };
+  const { overrides } = (req.body as any) || {};
+  const { project } = await resolveProjectRoot(id);
+  if (!project) {
+    reply.status(404);
+    return { success: false, error: 'Project not found' };
+  }
+
+  const node = project.nodes[nodeId];
+  if (!node) {
+    reply.status(404);
+    return { success: false, error: 'Node not found' };
+  }
+
+  node.shotContextOverrides = {
+    ...(node.shotContextOverrides || {}),
+    ...(overrides || {}),
+  };
+  await ProjectService.saveProject(project);
+  return { success: true, node };
+});
+
+// Synthesize rich contextual prompt for a scene node
+server.post('/api/projects/:id/nodes/:nodeId/synthesize-prompt', async (req, reply) => {
+  const { id, nodeId } = req.params as { id: string; nodeId: string };
+  const { targetPlatform = 'runway' } = (req.body as any) || {};
+  const { project, projectRoot } = await resolveProjectRoot(id);
+  if (!project) {
+    reply.status(404);
+    return { success: false, error: 'Project not found' };
+  }
+
+  const node = project.nodes[nodeId];
+  if (!node) {
+    reply.status(404);
+    return { success: false, error: 'Node not found' };
+  }
+
+  // Derive scene timing and continuity
+  const scene = project.scenes.find((s) => s.id === node.sceneId);
+  const durationSec = scene?.targetDurationSec || 4;
+
+  const sceneIndex = project.scenes.findIndex((s) => s.id === node.sceneId);
+  let continuityContext = '';
+  if (sceneIndex > 0) {
+    const prevScene = project.scenes[sceneIndex - 1];
+    continuityContext += `Incoming from ${prevScene.name}. `;
+  }
+  if (sceneIndex >= 0 && sceneIndex < project.scenes.length - 1) {
+    const nextScene = project.scenes[sceneIndex + 1];
+    continuityContext += `Transitioning into ${nextScene.name}.`;
+  }
+
+  // Collect bound subject anchors
+  const boundAnchors = (project.subjectAnchors || [])
+    .filter((a) => (node.boundSubjectAnchorIds || []).includes(a.id))
+    .map((a) => {
+      const activeVar = a.variants.find((v) => v.id === a.activeVariantId) || a.variants[0];
+      return {
+        id: a.id,
+        name: a.name,
+        coreDescription: a.coreDescription,
+        variantLabel: activeVar?.label,
+        variantDescription: activeVar?.promptDescription,
+        mediaUrl: activeVar?.mediaUrl,
+      };
+    });
+
+  const overrides = node.shotContextOverrides || {};
+
+  const synthesisResult: any = await SkillRegistry.execute(
+    'skill-prompt-synthesizer',
+    {
+      targetPlatform,
+      shotConcept: node.prompt || node.title,
+      aspectRatio: project.aspectRatio,
+      durationSec,
+      fps: project.fps,
+      shotType: 'medium_shot',
+      lensFocalLength: overrides.lensFocalLength || '35mm',
+      aperture: overrides.aperture || 'f/1.8',
+      cameraMovement: overrides.cameraMovement || 'slow_dolly_in',
+      motionSpeed: overrides.motionSpeed || 'slow_cinematic',
+      continuityContext: overrides.continuityNotes || continuityContext,
+      spokenVoiceover: node.artifacts?.textContent,
+      subjectAnchors: boundAnchors,
+    },
+    {
+      projectRoot,
+      styleGuideMd: project.styleMarkdown,
+      styleTokensJson: project.styleTokens,
+    }
+  );
+
+  // Update node with external fallback metadata
+  node.externalFallback = {
+    platform: targetPlatform,
+    synthesizedPrompt: synthesisResult.copyableFullString,
+    status: 'prompt_copied',
+  };
+  await ProjectService.saveProject(project);
+
+  return { success: true, result: synthesisResult, node };
+});
+
+// ==========================================
+// 8. Multi-Tab Scoped WebSocket AG-UI Gateway
 // ==========================================
 server.get('/ws/ag-ui', { websocket: true }, (connection, req) => {
   const query = (req.query as any) || {};

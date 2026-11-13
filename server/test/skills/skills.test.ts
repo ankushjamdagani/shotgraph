@@ -137,6 +137,82 @@ describe('Atomic Skill Swarm Suite', () => {
     expect(out.copyableFullString).toContain('--no');
   });
 
+  it('skillPromptSynthesizer synthesizes rich contextual prompt with optics, camera motion, continuity, subject anchors, and 2-layer negative guards', async () => {
+    const richOut = await skillPromptSynthesizer.execute(
+      {
+        targetPlatform: 'runway',
+        shotConcept: 'Founder demonstrates next-generation biometric interface',
+        aspectRatio: '9:16',
+        durationSec: 5,
+        fps: 30,
+        shotType: 'medium_shot',
+        lensFocalLength: '35mm',
+        aperture: 'f/1.8',
+        cameraMovement: 'slow_dolly_in',
+        motionSpeed: 'slow_cinematic',
+        continuityContext: 'Incoming from wide laboratory reveal at 00:03',
+        spokenVoiceover: 'Everything you touch transforms in real time.',
+        subjectAnchors: [
+          {
+            id: 'subj_anya',
+            name: 'Anya - Lead Presenter',
+            coreDescription: 'Early 30s female tech founder, sharp features, short dark hair',
+            variantLabel: 'Charcoal Blazer',
+            variantDescription: 'Tailored charcoal wool blazer with collarless silk shirt',
+            mediaUrl: 'assets/subjects/subj_anya/var_01.png',
+          },
+        ],
+      },
+      {
+        projectRoot: '/tmp',
+        styleTokensJson: {
+          palette: { background: '#0B0F19', accent: '#38BDF8' },
+          archetype: 'liquid_glass',
+          negativeConstraints: ['no cheesy smiles', 'no glossy 3d render look'],
+        },
+      }
+    );
+
+    expect(richOut.targetPlatform).toBe('runway');
+    // Check subject anchor injection
+    expect(richOut.finalPrompt).toContain('Anya - Lead Presenter');
+    expect(richOut.finalPrompt).toContain('Tailored charcoal wool blazer');
+    // Check optics & camera motion
+    expect(richOut.finalPrompt).toContain('35mm prime lens at f/1.8');
+    expect(richOut.finalPrompt).toContain('camera: push in slowly');
+    expect(richOut.finalPrompt).toContain('duration: 5s');
+    // Check reference image preservation
+    expect(richOut.referenceImageUrls).toContain('assets/subjects/subj_anya/var_01.png');
+
+    // Check Kling platform detail with two-layer negative guards
+    const kling = richOut.allPlatformPrompts['kling'];
+    expect(kling).toBeDefined();
+    expect(kling.prompt).toContain('Anya - Lead Presenter');
+    expect(kling.fullString).toContain('Camera Movement: Zoom In (Gentle)');
+    expect(kling.negativePrompt).toContain('no cheesy smiles'); // Layer 1 aesthetic rule
+    expect(kling.negativePrompt).toContain('morphing anatomy'); // Layer 2 video artifact guard
+    expect(kling.negativePrompt).toContain('temporal jitter');
+
+    // Check Minimax natural descriptive narrative format
+    const minimax = richOut.allPlatformPrompts['minimax'];
+    expect(minimax).toBeDefined();
+    expect(minimax.prompt).toContain('A high-end cinematic take of featuring Anya - Lead Presenter');
+    expect(minimax.prompt).toContain('35mm lens at f/1.8');
+
+    // Check ComfyUI exact technical settings
+    const comfy = richOut.allPlatformPrompts['comfyui'];
+    expect(comfy).toBeDefined();
+    expect(comfy.parameters?.width).toBe(1080);
+    expect(comfy.parameters?.height).toBe(1920);
+    expect(comfy.parameters?.frames).toBe(150); // 5s * 30fps = 150 frames
+    expect(comfy.parameters?.fps).toBe(30);
+
+    // Check ElevenLabs voice direction
+    const elevenlabs = richOut.allPlatformPrompts['elevenlabs'];
+    expect(elevenlabs).toBeDefined();
+    expect(elevenlabs.fullString).toContain('Everything you touch transforms in real time.');
+  });
+
   it('skillFCPXMLBuilder generates valid FCPXML v1.10 and EDL multi-track timeline documents', async () => {
     const result = await skillFCPXMLBuilder.execute(
       {
