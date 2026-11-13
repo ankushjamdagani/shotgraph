@@ -4,10 +4,10 @@ This document tracks all iterative development phases, sub-milestones, active st
 
 ---
 
-## Current Status: Phase 1 Completed -> Entering Phase 2 (Headless Toolchain & Runner Adapters)
-**Active Phase**: Phase 2
-**Last Updated**: Phase 1 Complete (Harness, Subagent, Health Check, AG-UI & A2UI Protocols)
-**Resumption Instruction**: If resuming, run `npm run health` to verify local CLIs, check `server/src/runners/`, and continue with Phase 2 implementation.
+## Current Status: Phase 2 Completed -> Entering Phase 3 (Atomic Swarm of Skills)
+**Active Phase**: Phase 3
+**Last Updated**: Phase 2 Complete (Base, Gemini CLI, Claude CLI, Ollama, HyperFrames, MediaRunner)
+**Resumption Instruction**: Run `npm --workspace=server test` to confirm runners pass, then proceed with Phase 3 skills implementation.
 
 ---
 
@@ -24,13 +24,13 @@ This document tracks all iterative development phases, sub-milestones, active st
 ---
 
 ### Phase 2: Headless Toolchain & Runner Adapters
-- [ ] **Step 2.1**: Implement `server/src/runners/base.ts` (child process spawner with timeout, exit code capture, and streaming output).
-- [ ] **Step 2.2**: Implement `server/src/runners/geminiRunner.ts` (default headless `gemini -p "..." -y` runner).
-- [ ] **Step 2.3**: Implement `server/src/runners/claudeRunner.ts` (`claude -p "..."` headless adapter).
-- [ ] **Step 2.4**: Implement `server/src/runners/ollamaRunner.ts` (local Ollama HTTP API adapter).
-- [ ] **Step 2.5**: Implement `server/src/runners/hyperframesRunner.ts` (`npx hyperframes` transcribe, tts, render, snapshot).
-- [ ] **Step 2.6**: Implement `server/src/runners/mediaRunner.ts` (FFmpeg slicing, silencedetect, audio ducking to -14 LUFS, and `yt-dlp` reference downloader).
-- [ ] **Step 2.7**: Unit tests for all runner adapters.
+- [x] **Step 2.1**: Implement `server/src/runners/base.ts` (child process spawner with timeout, exit code capture, and streaming output).
+- [x] **Step 2.2**: Implement `server/src/runners/geminiRunner.ts` (default headless `gemini -p "..." -y` runner).
+- [x] **Step 2.3**: Implement `server/src/runners/claudeRunner.ts` (`claude -p "..."` headless adapter).
+- [x] **Step 2.4**: Implement `server/src/runners/ollamaRunner.ts` (local Ollama HTTP API adapter).
+- [x] **Step 2.5**: Implement `server/src/runners/hyperframesRunner.ts` (`npx hyperframes` transcribe, tts, render, snapshot).
+- [x] **Step 2.6**: Implement `server/src/runners/mediaRunner.ts` (FFmpeg slicing, silencedetect, audio ducking to -14 LUFS, and `yt-dlp` reference downloader).
+- [x] **Step 2.7**: Unit tests for all runner adapters (`server/test/runners/runners.test.ts`).
 
 ---
 
