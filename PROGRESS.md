@@ -96,3 +96,17 @@ This document tracks all iterative development phases, sub-milestones, active st
 - [x] **Step 8.6**: Interactive Shot Director Card in `A2UIInspector.tsx` with live context badges bar, optics & camera overrides, anchor binding pills, platform tabs with 1-click copy, and in-inspector video dropzone with duration validation.
 - [x] **Step 8.7**: Server REST endpoints for subject anchor CRUD, active variant switching, node subject binding, and shot context synthesis (`server/src/index.ts`).
 - [x] **Step 8.8**: Unit test suite (`server/test/skills/skills.test.ts`) and end-to-end verification script (`scripts/verify-rich-prompts.ts`) passing with 100% accuracy across all platforms.
+
+---
+
+## Phase 9: 8-Stage Production DAG & Subject Style Parity Engine (COMPLETED)
+- [x] **Step 9.1**: Extended `ProductionStage` lifecycle: `1. Idea` → `2. Taste` → `3. Master Script (Scenes)` → `4. Subject Assets` → `5. Shots & Storyboard` → `6. Footage (Video Takes) & Audio` → `7. VFX & Overlays (Track V2)` → `8. Assembly & DaVinci Export`.
+- [x] **Step 9.2**: Three-Pillar Style Parity Lock (`skill-asset-generator`): Injected Style DNA + First-Approved Asset Master Style Anchor (`--sref <url> --sw 100` / IP-Adapter) + Universal Two-Layer Negative Guards ensuring identical grain, lighting, and palette across different subjects (e.g. girl and boy).
+- [x] **Step 9.3**: 8-Column Pipeline Layout Engine in `VersionTreeCanvas.tsx` with floating stage header ribbon, vertical version branch stacks, and arrow dependency edges.
+- [x] **Step 9.4**: Enhanced `CustomVersionNode.tsx` with stage icons, active cut stars, Master Style Anchor badges, and media asset thumbnail previews.
+- [x] **Step 9.5**: Multi-Mode `A2UIInspector.tsx`:
+  - **Asset Mode**: Master Style Anchor toggle, turnaround angle selector (Portrait, 3/4 Profile, Full Body, Macro Detail), locked prompt with `--sref` copy, and turnaround image dropzone.
+  - **VFX Mode**: Track V2 alpha overlays, kinetic typography, UI mockups, in/out duration timing, and ProRes 4444 dropzone.
+  - **Shot Director Mode**: Optics, camera moves, and platform video prompt synthesizer.
+- [x] **Step 9.6**: Server REST endpoints for Master Style Anchor designation, turnaround prompt synthesis, and asset node spawning on the DAG (`server/src/index.ts`).
+- [x] **Step 9.7**: All 19 Vitest unit tests passing (`server/test/`) and end-to-end verification script (`scripts/verify-asset-parity-dag.ts`) passing with 100% accuracy.
