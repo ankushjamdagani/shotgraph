@@ -105,23 +105,22 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl bg-surface border border-subtle rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-scale-in"
+        className="w-full max-w-2xl bg-surface border border-subtle rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-subtle bg-card/60">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center text-accent-primary">
-              <Sliders className="w-5 h-5" />
+        <div className="flex items-center justify-between px-6 py-3.5 border-b border-subtle bg-card/60">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center text-accent-primary">
+              <Sliders className="w-4 h-4" />
             </div>
             <div>
               <h2 className="text-sm font-bold text-text-primary">Project Settings</h2>
-              <p className="text-xs text-text-muted">Master specifications, typography & studio visual theme</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-text-muted hover:text-text-primary hover:bg-card transition"
+            className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-card transition"
           >
             <X className="w-4 h-4" />
           </button>
@@ -189,7 +188,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-2 bg-card border border-subtle rounded-xl text-xs text-text-primary focus:outline-none focus:border-accent-primary transition"
+                  className="w-full px-3 py-2 bg-card border border-subtle rounded text-xs text-text-primary focus:outline-none focus:border-accent-primary transition"
                   placeholder="e.g. Minimalist Tech Launch Video"
                 />
               </div>
@@ -208,7 +207,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                       key={ratio.id}
                       type="button"
                       onClick={() => setAspectRatio(ratio.id as any)}
-                      className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between ${
+                      className={`p-3 rounded border text-left transition flex flex-col justify-between ${
                         aspectRatio === ratio.id
                           ? 'border-accent-primary bg-card text-text-primary ring-1 ring-accent-primary'
                           : 'border-subtle bg-card/50 text-text-muted hover:text-text-primary hover:border-text-muted'
@@ -233,7 +232,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                     max={600}
                     value={targetDurationSec}
                     onChange={(e) => setTargetDurationSec(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-card border border-subtle rounded-xl text-xs text-text-primary font-mono focus:outline-none focus:border-accent-primary transition"
+                    className="w-full px-3 py-2 bg-card border border-subtle rounded text-xs text-text-primary font-mono focus:outline-none focus:border-accent-primary transition"
                   />
                   <div className="text-[10px] text-text-muted font-mono">
                     Total: {Math.floor(targetDurationSec / 60)}m {targetDurationSec % 60}s
@@ -247,7 +246,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                   <select
                     value={fps}
                     onChange={(e) => setFps(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-card border border-subtle rounded-xl text-xs text-text-primary font-mono focus:outline-none focus:border-accent-primary transition"
+                    className="w-full px-3 py-2 bg-card border border-subtle rounded text-xs text-text-primary font-mono focus:outline-none focus:border-accent-primary transition"
                   >
                     <option value={24}>24 FPS (Cinematic standard)</option>
                     <option value={30}>30 FPS (Digital & Web standard)</option>
@@ -260,22 +259,22 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
 
           {activeTab === 'typography' && (
             <div className="space-y-4">
-              <div className="p-4 rounded-2xl bg-card border border-subtle space-y-3">
+              <div className="p-4 rounded bg-card border border-subtle space-y-3">
                 <div className="text-xs font-bold text-text-primary">Studio Interface Typography</div>
                 <div className="text-xs text-text-muted leading-relaxed">
                   Default: <span className="font-bold text-text-primary font-sans">Plus Jakarta Sans & Inter</span>
                 </div>
-                <div className="p-3 rounded-xl bg-surface border border-subtle font-sans text-sm font-semibold">
+                <div className="p-3 rounded bg-surface border border-subtle font-sans text-sm font-semibold">
                   The quick brown fox jumps over the cinematic master cut.
                 </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-card border border-subtle space-y-3">
+              <div className="p-4 rounded bg-card border border-subtle space-y-3">
                 <div className="text-xs font-bold text-text-primary">Screenplay Dialogue & Timecode Font</div>
                 <div className="text-xs text-text-muted leading-relaxed">
                   Default: <span className="font-bold text-text-primary font-mono">JetBrains Mono</span>
                 </div>
-                <div className="p-3 rounded-xl bg-surface border border-subtle font-mono text-xs text-emerald-400">
+                <div className="p-3 rounded bg-surface border border-subtle font-mono text-xs text-emerald-400">
                   SCENE 1 - ATRIUM - DAY<br />
                   ANYA: Style is not what is added. It is what cannot be stripped away.
                 </div>
@@ -297,14 +296,14 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                         key={thm}
                         type="button"
                         onClick={() => onThemeChange(thm)}
-                        className={`p-3.5 rounded-2xl border text-left transition flex items-start gap-3 relative ${
+                        className={`p-3.5 rounded border text-left transition flex items-start gap-3 relative ${
                           isSelected
                             ? 'border-accent-primary bg-card ring-1 ring-accent-primary'
                             : 'border-subtle bg-card/60 hover:bg-card hover:border-text-muted'
                         }`}
                       >
                         <div
-                          className="w-7 h-7 rounded-xl border border-white/20 shrink-0 mt-0.5 shadow"
+                          className="w-7 h-7 rounded border border-white/20 shrink-0 mt-0.5 shadow"
                           style={{ backgroundColor: meta.previewBg }}
                         />
                         <div className="flex-1 min-w-0">
@@ -332,7 +331,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                         key={thm}
                         type="button"
                         onClick={() => onThemeChange(thm)}
-                        className={`p-3.5 rounded-2xl border text-left transition flex items-start gap-2.5 relative ${
+                        className={`p-3.5 rounded border text-left transition flex items-start gap-2.5 relative ${
                           isSelected
                             ? 'border-accent-primary bg-card ring-1 ring-accent-primary'
                             : 'border-subtle bg-card/60 hover:bg-card hover:border-text-muted'
@@ -375,7 +374,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                       key={preset.id}
                       type="button"
                       onClick={() => setBasePresetId(preset.id)}
-                      className={`p-3 rounded-2xl border text-left transition ${
+                      className={`p-3 rounded border text-left transition ${
                         basePresetId === preset.id
                           ? 'border-accent-primary bg-card ring-1 ring-accent-primary'
                           : 'border-subtle bg-card/60 hover:bg-card'
@@ -399,13 +398,13 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                       type="color"
                       value={accentColor}
                       onChange={(e) => setAccentColor(e.target.value)}
-                      className="w-9 h-9 rounded-xl border border-subtle bg-card cursor-pointer p-0.5"
+                      className="w-9 h-9 rounded border border-subtle bg-card cursor-pointer p-0.5"
                     />
                     <input
                       type="text"
                       value={accentColor}
                       onChange={(e) => setAccentColor(e.target.value)}
-                      className="flex-1 px-3 py-2 bg-card border border-subtle rounded-xl text-xs font-mono text-text-primary"
+                      className="flex-1 px-3 py-2 bg-card border border-subtle rounded text-xs font-mono text-text-primary"
                     />
                   </div>
                 </div>
@@ -443,7 +442,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                   {constraints.map((c, i) => (
                     <span
                       key={i}
-                      className="px-2.5 py-1 rounded-xl bg-card border border-subtle text-[11px] font-mono text-text-primary flex items-center gap-1.5"
+                      className="px-2.5 py-1 rounded bg-card border border-subtle text-[11px] font-mono text-text-primary flex items-center gap-1.5"
                     >
                       <span>{c}</span>
                       <button
@@ -469,7 +468,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                       }
                     }}
                     placeholder="Add negative style guard (e.g. no 3D cartoon, no oversaturated bloom)..."
-                    className="flex-1 px-3 py-1.5 bg-card border border-subtle rounded-xl text-xs text-text-primary"
+                    className="flex-1 px-3 py-1.5 bg-card border border-subtle rounded text-xs text-text-primary"
                   />
                   <button
                     type="button"
@@ -479,7 +478,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                         setNewConstraint('');
                       }
                     }}
-                    className="px-3 py-1.5 bg-card border border-subtle rounded-xl text-xs font-bold hover:bg-subtle text-text-primary flex items-center gap-1"
+                    className="px-3 py-1.5 bg-card border border-subtle rounded text-xs font-bold hover:bg-subtle text-text-primary flex items-center gap-1"
                   >
                     <Plus className="w-3 h-3" />
                     <span>Add</span>
@@ -497,7 +496,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                   onChange={(e) => setStyleMarkdown(e.target.value)}
                   rows={5}
                   placeholder="# Director Visual System..."
-                  className="w-full px-3 py-2 bg-card border border-subtle rounded-xl text-xs font-mono text-text-primary leading-relaxed focus:outline-none focus:border-accent-primary"
+                  className="w-full px-3 py-2 bg-card border border-subtle rounded text-xs font-mono text-text-primary leading-relaxed focus:outline-none focus:border-accent-primary"
                 />
               </div>
             </div>
@@ -512,14 +511,14 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-text-muted hover:text-text-primary transition"
+              className="px-4 py-2 rounded text-xs font-semibold text-text-muted hover:text-text-primary transition"
             >
               Cancel
             </button>
             <button
               onClick={handleSaveGeneral}
               disabled={isSaving}
-              className="px-4 py-2 rounded-xl bg-accent-primary hover:opacity-90 text-app font-bold text-xs flex items-center gap-1.5 shadow-lg transition"
+              className="px-4 py-2 rounded bg-accent-primary hover:opacity-90 text-app font-bold text-xs flex items-center gap-1.5 shadow-lg transition"
             >
               <Save className="w-3.5 h-3.5" />
               <span>{isSaving ? 'Saving...' : 'Save Settings'}</span>

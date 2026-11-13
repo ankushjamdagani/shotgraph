@@ -41,7 +41,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-lg rounded-2xl bg-surface border border-subtle shadow-2xl overflow-hidden animate-scale-up text-text-primary">
+      <div className="w-full max-w-lg rounded-lg bg-surface border border-subtle shadow-2xl overflow-hidden animate-scale-up text-text-primary">
         <Command label="Global Command Menu" className="w-full">
           <div className="flex items-center px-4 border-b border-subtle bg-surface">
             <Sparkles className="w-4 h-4 text-accent-primary mr-2" />

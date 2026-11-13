@@ -312,7 +312,7 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
         {isAssetMode ? (
           <div className="space-y-4">
             {/* Master Style Anchor Parity Banner */}
-            <div className={`p-3 rounded-xl border flex flex-col gap-2 ${
+            <div className={`p-3 rounded border flex flex-col gap-2 ${
               node.assetMetadata?.isMasterStyleAnchor
                 ? 'bg-purple-950/40 border-purple-500/80'
                 : project?.masterStyleAnchorAssetUrl
@@ -345,7 +345,7 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
             </div>
 
             {/* Turnaround Angle Selector */}
-            <div className="p-3.5 rounded-xl bg-[#111726]/80 border border-slate-800 space-y-2">
+            <div className="p-3.5 rounded bg-[#111726]/80 border border-slate-800 space-y-2">
               <label className="block text-[10px] uppercase font-mono text-slate-400">
                 Turnaround Angle & Framing
               </label>
@@ -376,7 +376,7 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
             </div>
 
             {/* Synthesized Asset Prompt Card */}
-            <div className="p-3.5 rounded-xl bg-[#111726]/80 border border-slate-800 space-y-2.5">
+            <div className="p-3.5 rounded bg-[#111726]/80 border border-slate-800 space-y-2.5">
               <div className="flex items-center justify-between text-xs font-bold text-white">
                 <span className="flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-purple-400" />
@@ -409,7 +409,7 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              className={`p-4 rounded-xl border-2 border-dashed transition text-center cursor-pointer ${
+              className={`p-4 rounded border-2 border-dashed transition text-center cursor-pointer ${
                 isDraggingOver
                   ? 'bg-purple-950/40 border-purple-400 text-white'
                   : 'bg-[#0A0D14]/60 border-slate-800/80 text-slate-400 hover:border-slate-700'
@@ -427,7 +427,7 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
           /* B. VFX & OVERLAY MODE (When node.stage === 'vfx') */
           /* ======================================================== */
           <div className="space-y-4">
-            <div className="p-3 rounded-xl bg-orange-950/30 border border-orange-500/60 text-xs text-orange-200 space-y-1">
+            <div className="p-3 rounded bg-orange-950/30 border border-orange-500/60 text-xs text-orange-200 space-y-1">
               <div className="font-bold flex items-center gap-1.5 text-white">
                 <Wand2 className="w-3.5 h-3.5 text-orange-400" />
                 Track V2: Alpha Overlays & Motion Graphics
@@ -437,7 +437,7 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
               </p>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-[#111726]/80 border border-slate-800 space-y-3">
+            <div className="p-3.5 rounded bg-[#111726]/80 border border-slate-800 space-y-3">
               <label className="block text-[10px] uppercase font-mono text-slate-400">
                 Overlay Category
               </label>
@@ -496,7 +496,7 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              className={`p-4 rounded-xl border-2 border-dashed transition text-center cursor-pointer ${
+              className={`p-4 rounded border-2 border-dashed transition text-center cursor-pointer ${
                 isDraggingOver
                   ? 'bg-orange-950/40 border-orange-400 text-white'
                   : 'bg-[#0A0D14]/60 border-slate-800/80 text-slate-400 hover:border-slate-700'
@@ -515,7 +515,7 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
           /* ======================================================== */
           <>
             {/* Live Context Badges Bar */}
-            <div className="flex flex-wrap gap-1.5 p-2.5 rounded-xl bg-[#0A0D14] border border-slate-800/80 text-[10px] font-mono">
+            <div className="flex flex-wrap gap-1.5 p-2.5 rounded bg-[#0A0D14] border border-slate-800/80 text-[10px] font-mono">
               <div className="px-2 py-1 rounded-md bg-slate-900 border border-slate-800 text-sky-300 flex items-center gap-1">
                 <Clock className="w-3 h-3 text-sky-400" />
                 <span>{sceneDuration}s Duration</span>
@@ -535,7 +535,7 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
             </div>
 
             {/* Interactive Shot Director Knobs */}
-            <div className="p-3.5 rounded-xl bg-[#111726]/80 border border-slate-800 space-y-3.5">
+            <div className="p-3.5 rounded bg-[#111726]/80 border border-slate-800 space-y-3.5">
               <div className="flex items-center justify-between text-xs font-bold text-slate-200">
                 <div className="flex items-center gap-1.5">
                   <Camera className="w-3.5 h-3.5 text-sky-400" />
@@ -668,7 +668,7 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
             </div>
 
             {/* Platform-Tailored Synthesizer Tabs */}
-            <div className="p-3.5 rounded-xl bg-[#111726]/80 border border-slate-800 space-y-3">
+            <div className="p-3.5 rounded bg-[#111726]/80 border border-slate-800 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-white flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-sky-400" />
@@ -767,7 +767,7 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              className={`p-4 rounded-xl border-2 border-dashed transition text-center cursor-pointer ${
+              className={`p-4 rounded border-2 border-dashed transition text-center cursor-pointer ${
                 isDraggingOver
                   ? 'bg-sky-950/40 border-sky-400 text-white'
                   : 'bg-[#0A0D14]/60 border-slate-800/80 text-slate-400 hover:border-slate-700'
@@ -858,7 +858,7 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
 
         {/* Live Streaming Terminal Drawer */}
         {streamingLog && (
-          <div className="rounded-xl bg-[#070A0F] border border-slate-800 p-3 font-mono text-[10px] text-emerald-400 overflow-hidden">
+          <div className="rounded bg-[#070A0F] border border-slate-800 p-3 font-mono text-[10px] text-emerald-400 overflow-hidden">
             <div className="flex items-center gap-1.5 text-slate-400 mb-1.5 border-b border-slate-800/60 pb-1">
               <Terminal className="w-3 h-3 text-emerald-400" />
               <span>Live Agent Thought Stream</span>

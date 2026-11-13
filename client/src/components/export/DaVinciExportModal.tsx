@@ -48,7 +48,7 @@ export const DaVinciExportModal: React.FC<DaVinciExportModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-lg rounded-2xl bg-surface border border-subtle shadow-2xl p-6 text-text-primary">
+      <div className="w-full max-w-lg rounded-lg bg-surface border border-subtle shadow-2xl p-6 text-text-primary">
         <div className="flex items-center justify-between pb-3 border-b border-subtle">
           <div className="flex items-center gap-2 text-sm font-bold text-text-primary">
             <Film className="w-4 h-4 text-accent-primary" />
@@ -91,7 +91,7 @@ export const DaVinciExportModal: React.FC<DaVinciExportModalProps> = ({
           </div>
 
           {/* Stems Manifest Preview */}
-          <div className="p-3.5 rounded-xl bg-card border border-subtle text-xs space-y-2">
+          <div className="p-3.5 rounded bg-card border border-subtle text-xs space-y-2">
             <span className="font-bold text-text-primary block">Export Bundle Stems:</span>
             <div className="space-y-1 font-mono text-[11px] text-text-muted">
               <div>📹 <span className="text-text-primary">timeline.fcpxml</span> (FCPXML v1.10)</div>
@@ -106,7 +106,7 @@ export const DaVinciExportModal: React.FC<DaVinciExportModalProps> = ({
           </div>
 
           {exportResult && (
-            <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-600/50 text-xs text-emerald-300 space-y-1">
+            <div className="p-3 rounded bg-emerald-950/40 border border-emerald-600/50 text-xs text-emerald-300 space-y-1">
               <div className="flex items-center gap-1.5 font-bold">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 <span>Export Complete!</span>

@@ -4,14 +4,13 @@ import { VersionNode } from '../../types.js';
 import {
   GitBranch,
   Star,
-  Video,
   FileText,
   Camera,
   User,
   Lightbulb,
-  Palette,
+  Sliders,
   Film,
-  Wand2,
+  Sparkles,
   Trash2,
   Tag,
   Edit2,
@@ -22,22 +21,31 @@ import {
   Play,
   Volume2,
   Plus,
+  Clapperboard,
+  Rocket,
+  Layers,
 } from 'lucide-react';
 
-const NEXT_STAGE_MAP: Record<string, Array<{ stage: string; label: string; icon: string }>> = {
-  ideation: [{ stage: 'script', label: 'Script Beat', icon: '📝' }],
-  taste: [{ stage: 'script', label: 'Script Beat', icon: '📝' }],
+interface NextStageOption {
+  stage: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const NEXT_STAGE_MAP: Record<string, NextStageOption[]> = {
+  ideation: [{ stage: 'script', label: 'Script Beat', icon: FileText }],
+  taste: [{ stage: 'script', label: 'Script Beat', icon: FileText }],
   script: [
-    { stage: 'assets', label: 'Character Asset', icon: '👤' },
-    { stage: 'shot', label: 'Shot Framing', icon: '🎥' },
+    { stage: 'assets', label: 'Subject Anchor', icon: User },
+    { stage: 'shot', label: 'Shot Framing', icon: Camera },
   ],
-  assets: [{ stage: 'shot', label: 'Shot Framing', icon: '🎥' }],
-  shot: [{ stage: 'footage', label: 'Video Take', icon: '🎬' }],
-  storyboard: [{ stage: 'footage', label: 'Video Take', icon: '🎬' }],
-  footage: [{ stage: 'vfx', label: 'VFX / Motion', icon: '✨' }],
-  motion: [{ stage: 'vfx', label: 'VFX / Motion', icon: '✨' }],
-  vfx: [{ stage: 'assembly', label: 'Active Cut', icon: '🎞️' }],
-  assembly: [{ stage: 'render', label: 'Final Master', icon: '🚀' }],
+  assets: [{ stage: 'shot', label: 'Shot Framing', icon: Camera }],
+  shot: [{ stage: 'footage', label: 'Video Take', icon: Clapperboard }],
+  storyboard: [{ stage: 'footage', label: 'Video Take', icon: Clapperboard }],
+  footage: [{ stage: 'vfx', label: 'VFX / Motion', icon: Sparkles }],
+  motion: [{ stage: 'vfx', label: 'VFX / Motion', icon: Sparkles }],
+  vfx: [{ stage: 'assembly', label: 'Active Cut', icon: Layers }],
+  assembly: [{ stage: 'render', label: 'Final Master', icon: Rocket }],
 };
 
 interface CustomVersionNodeProps {
@@ -88,99 +96,89 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
 
   const nextStages = NEXT_STAGE_MAP[node.stage];
 
-  // Stage Design Configurations (Silhouettes & Accents)
+  // Stage Design Configurations (Unified Dark Graphite Chassis + Subtle Semantic Icons)
   const getStageDesign = (stage: string) => {
     switch (stage) {
       case 'ideation':
         return {
-          label: 'Idea / Premise',
-          bannerBg: 'bg-amber-500/10 dark:bg-amber-950/40 text-amber-500 dark:text-amber-200 border-amber-500/30',
-          accentColor: '#F59E0B',
-          icon: <Lightbulb className="w-3.5 h-3.5 text-amber-500 shrink-0" />,
+          label: 'Ideation / Premise',
+          icon: <Lightbulb className="w-3.5 h-3.5 text-zinc-400 shrink-0" />,
         };
       case 'taste':
         return {
           label: 'Taste DNA',
-          bannerBg: 'bg-rose-500/10 dark:bg-rose-950/40 text-rose-500 dark:text-rose-200 border-rose-500/30',
-          accentColor: '#F43F5E',
-          icon: <Palette className="w-3.5 h-3.5 text-rose-500 shrink-0" />,
+          icon: <Sliders className="w-3.5 h-3.5 text-zinc-400 shrink-0" />,
         };
       case 'script':
         return {
           label: 'Screenplay Beat',
-          bannerBg: 'bg-emerald-500/10 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-200 border-emerald-500/30',
-          accentColor: '#10B981',
-          icon: <FileText className="w-3.5 h-3.5 text-emerald-500 shrink-0" />,
+          icon: <FileText className="w-3.5 h-3.5 text-zinc-400 shrink-0" />,
         };
       case 'assets':
         return {
           label: 'Subject Anchor',
-          bannerBg: 'bg-purple-500/10 dark:bg-purple-950/40 text-purple-600 dark:text-purple-200 border-purple-500/30',
-          accentColor: '#8B5CF6',
-          icon: <User className="w-3.5 h-3.5 text-purple-500 shrink-0" />,
+          icon: <User className="w-3.5 h-3.5 text-zinc-400 shrink-0" />,
         };
       case 'shot':
       case 'storyboard':
         return {
           label: 'Shot & Optics',
-          bannerBg: 'bg-sky-500/10 dark:bg-sky-950/40 text-sky-600 dark:text-sky-200 border-sky-500/30',
-          accentColor: '#06B6D4',
-          icon: <Camera className="w-3.5 h-3.5 text-sky-500 shrink-0" />,
+          icon: <Camera className="w-3.5 h-3.5 text-zinc-400 shrink-0" />,
         };
       case 'footage':
       case 'motion':
         return {
           label: 'Video Take',
-          bannerBg: 'bg-amber-500/15 dark:bg-amber-950/50 text-amber-600 dark:text-amber-200 border-amber-500/30',
-          accentColor: '#EAB308',
-          icon: <Video className="w-3.5 h-3.5 text-amber-500 shrink-0" />,
+          icon: <Clapperboard className="w-3.5 h-3.5 text-zinc-400 shrink-0" />,
         };
       case 'vfx':
         return {
-          label: 'VFX / Overlay',
-          bannerBg: 'bg-fuchsia-500/10 dark:bg-fuchsia-950/40 text-fuchsia-600 dark:text-fuchsia-200 border-fuchsia-500/30',
-          accentColor: '#D946EF',
-          icon: <Wand2 className="w-3.5 h-3.5 text-fuchsia-500 shrink-0" />,
+          label: 'VFX / Motion',
+          icon: <Sparkles className="w-3.5 h-3.5 text-zinc-400 shrink-0" />,
         };
       case 'assembly':
       case 'render':
         return {
           label: 'Master Cut',
-          bannerBg: 'bg-text-primary/10 text-text-primary border-subtle',
-          accentColor: '#FAFAFA',
-          icon: <Film className="w-3.5 h-3.5 text-text-primary shrink-0" />,
+          icon: <Film className="w-3.5 h-3.5 text-zinc-400 shrink-0" />,
         };
       default:
         return {
-          label: stage,
-          bannerBg: 'bg-card text-text-muted border-subtle',
-          accentColor: '#A1A1AA',
-          icon: <Film className="w-3.5 h-3.5 text-text-muted shrink-0" />,
+          label: stage.toUpperCase(),
+          icon: <Film className="w-3.5 h-3.5 text-zinc-400 shrink-0" />,
         };
     }
   };
 
-  const getColorTagBorder = (tag?: VersionNode['colorTag']) => {
-    switch (tag) {
-      case 'white':
-        return 'border-[#FAFAFA] ring-1 ring-white/50';
-      case 'blue':
-        return 'border-sky-500 ring-1 ring-sky-500/50';
-      case 'purple':
-        return 'border-purple-500 ring-1 ring-purple-500/50';
-      case 'emerald':
-        return 'border-emerald-500 ring-1 ring-emerald-500/50';
-      case 'amber':
-        return 'border-amber-500 ring-1 ring-amber-500/50';
-      default:
-        return isSelected
-          ? 'border-accent-primary ring-2 ring-accent-primary/30 shadow-2xl scale-[1.01]'
-          : isActiveCut
-          ? 'border-amber-500/90 shadow-amber-500/10 shadow-lg'
-          : isHudOpen
-          ? 'border-sky-400 ring-2 ring-sky-500/30'
-          : 'border-subtle hover:border-text-muted/60';
+  const getNodeBorderState = (tag?: VersionNode['colorTag']) => {
+    if (tag && tag !== 'default') {
+      switch (tag) {
+        case 'white':
+          return 'border-zinc-200 ring-1 ring-white/30';
+        case 'blue':
+          return 'border-sky-400/80 ring-1 ring-sky-400/30';
+        case 'purple':
+          return 'border-purple-400/80 ring-1 ring-purple-400/30';
+        case 'emerald':
+          return 'border-emerald-400/80 ring-1 ring-emerald-400/30';
+        case 'amber':
+          return 'border-amber-400/80 ring-1 ring-amber-400/30';
+      }
     }
+
+    if (isSelected) {
+      return 'border-white ring-1 ring-white/40 shadow-2xl scale-[1.01]';
+    }
+
+    if (isActiveCut) {
+      return 'border-amber-400/90 shadow-[0_0_24px_-4px_rgba(251,191,36,0.22)] ring-1 ring-amber-400/40';
+    }
+
+    if (isHudOpen) {
+      return 'border-zinc-400 ring-1 ring-white/20';
+    }
+
+    return 'border-subtle hover:border-zinc-500/80 shadow-xl shadow-black/40';
   };
 
   const handleCommitRename = () => {
@@ -218,9 +216,9 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
           onMediaDrop(node.id, e.dataTransfer.files[0]);
         }
       }}
-      className={`group relative rounded-2xl bg-surface transition-shadow duration-150 cursor-pointer shadow-xl border overflow-hidden ${getColorTagBorder(
+      className={`group relative rounded bg-surface transition-all duration-150 cursor-pointer border overflow-hidden ${getNodeBorderState(
         node.colorTag
-      )} ${isDragOver ? 'ring-2 ring-emerald-500 bg-emerald-950/20' : ''}`}
+      )} ${isDragOver ? 'ring-2 ring-emerald-400/80 bg-emerald-950/20' : ''}`}
     >
       {isSelected && (
         <>
@@ -229,7 +227,7 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
             variant={ResizeControlVariant.Line}
             minWidth={280}
             maxWidth={640}
-            className="!border-r-2 !border-dashed !border-accent-primary"
+            className="!border-r !border-white/30 hover:!border-white/70"
             onResize={(_e, params) => {
               if (onResize) onResize(node.id, params.width);
             }}
@@ -239,7 +237,7 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
             variant={ResizeControlVariant.Line}
             minWidth={280}
             maxWidth={640}
-            className="!border-l-2 !border-dashed !border-accent-primary"
+            className="!border-l !border-white/30 hover:!border-white/70"
             onResize={(_e, params) => {
               if (onResize) onResize(node.id, params.width);
             }}
@@ -247,18 +245,27 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
         </>
       )}
 
-      <Handle type="target" position={Position.Left} className="!bg-accent-primary !w-2.5 !h-2.5" />
-      <Handle type="target" position={Position.Top} className="!bg-accent-primary !w-2.5 !h-2.5" id="top" />
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="!bg-zinc-400 hover:!bg-white !w-2.5 !h-2.5 !border !border-black transition-colors"
+      />
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="!bg-zinc-400 hover:!bg-white !w-2.5 !h-2.5 !border !border-black transition-colors"
+        id="top"
+      />
 
       {/* ON-NODE HOVER QUICK ACTION TOOLBAR */}
-      <div className="absolute top-2 right-2 hidden group-hover:flex items-center gap-1 bg-card/95 backdrop-blur-md px-1.5 py-0.5 rounded-xl border border-subtle shadow-xl z-20 animate-in fade-in duration-100">
+      <div className="absolute top-2 right-2 hidden group-hover:flex items-center gap-0.5 bg-[#141418]/95 backdrop-blur-md p-1 rounded-lg border border-white/10 shadow-2xl z-20 animate-in fade-in duration-100">
         {onToggleHud && (
           <button
             onClick={(e) => {
               e.stopPropagation();
               onToggleHud(node.id);
             }}
-            className="p-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-subtle transition"
+            className="p-1 rounded text-zinc-400 hover:text-white hover:bg-white/[0.08] active:scale-90 transition-all cursor-pointer"
             title="Open in-place floating HUD"
           >
             <Maximize2 className="w-3 h-3" />
@@ -271,8 +278,10 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
               e.stopPropagation();
               if (node.sceneId) onSetActiveCut(node.sceneId, node.id);
             }}
-            className={`p-1 rounded-lg transition ${
-              isActiveCut ? 'text-amber-400 bg-amber-500/20' : 'text-text-muted hover:text-amber-400 hover:bg-subtle'
+            className={`p-1 rounded active:scale-90 transition-all cursor-pointer ${
+              isActiveCut
+                ? 'text-amber-400 bg-amber-400/20'
+                : 'text-zinc-400 hover:text-amber-400 hover:bg-white/[0.08]'
             }`}
             title="Set as Active Cut"
           >
@@ -287,13 +296,13 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
                 e.stopPropagation();
                 setShowColorPicker(!showColorPicker);
               }}
-              className="p-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-subtle transition"
+              className="p-1 rounded text-zinc-400 hover:text-white hover:bg-white/[0.08] active:scale-90 transition-all cursor-pointer"
               title="Set Color Tag"
             >
               <Tag className="w-3 h-3" />
             </button>
             {showColorPicker && (
-              <div className="absolute top-7 right-0 flex items-center gap-1.5 bg-surface p-1.5 rounded-xl border border-subtle shadow-2xl z-30">
+              <div className="absolute top-8 right-0 flex items-center gap-1.5 bg-[#18181C] p-1.5 rounded-lg border border-white/10 shadow-2xl z-30">
                 {(['default', 'white', 'blue', 'purple', 'emerald', 'amber'] as const).map((color) => (
                   <button
                     key={color}
@@ -302,9 +311,9 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
                       onColorTag(node.id, color);
                       setShowColorPicker(false);
                     }}
-                    className={`w-3 h-3 rounded-full border border-black/40 ${
+                    className={`w-3 h-3 rounded-full border border-black/50 transition-transform hover:scale-125 active:scale-95 cursor-pointer ${
                       color === 'default'
-                        ? 'bg-subtle'
+                        ? 'bg-zinc-600'
                         : color === 'white'
                         ? 'bg-white'
                         : color === 'blue'
@@ -328,7 +337,7 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
               e.stopPropagation();
               setIsEditingTitle(true);
             }}
-            className="p-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-subtle transition"
+            className="p-1 rounded text-zinc-400 hover:text-white hover:bg-white/[0.08] active:scale-90 transition-all cursor-pointer"
             title="Rename node"
           >
             <Edit2 className="w-3 h-3" />
@@ -340,7 +349,7 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
             e.stopPropagation();
             onBranch(node.id);
           }}
-          className="p-1 rounded-lg text-text-muted hover:text-sky-400 hover:bg-subtle transition"
+          className="p-1 rounded text-zinc-400 hover:text-sky-400 hover:bg-white/[0.08] active:scale-90 transition-all cursor-pointer"
           title="Branch this version"
         >
           <GitBranch className="w-3 h-3" />
@@ -352,7 +361,7 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
               e.stopPropagation();
               onDelete(node.id);
             }}
-            className="p-1 rounded-lg text-text-muted hover:text-red-400 hover:bg-subtle transition"
+            className="p-1 rounded text-zinc-400 hover:text-rose-400 hover:bg-white/[0.08] active:scale-90 transition-all cursor-pointer"
             title="Delete node"
           >
             <Trash2 className="w-3 h-3" />
@@ -360,29 +369,29 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
         )}
       </div>
 
-      {/* DISTINCT STAGE HEADER BANNER */}
-      <div className={`px-3 py-1.5 border-b flex items-center justify-between ${stage.bannerBg}`}>
-        <div className="flex items-center gap-1.5">
+      {/* DISCIPLINED GRAPHITE STAGE HEADER */}
+      <div className="px-3 py-1.5 bg-[#17171B] border-b border-white/[0.06] flex items-center justify-between">
+        <div className="flex items-center gap-1.5 min-w-0">
           {stage.icon}
-          <span className="text-[10px] font-mono font-bold tracking-wider uppercase truncate">
+          <span className="text-[10px] font-mono font-medium tracking-[0.14em] uppercase text-zinc-300 truncate">
             {stage.label}
           </span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0 ml-2">
           {isMasterAnchor && (
-            <span className="flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold tracking-wider uppercase bg-purple-500/10 text-purple-300 border border-purple-500/30">
               <Star className="w-2.5 h-2.5 fill-purple-300 text-purple-300" />
               ANCHOR
             </span>
           )}
           {isActiveCut && (
-            <span className="flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold tracking-wider uppercase bg-amber-400/15 text-amber-300 border border-amber-400/30 shadow-[0_0_8px_rgba(251,191,36,0.15)]">
               <Star className="w-2.5 h-2.5 fill-amber-300 text-amber-300" />
               CUT
             </span>
           )}
           {isHudOpen && (
-            <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-accent-primary text-app">
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold tracking-wider uppercase bg-zinc-800 text-zinc-200 border border-zinc-700">
               HUD
             </span>
           )}
@@ -391,8 +400,8 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
 
       {/* SOFT INVALIDATION (STALE FLAGGING) WARNING BAR */}
       {node.isStale && (
-        <div className="px-3 py-1 bg-amber-500/15 border-b border-amber-500/30 flex items-center justify-between text-[10px] text-amber-300 font-mono">
-          <div className="flex items-center gap-1 truncate">
+        <div className="px-3 py-1 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between text-[10px] text-amber-300 font-mono">
+          <div className="flex items-center gap-1.5 truncate">
             <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
             <span className="truncate">{node.staleReason || 'Upstream ancestor modified'}</span>
           </div>
@@ -402,7 +411,7 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
                 e.stopPropagation();
                 onResyncStale(node.id);
               }}
-              className="flex items-center gap-0.5 text-[9px] font-bold text-amber-400 hover:underline shrink-0"
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-[9px] font-bold text-amber-200 transition active:scale-95 shrink-0 cursor-pointer"
               title="Re-sync contextual prompt"
             >
               <RotateCw className="w-2.5 h-2.5" />
@@ -413,7 +422,7 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
       )}
 
       {/* NODE BODY CONTENT */}
-      <div className="p-3.5 space-y-2.5">
+      <div className="p-3 space-y-2.5">
         {/* Title & Version Slug */}
         <div>
           {isEditingTitle ? (
@@ -427,28 +436,42 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
                   if (e.key === 'Escape') setIsEditingTitle(false);
                 }}
                 autoFocus
-                className="w-full p-1 rounded-lg bg-card border border-accent-primary text-xs text-text-primary font-mono focus:outline-none"
+                className="w-full px-2 py-1 rounded bg-[#0A0A0D] border border-white/20 text-xs text-white font-mono focus:outline-none focus:border-white/50"
               />
               <button
                 onClick={handleCommitRename}
-                className="p-1 rounded-lg bg-accent-primary text-app hover:opacity-90"
+                className="p-1 rounded bg-white text-black hover:bg-zinc-200 active:scale-95 transition cursor-pointer"
               >
                 <Check className="w-3 h-3" />
               </button>
             </div>
           ) : (
-            <div className="text-xs font-bold text-text-primary truncate">{node.title}</div>
+            <div className="text-xs font-semibold text-zinc-100 truncate tracking-tight">{node.title}</div>
           )}
-          <div className="text-[10px] font-mono text-text-muted flex items-center justify-between mt-0.5">
-            <span>{node.versionLabel}</span>
-            {node.sceneId && <span className="opacity-75">{node.sceneId}</span>}
+          <div className="text-[10px] font-mono text-zinc-400 flex items-center justify-between mt-1">
+            <span className="bg-white/[0.04] px-1.5 py-0.5 rounded border border-white/[0.06] text-zinc-300 tracking-wider">
+              {node.versionLabel}
+            </span>
+            {node.sceneId && (
+              <span className="text-zinc-500 tracking-widest text-[9px] uppercase font-mono">
+                {node.sceneId}
+              </span>
+            )}
           </div>
         </div>
 
         {/* BESPOKE CONTENT BASED ON STAGE */}
-        {/* 1. Asset Anchor: Prominent character/product portrait */}
+        {/* 1. Asset Anchor: Precision Studio Portrait Monitor */}
         {node.stage === 'assets' && (
-          <div className="relative rounded-xl overflow-hidden border border-purple-500/30 h-28 bg-app flex items-center justify-center">
+          <div className="relative rounded-lg overflow-hidden border border-white/[0.08] h-32 bg-[#050508] flex items-center justify-center group/monitor">
+            {/* Corner Reticles */}
+            <div className="absolute inset-0 pointer-events-none z-10">
+              <div className="absolute top-1 left-1 w-2 h-2 border-t border-l border-white/20" />
+              <div className="absolute top-1 right-1 w-2 h-2 border-t border-r border-white/20" />
+              <div className="absolute bottom-1 left-1 w-2 h-2 border-b border-l border-white/20" />
+              <div className="absolute bottom-1 right-1 w-2 h-2 border-b border-r border-white/20" />
+            </div>
+
             {node.artifacts?.mediaUrl || node.assetMetadata?.styleReferenceAssetUrl ? (
               <img
                 src={`http://localhost:3030/media/${(
@@ -461,24 +484,41 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
                 }}
               />
             ) : (
-              <div className="flex flex-col items-center justify-center text-purple-400/60 gap-1 text-[10px] font-mono">
-                <User className="w-6 h-6 text-purple-400/40" />
-                <span>Style Anchor Portrait</span>
+              <div className="flex flex-col items-center justify-center text-zinc-500 gap-1.5 text-[9px] font-mono uppercase tracking-widest">
+                <div className="w-7 h-7 rounded bg-white/[0.03] border border-white/[0.06] flex items-center justify-center">
+                  <User className="w-3.5 h-3.5 text-zinc-400 stroke-[1.5]" />
+                </div>
+                <span className="text-[9px] text-zinc-400 font-medium">Style Anchor</span>
               </div>
             )}
-            <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded-md bg-black/80 text-[9px] font-mono text-purple-300">
+
+            {/* Precision Telemetry Overlays */}
+            <div className="absolute top-1.5 left-1.5 z-10 flex items-center gap-1 bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-mono tracking-wider text-zinc-300 border border-white/10 uppercase">
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-400/90 shrink-0 shadow-[0_0_4px_rgba(192,132,252,0.5)]" />
+              <span>ANCHOR</span>
+            </div>
+
+            <div className="absolute bottom-1.5 right-1.5 z-10 bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-mono text-zinc-300 border border-white/10 uppercase">
               {node.assetMetadata?.turnaroundAngle || 'Portrait'}
             </div>
           </div>
         )}
 
-        {/* 2. Footage Take: Video Monitor Slate */}
+        {/* 2. Footage Take: Precision Letterboxed Video Monitor */}
         {(node.stage === 'footage' || node.stage === 'motion') && (
-          <div className="relative rounded-xl overflow-hidden border border-amber-500/30 h-24 bg-black flex items-center justify-center">
+          <div className="relative rounded-lg overflow-hidden border border-white/[0.08] h-28 bg-[#050508] flex items-center justify-center group/monitor">
+            {/* Framing Guides & Letterbox Corner Reticles */}
+            <div className="absolute inset-0 pointer-events-none z-10">
+              <div className="absolute top-1 left-1 w-2 h-2 border-t border-l border-white/20" />
+              <div className="absolute top-1 right-1 w-2 h-2 border-t border-r border-white/20" />
+              <div className="absolute bottom-1 left-1 w-2 h-2 border-b border-l border-white/20" />
+              <div className="absolute bottom-1 right-1 w-2 h-2 border-b border-r border-white/20" />
+            </div>
+
             {node.artifacts?.mediaUrl ? (
               <video
                 src={`http://localhost:3030/media/${node.artifacts.mediaUrl.replace(/^\//, '')}`}
-                className="w-full h-full object-cover opacity-85"
+                className="w-full h-full object-cover transition-opacity duration-200"
                 muted
                 loop
                 playsInline
@@ -486,17 +526,28 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
                 onMouseOut={(e) => (e.target as HTMLVideoElement).pause()}
               />
             ) : (
-              <div className="flex flex-col items-center justify-center text-amber-400/60 gap-1 text-[10px] font-mono">
-                <Play className="w-5 h-5 text-amber-400/40 ml-0.5" />
-                <span>Rendered Clip Slate</span>
+              <div className="flex flex-col items-center justify-center text-zinc-500 gap-1.5 text-[9px] font-mono uppercase tracking-widest">
+                <div className="w-7 h-7 rounded bg-white/[0.03] border border-white/[0.06] flex items-center justify-center">
+                  <Clapperboard className="w-3.5 h-3.5 text-zinc-400 stroke-[1.5]" />
+                </div>
+                <span className="text-[9px] text-zinc-400 font-medium">Awaiting Take</span>
               </div>
             )}
-            <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/80 text-[8px] font-mono text-amber-300 uppercase">
-              {node.modelEngine}
+
+            {/* Precision Telemetry Overlays */}
+            <div className="absolute top-1.5 left-1.5 z-10 flex items-center gap-1 bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-mono tracking-wider text-zinc-300 border border-white/10 uppercase">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/90 shrink-0 shadow-[0_0_4px_rgba(52,211,153,0.5)]" />
+              <span>{node.modelEngine}</span>
             </div>
+
+            <div className="absolute top-1.5 right-1.5 z-10 bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-mono tabular-nums text-zinc-400 border border-white/10">
+              24 FPS
+            </div>
+
             {node.artifacts?.mediaUrl && (
-              <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/80 text-[8px] font-mono text-text-muted">
-                Hover to Play
+              <div className="absolute bottom-1.5 right-1.5 z-10 bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-mono text-zinc-400 border border-white/10 opacity-0 group-hover/monitor:opacity-100 transition-opacity duration-150 flex items-center gap-1">
+                <Play className="w-2 h-2 fill-zinc-400 text-zinc-400" />
+                <span>PLAY</span>
               </div>
             )}
           </div>
@@ -504,12 +555,20 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
 
         {/* 3. Script Beat: Screenplay Beat Card */}
         {node.stage === 'script' && (
-          <div className="p-2.5 rounded-xl bg-card border border-emerald-500/20 text-xs font-mono text-text-muted space-y-1.5">
-            <div className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center justify-between">
-              <span>Dialogue Beat</span>
-              {node.artifacts?.audioUrl && <Volume2 className="w-3 h-3 text-emerald-400" />}
+          <div className="p-2.5 rounded-lg bg-[#0A0A0D] border border-white/[0.06] text-xs font-mono space-y-1.5">
+            <div className="text-[9px] font-mono font-medium tracking-[0.12em] uppercase text-zinc-400 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <FileText className="w-3 h-3 text-zinc-500" />
+                <span>Dialogue Beat</span>
+              </span>
+              {node.artifacts?.audioUrl && (
+                <span className="flex items-center gap-1 text-[8px] text-zinc-400 bg-white/[0.05] px-1 py-0.5 rounded border border-white/[0.06]">
+                  <Volume2 className="w-2.5 h-2.5 text-zinc-400" />
+                  <span>STEM</span>
+                </span>
+              )}
             </div>
-            <div className="line-clamp-2 leading-relaxed italic text-text-primary text-[11px]">
+            <div className="line-clamp-2 leading-relaxed italic text-zinc-200 text-[11px] border-l-2 border-zinc-700/80 pl-2">
               "{node.artifacts?.textContent || node.prompt || 'Dialogue text line...'}"
             </div>
           </div>
@@ -517,16 +576,16 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
 
         {/* 4. Shot Optics: Lens Specs & Camera Motion */}
         {(node.stage === 'shot' || node.stage === 'storyboard') && (
-          <div className="p-2 rounded-xl bg-card border border-sky-500/20 text-[10px] font-mono text-text-muted grid grid-cols-2 gap-1.5">
-            <div className="bg-surface p-1 rounded-lg border border-subtle">
-              <span className="opacity-60 block">Lens</span>
-              <span className="text-sky-400 font-bold truncate block">
+          <div className="grid grid-cols-2 gap-1.5 text-[10px] font-mono">
+            <div className="bg-[#0A0A0D] p-2 rounded-lg border border-white/[0.06]">
+              <span className="text-[8px] font-mono uppercase tracking-widest text-zinc-500 block">Lens</span>
+              <span className="text-zinc-200 font-semibold truncate block mt-0.5">
                 {node.shotContextOverrides?.lensFocalLength || '35mm Prime'}
               </span>
             </div>
-            <div className="bg-surface p-1 rounded-lg border border-subtle">
-              <span className="opacity-60 block">Motion</span>
-              <span className="text-text-primary font-bold truncate block">
+            <div className="bg-[#0A0A0D] p-2 rounded-lg border border-white/[0.06]">
+              <span className="text-[8px] font-mono uppercase tracking-widest text-zinc-500 block">Motion</span>
+              <span className="text-zinc-200 font-semibold truncate block mt-0.5">
                 {node.shotContextOverrides?.cameraMovement || 'Slow Push-In'}
               </span>
             </div>
@@ -535,44 +594,60 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
 
         {/* Fallback Text excerpt for Ideation/Taste/VFX */}
         {['ideation', 'taste', 'vfx', 'assembly', 'render'].includes(node.stage) && (
-          <div className="bg-card rounded-xl p-2 border border-subtle text-[10px] text-text-muted font-mono line-clamp-2 leading-relaxed">
-            {node.artifacts?.textContent || node.prompt || 'Awaiting generation...'}
+          <div className="bg-[#0A0A0D] rounded-lg p-2.5 border border-white/[0.06] text-[10px] text-zinc-300 font-mono line-clamp-2 leading-relaxed">
+            {node.artifacts?.textContent || node.prompt || 'Awaiting generation prompt...'}
           </div>
         )}
 
         {/* Footer Details */}
-        <div className="flex items-center justify-between pt-1 border-t border-subtle text-[10px] font-mono text-text-muted">
-          <span>{node.modelEngine}</span>
+        <div className="flex items-center justify-between pt-2 border-t border-white/[0.06] text-[9px] font-mono text-zinc-500">
+          <span className="uppercase tracking-wider">{node.modelEngine}</span>
           <button
             onClick={(e) => {
               e.stopPropagation();
               onToggleHud && onToggleHud(node.id);
             }}
-            className="text-text-primary font-bold hover:underline"
+            className="text-zinc-400 hover:text-white font-medium transition active:scale-95 cursor-pointer flex items-center gap-1"
           >
-            {isHudOpen ? 'Close HUD ✕' : 'Inspect HUD ↗'}
+            <span>{isHudOpen ? 'CLOSE HUD' : 'INSPECT HUD'}</span>
+            <span className="text-[10px]">{isHudOpen ? '✕' : '↗'}</span>
           </button>
         </div>
       </div>
 
-      <Handle type="source" position={Position.Right} className="!bg-[#E4E4E7] !w-2.5 !h-2.5" />
-      <Handle type="source" position={Position.Bottom} className="!bg-[#E4E4E7] !w-2.5 !h-2.5" id="bottom" />
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="!bg-zinc-400 hover:!bg-white !w-2.5 !h-2.5 !border !border-black transition-colors"
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="!bg-zinc-400 hover:!bg-white !w-2.5 !h-2.5 !border !border-black transition-colors"
+        id="bottom"
+      />
 
       {/* CONTEXTUAL AUTO-ADD NEXT STAGE BADGE ON HOVER */}
       {isHovered && nextStages && nextStages.length > 0 && (
         <div className="absolute -right-3.5 top-1/2 -translate-y-1/2 z-30 flex items-center animate-in fade-in zoom-in-95 duration-100">
           {nextStages.length === 1 ? (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onAutoAddNextStage) onAutoAddNextStage(node.id, nextStages[0].stage);
-              }}
-              className="px-2 py-0.5 rounded-full bg-accent-primary text-app font-bold text-[9px] shadow-lg flex items-center gap-1 hover:scale-105 transition font-mono border border-surface cursor-pointer"
-              title={`Auto-Add Next Stage: ${nextStages[0].label}`}
-            >
-              <Plus className="w-2.5 h-2.5" />
-              <span>{nextStages[0].label}</span>
-            </button>
+            (() => {
+              const NextIcon = nextStages[0].icon;
+              return (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onAutoAddNextStage) onAutoAddNextStage(node.id, nextStages[0].stage);
+                  }}
+                  className="px-2.5 py-1 rounded-md bg-[#1F1F24] hover:bg-[#2A2A30] active:scale-95 text-zinc-200 hover:text-white font-medium text-[9px] font-mono tracking-wider uppercase shadow-2xl flex items-center gap-1.5 border border-white/10 transition-all cursor-pointer"
+                  title={`Auto-Add Next Stage: ${nextStages[0].label}`}
+                >
+                  <Plus className="w-2.5 h-2.5 text-zinc-400" />
+                  <NextIcon className="w-3 h-3 text-zinc-300" />
+                  <span>{nextStages[0].label}</span>
+                </button>
+              );
+            })()
           ) : (
             <div className="relative">
               <button
@@ -580,30 +655,33 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
                   e.stopPropagation();
                   setShowNextStagePicker(!showNextStagePicker);
                 }}
-                className="w-5 h-5 rounded-full bg-accent-primary text-app font-bold text-[10px] shadow-lg flex items-center justify-center hover:scale-105 transition font-mono border border-surface cursor-pointer"
+                className="w-6 h-6 rounded-md bg-[#1F1F24] hover:bg-[#2A2A30] active:scale-95 text-zinc-200 hover:text-white font-medium text-[10px] font-mono shadow-2xl flex items-center justify-center border border-white/10 transition-all cursor-pointer"
                 title="Auto-Add Next Stage"
               >
-                <Plus className="w-3 h-3" />
+                <Plus className="w-3.5 h-3.5" />
               </button>
               {showNextStagePicker && (
-                <div className="absolute left-6 top-1/2 -translate-y-1/2 w-40 bg-surface border border-subtle rounded-xl shadow-2xl p-1 z-40 space-y-0.5 animate-scale-in">
-                  <div className="text-[9px] font-mono text-text-muted px-2 py-0.5 uppercase font-bold">
+                <div className="absolute left-7 top-1/2 -translate-y-1/2 w-44 bg-[#18181C] border border-white/10 rounded-lg shadow-2xl p-1 z-40 space-y-0.5 animate-scale-in">
+                  <div className="text-[8px] font-mono text-zinc-400 px-2 py-1 uppercase tracking-widest font-semibold border-b border-white/[0.06]">
                     Add Next Stage
                   </div>
-                  {nextStages.map((nxt) => (
-                    <button
-                      key={nxt.stage}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowNextStagePicker(false);
-                        if (onAutoAddNextStage) onAutoAddNextStage(node.id, nxt.stage);
-                      }}
-                      className="w-full text-left px-2 py-1.5 rounded-lg text-[10px] font-semibold text-text-primary hover:bg-card hover:text-accent-primary transition flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <span>{nxt.icon}</span>
-                      <span>{nxt.label}</span>
-                    </button>
-                  ))}
+                  {nextStages.map((nxt) => {
+                    const NextIcon = nxt.icon;
+                    return (
+                      <button
+                        key={nxt.stage}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowNextStagePicker(false);
+                          if (onAutoAddNextStage) onAutoAddNextStage(node.id, nxt.stage);
+                        }}
+                        className="w-full text-left px-2 py-1.5 rounded text-[10px] font-mono tracking-wide text-zinc-300 hover:bg-white/[0.08] hover:text-white transition flex items-center gap-2 cursor-pointer active:scale-95"
+                      >
+                        <NextIcon className="w-3 h-3 text-zinc-400 shrink-0" />
+                        <span className="truncate">{nxt.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>

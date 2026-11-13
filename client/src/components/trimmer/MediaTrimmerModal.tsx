@@ -23,7 +23,7 @@ export const MediaTrimmerModal: React.FC<MediaTrimmerModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-lg rounded-2xl bg-surface border border-subtle shadow-2xl p-5 text-text-primary">
+      <div className="w-full max-w-lg rounded-lg bg-surface border border-subtle shadow-2xl p-5 text-text-primary">
         <div className="flex items-center justify-between pb-3 border-b border-subtle">
           <div className="flex items-center gap-2 text-sm font-bold text-text-primary">
             <Scissors className="w-4 h-4 text-accent-primary" />
@@ -45,7 +45,7 @@ export const MediaTrimmerModal: React.FC<MediaTrimmerModalProps> = ({
           </div>
 
           {/* Visual Scrubber Track */}
-          <div className="p-4 rounded-xl bg-card border border-subtle space-y-3">
+          <div className="p-4 rounded bg-card border border-subtle space-y-3">
             <div className="flex justify-between text-xs text-text-muted font-mono">
               <span>In-Point: {startSec.toFixed(1)}s</span>
               <span>Duration: {targetDurationSec.toFixed(1)}s</span>

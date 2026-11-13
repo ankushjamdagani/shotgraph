@@ -199,11 +199,11 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150">
-      <div className="flex flex-col w-full max-w-4xl h-[85vh] bg-surface border border-subtle rounded-2xl shadow-2xl overflow-hidden text-text-primary">
+      <div className="flex flex-col w-full max-w-4xl h-[85vh] bg-surface border border-subtle rounded-lg shadow-2xl overflow-hidden text-text-primary">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-subtle bg-surface">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-card border border-subtle text-accent-primary">
+            <div className="p-2 rounded bg-card border border-subtle text-accent-primary">
               <User className="w-5 h-5" />
             </div>
             <div>
@@ -232,7 +232,7 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
           <div className="w-72 border-r border-subtle bg-surface/50 flex flex-col p-3 space-y-2 overflow-y-auto">
             <button
               onClick={handleStartNewSubject}
-              className={`w-full py-2 px-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-semibold transition ${
+              className={`w-full py-2 px-3 rounded border flex items-center justify-center gap-2 text-xs font-semibold transition ${
                 isCreatingNew
                   ? 'bg-accent-primary text-app border-accent-primary shadow-sm font-bold'
                   : 'bg-card border-subtle text-text-muted hover:border-text-muted/40 hover:text-text-primary'
@@ -247,7 +247,7 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
             </div>
 
             {subjects.length === 0 && !isCreatingNew ? (
-              <div className="p-4 text-center text-xs text-text-muted rounded-xl border border-dashed border-subtle">
+              <div className="p-4 text-center text-xs text-text-muted rounded border border-dashed border-subtle">
                 No subjects defined yet. Add a presenter, character, or hero product anchor to lock consistency across shots.
               </div>
             ) : (
@@ -258,7 +258,7 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
                   <div
                     key={sub.id}
                     onClick={() => handleSelectSubject(sub.id)}
-                    className={`p-3 rounded-xl border cursor-pointer transition text-left relative group ${
+                    className={`p-3 rounded border cursor-pointer transition text-left relative group ${
                       isSelected
                         ? 'bg-card border-accent-primary text-text-primary shadow-sm ring-1 ring-accent-primary/40'
                         : 'bg-card border-subtle text-text-muted hover:border-text-muted/40 hover:text-text-primary'
@@ -382,7 +382,7 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
                       return (
                         <div
                           key={v.id}
-                          className={`p-3.5 rounded-xl border transition ${
+                          className={`p-3.5 rounded border transition ${
                             isActive
                               ? 'bg-card border-accent-primary shadow-sm ring-1 ring-accent-primary/40'
                               : 'bg-card border-subtle'
@@ -467,7 +467,7 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
                   <button
                     onClick={handleSaveSubject}
                     disabled={isSaving || !name.trim() || !coreDescription.trim()}
-                    className="px-5 py-2.5 rounded-xl bg-accent-primary hover:opacity-90 disabled:opacity-50 text-app font-bold text-xs flex items-center gap-1.5 shadow-lg transition"
+                    className="px-5 py-2.5 rounded bg-accent-primary hover:opacity-90 disabled:opacity-50 text-app font-bold text-xs flex items-center gap-1.5 shadow-lg transition"
                   >
                     <Check className="w-4 h-4" />
                     {isSaving ? 'Preserving...' : 'Save Subject Anchor'}

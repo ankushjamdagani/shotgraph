@@ -133,6 +133,13 @@ export interface ProjectRegistryEntry {
   lastOpenedAt: number;
   createdAt: number;
   previewThumbnailUrl?: string;
+  previewVideoUrl?: string;
+  dagNodes?: Array<{
+    id: string;
+    stage: string;
+    title: string;
+    parentId: string | null;
+  }>;
   basePresetId?: string;
   styleOverrides?: Record<string, any>;
   additionalConstraints?: string[];

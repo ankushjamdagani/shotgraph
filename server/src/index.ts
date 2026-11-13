@@ -250,6 +250,23 @@ server.get('/api/projects/:id', async (req, reply) => {
   return project;
 });
 
+// Dynamic project media asset serving
+server.get('/api/projects/:id/media/*', async (req, reply) => {
+  const { id } = req.params as { id: string };
+  const entry = await ProjectRegistry.getProjectEntry(id);
+  if (!entry) {
+    reply.status(404);
+    return { error: 'Project not found' };
+  }
+  const relPath = (req.params as any)['*'];
+  const fullPath = path.resolve(entry.path, relPath);
+  if (!fullPath.startsWith(path.resolve(entry.path))) {
+    reply.status(403);
+    return { error: 'Access denied' };
+  }
+  return reply.sendFile(path.basename(fullPath), path.dirname(fullPath));
+});
+
 // Update project settings, scenes, sticky notes, or metadata
 server.patch('/api/projects/:id', async (req, reply) => {
   const { id } = req.params as { id: string };

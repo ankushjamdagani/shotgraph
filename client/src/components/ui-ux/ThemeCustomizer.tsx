@@ -95,7 +95,7 @@ export const ThemeCustomizer: React.FC<ThemeCustomizerProps> = ({
   }, [currentTheme]);
 
   return (
-    <div className="flex items-center gap-1.5 bg-card px-2 py-1 rounded-xl border border-subtle text-xs shadow-sm">
+    <div className="flex items-center gap-1.5 bg-card px-2 py-1 rounded border border-subtle text-xs shadow-sm">
       <Palette className="w-3.5 h-3.5 text-text-muted" />
       <select
         value={currentTheme}

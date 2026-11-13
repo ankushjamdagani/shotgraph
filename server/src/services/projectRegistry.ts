@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import fsSync from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { exec } from 'node:child_process';
@@ -24,6 +25,13 @@ export interface ProjectRegistryEntry {
   lastOpenedAt: number;
   createdAt: number;
   previewThumbnailUrl?: string;
+  previewVideoUrl?: string;
+  dagNodes?: Array<{
+    id: string;
+    stage: string;
+    title: string;
+    parentId: string | null;
+  }>;
   basePresetId?: string;
   styleOverrides?: Record<string, any>;
   additionalConstraints?: string[];
@@ -282,7 +290,55 @@ export class ProjectRegistry {
     try {
       const raw = await fs.readFile(this.getIndexFilePath(), 'utf-8');
       const list = JSON.parse(raw) as ProjectRegistryEntry[];
-      return list.sort((a, b) => (b.lastOpenedAt || 0) - (a.lastOpenedAt || 0));
+
+      const enriched = await Promise.all(
+        list.map(async (entry) => {
+          try {
+            const projectJsonPath = path.join(entry.path, '.studio', 'project.json');
+            const dataStr = await fs.readFile(projectJsonPath, 'utf-8');
+            const projectData = JSON.parse(dataStr);
+            const nodesObj = projectData.nodes || {};
+            const nodes = Object.values(nodesObj) as any[];
+
+            // Look for video or media preview that actually exists on disk
+            let videoUrl = entry.previewThumbnailUrl;
+            if (!videoUrl) {
+              const videoNode = nodes.find((n) => {
+                if (!n.artifacts?.mediaUrl) return false;
+                const isMedia =
+                  n.artifacts.mediaUrl.endsWith('.mp4') ||
+                  n.artifacts.mediaUrl.endsWith('.webm') ||
+                  n.artifacts.mediaUrl.endsWith('.mov') ||
+                  n.artifacts.mediaUrl.endsWith('.png') ||
+                  n.artifacts.mediaUrl.endsWith('.jpg');
+                if (!isMedia) return false;
+                const fullMedia = path.join(entry.path, n.artifacts.mediaUrl);
+                return fsSync.existsSync(fullMedia);
+              });
+              if (videoNode) {
+                videoUrl = `http://localhost:3030/api/projects/${entry.id}/media/${videoNode.artifacts.mediaUrl}`;
+              }
+            }
+
+            const dagNodes = nodes.map((n) => ({
+              id: n.id,
+              stage: n.stage,
+              title: n.title,
+              parentId: n.parentId,
+            }));
+
+            return {
+              ...entry,
+              previewVideoUrl: videoUrl,
+              dagNodes: dagNodes.length > 0 ? dagNodes : undefined,
+            };
+          } catch {
+            return entry;
+          }
+        })
+      );
+
+      return enriched.sort((a, b) => (b.lastOpenedAt || 0) - (a.lastOpenedAt || 0));
     } catch {
       return [];
     }

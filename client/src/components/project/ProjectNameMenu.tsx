@@ -10,7 +10,7 @@ import {
   Trash2,
   Check,
   ChevronRight,
-  Sparkles,
+  LayoutGrid,
 } from 'lucide-react';
 import { FilmProject, ProjectRegistryEntry } from '../../types.js';
 import { toast } from '../../services/toastService.js';
@@ -83,18 +83,34 @@ export const ProjectNameMenu: React.FC<ProjectNameMenuProps> = ({
     return () => document.removeEventListener('mousedown', handleOutside);
   }, [isOpen]);
 
-  // Escape key listener
+  // Global & In-Menu Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsOpen(false);
         setIsSubmenuOpen(false);
         setIsRenaming(false);
+        return;
+      }
+
+      if (isOpen && !isRenaming) {
+        if (e.key === 'F2') {
+          e.preventDefault();
+          setIsOpen(false);
+          setIsRenaming(true);
+        } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd') {
+          e.preventDefault();
+          handleDuplicate();
+        } else if ((e.metaKey || e.ctrlKey) && e.key === 'Backspace') {
+          e.preventDefault();
+          setIsOpen(false);
+          onDeleteProject();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isOpen, isRenaming]);
 
   const totalDuration = project.scenes.reduce((acc, s) => acc + s.targetDurationSec, 0);
 
@@ -172,8 +188,8 @@ export const ProjectNameMenu: React.FC<ProjectNameMenuProps> = ({
     <div ref={containerRef} className="relative select-none">
       {/* Active Project Switcher Pill */}
       {isRenaming ? (
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-card border border-accent-primary shadow-sm">
-          <Folder className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+        <div className="flex items-center gap-1.5 px-2.5 h-8 rounded-lg bg-card border border-accent-primary shadow-xs">
+          <Folder className="w-3.5 h-3.5 text-amber-400/90 shrink-0" />
           <input
             ref={renameInputRef}
             type="text"
@@ -184,26 +200,27 @@ export const ProjectNameMenu: React.FC<ProjectNameMenuProps> = ({
               if (e.key === 'Escape') setIsRenaming(false);
             }}
             onBlur={handleCommitRename}
-            className="w-40 bg-transparent text-xs font-bold text-text-primary focus:outline-none"
+            className="w-40 bg-transparent text-xs font-semibold text-text-primary focus:outline-none"
           />
           <button
             onClick={handleCommitRename}
-            className="p-0.5 rounded text-text-muted hover:text-emerald-400 transition"
+            className="p-1 rounded text-text-muted hover:text-text-primary transition active:scale-95"
+            title="Save Name (Enter)"
           >
-            <Check className="w-3 h-3" />
+            <Check className="w-3 h-3 text-emerald-400" />
           </button>
         </div>
       ) : (
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 px-3 py-1 rounded-xl bg-card hover:bg-subtle border border-subtle text-text-primary transition group shadow-sm"
-          title="Project Options & Switcher (Cmd+O)"
+          className="flex items-center gap-2 px-2.5 h-7 rounded bg-card hover:bg-subtle/70 border border-subtle text-text-primary transition group shadow-xs active:scale-[0.98]"
+          title="Project Options (⌘O)"
         >
-          <Folder className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-          <span className="text-xs font-bold text-text-primary transition truncate max-w-[200px]">
+          <Folder className="w-3.5 h-3.5 text-amber-400/90 shrink-0" />
+          <span className="text-xs font-semibold text-text-primary transition truncate max-w-[190px]">
             {project.name}
           </span>
-          <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-app text-text-muted border border-subtle">
+          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-app text-text-muted border border-subtle">
             {project.aspectRatio} • {totalDuration}s
           </span>
           <ChevronDown
@@ -214,14 +231,23 @@ export const ProjectNameMenu: React.FC<ProjectNameMenuProps> = ({
         </button>
       )}
 
-      {/* Dropdown Menu */}
+      {/* DaVinci Resolve / macOS Style Dropdown Menu */}
       {isOpen && (
-        <div className="absolute left-0 mt-2 w-64 bg-surface/95 backdrop-blur-xl border border-subtle rounded-2xl shadow-2xl p-1.5 z-50 space-y-1 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-subtle">
-          {/* Header Info */}
-          <div className="px-2.5 py-2 border-b border-subtle">
-            <div className="text-xs font-extrabold text-text-primary truncate">{project.name}</div>
-            <div className="text-[10px] font-mono text-text-muted mt-0.5">
-              {project.aspectRatio} • {totalDuration}s • {project.scenes.length} Scenes • {Object.keys(project.nodes).length} Nodes
+        <div className="absolute left-0 mt-1 w-68 bg-surface/95 backdrop-blur-xl border border-subtle rounded-md shadow-2xl p-1 z-50 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-subtle">
+          {/* Header Info Banner */}
+          <div className="px-3 py-1.5 border-b border-subtle bg-card/40 rounded-t-sm">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-text-primary truncate">{project.name}</span>
+              <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-app text-text-muted border border-subtle shrink-0">
+                {project.aspectRatio}
+              </span>
+            </div>
+            <div className="text-[10px] font-mono text-text-muted mt-0.5 flex items-center gap-1.5">
+              <span>{totalDuration}s</span>
+              <span className="text-subtle">•</span>
+              <span>{project.scenes.length} scenes</span>
+              <span className="text-subtle">•</span>
+              <span>{Object.keys(project.nodes).length} nodes</span>
             </div>
           </div>
 
@@ -231,19 +257,25 @@ export const ProjectNameMenu: React.FC<ProjectNameMenuProps> = ({
               setIsOpen(false);
               setIsRenaming(true);
             }}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs text-text-primary hover:bg-card hover:text-accent-primary transition text-left"
+            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-sm text-xs font-medium text-text-primary hover:bg-subtle transition-colors group text-left"
           >
-            <Edit2 className="w-3.5 h-3.5 text-text-muted" />
-            <span>Rename Project...</span>
+            <div className="flex items-center gap-2">
+              <Edit2 className="w-3.5 h-3.5 text-text-muted group-hover:text-text-primary transition-colors" />
+              <span>Rename Project</span>
+            </div>
+            <span className="text-[10px] font-mono text-text-muted">F2</span>
           </button>
 
           {/* Action 2: Duplicate Project */}
           <button
             onClick={handleDuplicate}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs text-text-primary hover:bg-card hover:text-accent-primary transition text-left"
+            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-sm text-xs font-medium text-text-primary hover:bg-subtle transition-colors group text-left"
           >
-            <Copy className="w-3.5 h-3.5 text-text-muted" />
-            <span>Duplicate Project</span>
+            <div className="flex items-center gap-2">
+              <Copy className="w-3.5 h-3.5 text-text-muted group-hover:text-text-primary transition-colors" />
+              <span>Duplicate Project</span>
+            </div>
+            <span className="text-[10px] font-mono text-text-muted">⌘D</span>
           </button>
 
           {/* Action 3: Export DaVinci Bundle */}
@@ -252,10 +284,13 @@ export const ProjectNameMenu: React.FC<ProjectNameMenuProps> = ({
               setIsOpen(false);
               onOpenDaVinciExport();
             }}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs text-text-primary hover:bg-card hover:text-accent-primary transition text-left"
+            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-sm text-xs font-medium text-text-primary hover:bg-subtle transition-colors group text-left"
           >
-            <Film className="w-3.5 h-3.5 text-text-muted" />
-            <span>Export DaVinci Bundle</span>
+            <div className="flex items-center gap-2">
+              <Film className="w-3.5 h-3.5 text-text-muted group-hover:text-text-primary transition-colors" />
+              <span>Export DaVinci</span>
+            </div>
+            <span className="text-[10px] font-mono text-text-muted">⌘E</span>
           </button>
 
           {/* Action 4: Project Settings */}
@@ -264,13 +299,13 @@ export const ProjectNameMenu: React.FC<ProjectNameMenuProps> = ({
               setIsOpen(false);
               onOpenProjectSettings();
             }}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs text-text-primary hover:bg-card hover:text-accent-primary transition text-left"
+            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-sm text-xs font-medium text-text-primary hover:bg-subtle transition-colors group text-left"
           >
-            <Settings className="w-3.5 h-3.5 text-text-muted" />
-            <span>Project Settings</span>
-            <span className="ml-auto text-[9px] font-mono text-text-muted bg-app px-1 rounded border border-subtle">
-              ⌘,
-            </span>
+            <div className="flex items-center gap-2">
+              <Settings className="w-3.5 h-3.5 text-text-muted group-hover:text-text-primary transition-colors" />
+              <span>Settings</span>
+            </div>
+            <span className="text-[10px] font-mono text-text-muted">⌘,</span>
           </button>
 
           <div className="w-full h-[1px] bg-subtle my-1" />
@@ -283,19 +318,19 @@ export const ProjectNameMenu: React.FC<ProjectNameMenuProps> = ({
           >
             <button
               onClick={() => setIsSubmenuOpen(!isSubmenuOpen)}
-              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs text-text-primary hover:bg-card hover:text-accent-primary transition text-left"
+              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-sm text-xs font-medium text-text-primary hover:bg-subtle transition-colors group text-left"
             >
               <div className="flex items-center gap-2">
-                <FolderOpen className="w-3.5 h-3.5 text-amber-400" />
-                <span>Open Projects</span>
+                <FolderOpen className="w-3.5 h-3.5 text-amber-400/90 shrink-0" />
+                <span>Open Recent</span>
               </div>
-              <ChevronRight className="w-3 h-3 text-text-muted" />
+              <ChevronRight className="w-3 h-3 text-text-muted group-hover:text-text-primary transition-colors" />
             </button>
 
             {/* Submenu for Recent Projects */}
             {isSubmenuOpen && (
-              <div className="absolute left-full top-0 ml-1.5 w-60 bg-surface/95 backdrop-blur-xl border border-subtle rounded-2xl shadow-2xl p-1.5 z-50 space-y-1 animate-scale-in">
-                <div className="px-2 py-1 text-[9px] font-mono uppercase font-bold text-text-muted border-b border-subtle">
+              <div className="absolute left-full top-0 ml-1 w-64 bg-surface/95 backdrop-blur-xl border border-subtle rounded-md shadow-2xl p-1 z-50 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-subtle">
+                <div className="px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider font-semibold text-text-muted border-b border-subtle">
                   Recent Projects
                 </div>
                 {recentProjects.length > 0 ? (
@@ -303,18 +338,18 @@ export const ProjectNameMenu: React.FC<ProjectNameMenuProps> = ({
                     <button
                       key={rec.id}
                       onClick={() => handleOpenRecentProject(rec.id)}
-                      className="w-full text-left px-2 py-1.5 rounded-xl text-xs text-text-primary hover:bg-card transition group flex flex-col"
+                      className="w-full text-left px-2.5 py-1.5 rounded-sm text-xs text-text-primary hover:bg-subtle transition-colors group flex flex-col"
                     >
-                      <span className="font-bold truncate group-hover:text-accent-primary transition">
+                      <span className="font-semibold truncate group-hover:text-accent-primary transition-colors">
                         {rec.name}
                       </span>
-                      <span className="text-[9px] font-mono text-text-muted">
+                      <span className="text-[10px] font-mono text-text-muted">
                         {rec.aspectRatio} • {rec.targetDurationSec}s
                       </span>
                     </button>
                   ))
                 ) : (
-                  <div className="px-2 py-2 text-[10px] text-text-muted italic">No other recent projects</div>
+                  <div className="px-2.5 py-2 text-[11px] text-text-muted italic">No recent projects</div>
                 )}
 
                 <div className="w-full h-[1px] bg-subtle my-1" />
@@ -325,10 +360,13 @@ export const ProjectNameMenu: React.FC<ProjectNameMenuProps> = ({
                     setIsSubmenuOpen(false);
                     onOpenProjectsHub();
                   }}
-                  className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-xl text-xs font-bold text-accent-primary hover:bg-card transition text-left"
+                  className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-sm text-xs font-semibold text-text-primary hover:bg-subtle transition-colors text-left group"
                 >
-                  <Sparkles className="w-3 h-3" />
-                  <span>View All Projects... (⌘O)</span>
+                  <div className="flex items-center gap-2">
+                    <LayoutGrid className="w-3.5 h-3.5 text-text-muted group-hover:text-text-primary transition-colors" />
+                    <span>View All Projects</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-text-muted">⌘O</span>
                 </button>
               </div>
             )}
@@ -342,10 +380,13 @@ export const ProjectNameMenu: React.FC<ProjectNameMenuProps> = ({
               setIsOpen(false);
               onDeleteProject();
             }}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs text-rose-500 hover:bg-rose-500/10 transition text-left"
+            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-sm text-xs font-medium text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-colors group text-left"
           >
-            <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-            <span>Delete Project...</span>
+            <div className="flex items-center gap-2">
+              <Trash2 className="w-3.5 h-3.5 text-rose-400 group-hover:text-rose-300 transition-colors" />
+              <span>Delete Project</span>
+            </div>
+            <span className="text-[10px] font-mono text-rose-400/70">⌘⌫</span>
           </button>
         </div>
       )}

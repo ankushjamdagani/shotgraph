@@ -180,11 +180,11 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-3xl rounded-2xl bg-surface border border-subtle shadow-2xl flex flex-col max-h-[90vh] overflow-hidden text-text-primary">
+      <div className="w-full max-w-3xl rounded-lg bg-surface border border-subtle shadow-2xl flex flex-col max-h-[90vh] overflow-hidden text-text-primary">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-subtle bg-surface">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-card border border-subtle flex items-center justify-center text-accent-primary">
+            <div className="w-10 h-10 rounded bg-card border border-subtle flex items-center justify-center text-accent-primary">
               <Sliders className="w-5 h-5" />
             </div>
             <div>
@@ -207,7 +207,7 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
         {/* Content Body */}
         <div className="p-6 space-y-6 overflow-y-auto flex-1 bg-surface">
           {errorMsg && (
-            <div className="p-3 bg-red-950/60 border border-red-800 rounded-xl text-xs text-red-200">
+            <div className="p-3 bg-red-950/60 border border-red-800 rounded text-xs text-red-200">
               {errorMsg}
             </div>
           )}
@@ -230,7 +230,7 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
             </div>
 
             {showSavePresetInput && (
-              <div className="p-3 mb-3 bg-card border border-accent-primary/40 rounded-xl flex items-center gap-2">
+              <div className="p-3 mb-3 bg-card border border-accent-primary/40 rounded flex items-center gap-2">
                 <input
                   type="text"
                   placeholder="New Preset Name (e.g. Acme Tech Vibrant)"
@@ -261,7 +261,7 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
                       setOverrideDisplayFont(sp.tokens.typography.displayFont);
                       setOverrideCutDuration(sp.tokens.pacing.avgCutDurationSec);
                     }}
-                    className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
+                    className={`p-3 rounded border text-left transition flex flex-col justify-between ${
                       isSelected
                         ? 'bg-card border-accent-primary text-text-primary shadow-md ring-1 ring-accent-primary/40'
                         : 'bg-card border-subtle text-text-muted hover:border-text-muted/40 hover:text-text-primary'
@@ -286,7 +286,7 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
           </div>
 
           {/* 2. Project-Level Local Overrides */}
-          <div className="p-4 rounded-xl bg-card border border-subtle space-y-4">
+          <div className="p-4 rounded bg-card border border-subtle space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-text-primary flex items-center gap-1.5">
                 <Sliders className="w-3.5 h-3.5 text-accent-primary" />
@@ -358,7 +358,7 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
           </div>
 
           {/* 3. Additional Negative Constraints */}
-          <div className="p-4 rounded-xl bg-card border border-subtle space-y-3">
+          <div className="p-4 rounded bg-card border border-subtle space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-text-primary flex items-center gap-1.5">
                 <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
@@ -430,7 +430,7 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
               type="button"
               onClick={handleApplyCascadingStyles}
               disabled={isApplying}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent-primary hover:opacity-90 text-app font-bold text-xs shadow-lg transition disabled:opacity-50"
+              className="flex items-center gap-1.5 px-4 py-2 rounded bg-accent-primary hover:opacity-90 text-app font-bold text-xs shadow-lg transition disabled:opacity-50"
             >
               {isApplying ? (
                 <>

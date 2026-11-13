@@ -150,7 +150,7 @@ export const StickyNoteNode: React.FC<NodeProps<any>> = ({ id, data, selected })
   return (
     <div
       onDoubleClick={() => setIsEditing(true)}
-      className={`group w-64 min-h-[160px] rounded-2xl p-4 shadow-xl border backdrop-blur-md transition-all duration-150 select-none ${
+      className={`group w-64 min-h-[160px] rounded-md p-4 shadow-xl border backdrop-blur-md transition-all duration-150 select-none ${
         activeStyle.container
       } ${selected ? 'ring-2 ring-accent-primary shadow-2xl scale-[1.01]' : ''}`}
     >

@@ -26,7 +26,7 @@
   --bg-card: #141414;
   --bg-hover: #1E1E1E;
   --border-subtle: #242424;
-  --border-focus: #444444;
+  --border-focus: #525252;
   --text-primary: #FFFFFF;
   --text-muted: #888888;
   --accent-primary: #FFFFFF;
@@ -34,8 +34,8 @@
 }
 
 .theme-midnight-navy {
-  --bg-app: #050811;
-  --bg-surface: #0A0F1D;
+  --bg-app: #060913;
+  --bg-surface: #0B1120;
   --bg-card: #0F172A;
   --bg-hover: #1E293B;
   --border-subtle: #1E293B;
@@ -50,7 +50,7 @@
   --bg-app: #12100E;
   --bg-surface: #1C1917;
   --bg-card: #292524;
-  --bg-hover: #44403C;
+  --bg-hover: #3A3533;
   --border-subtle: #3D3835;
   --border-focus: #F59E0B;
   --text-primary: #FAF8F5;
@@ -111,10 +111,14 @@ body {
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   margin: 0;
   padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 code, .font-mono {
   font-family: 'JetBrains Mono', monospace;
+  font-feature-settings: 'tnum' on, 'zero' on;
 }
 
 /* Custom Scrollbars */
@@ -153,13 +157,27 @@ button:active:not(:disabled) {
   background-image: radial-gradient(circle, var(--dot-color) 1px, transparent 1px);
 }
 
+/* Faded translucent separator lines */
+.border-faint {
+  border-color: color-mix(in srgb, var(--border-subtle) 35%, transparent) !important;
+}
+.border-faint-b {
+  border-bottom-color: color-mix(in srgb, var(--border-subtle) 35%, transparent) !important;
+}
+.border-faint-t {
+  border-top-color: color-mix(in srgb, var(--border-subtle) 35%, transparent) !important;
+}
+.divide-faint > :not([hidden]) ~ :not([hidden]) {
+  border-color: color-mix(in srgb, var(--border-subtle) 25%, transparent) !important;
+}
+
 /* React Flow Minimalist Lab Dark Styling */
 .react-flow__node {
-  border-radius: 16px;
+  border-radius: 12px;
 }
 .react-flow__handle {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   background: var(--accent-primary);
   border: 2px solid var(--bg-app);
 }
@@ -181,9 +199,9 @@ button:active:not(:disabled) {
   to { stroke-dashoffset: -12; }
 }
 
-/* Glow effects */
+/* Surgical accent elevation */
 .glow-accent {
-  box-shadow: 0 0 20px -5px rgba(234, 179, 8, 0.3);
+  box-shadow: 0 0 0 1px rgba(234, 179, 8, 0.3), 0 2px 8px -2px rgba(234, 179, 8, 0.2);
 }
 
 /* MiniMap & Controls Dark Theme Integration */

@@ -55,7 +55,7 @@ export const ThemeDropdownMenu: React.FC<ThemeDropdownMenuProps> = ({
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-card hover:bg-subtle border border-subtle text-text-primary text-xs font-medium shadow-sm transition group"
+        className="flex items-center gap-2 px-3 py-1.5 rounded bg-card hover:bg-subtle border border-subtle text-text-primary text-xs font-medium shadow-sm transition group"
         title="Change Studio Theme"
       >
         <div className="flex items-center gap-1.5">
@@ -76,7 +76,7 @@ export const ThemeDropdownMenu: React.FC<ThemeDropdownMenuProps> = ({
 
       {/* Popover Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-72 bg-surface/95 backdrop-blur-xl border border-subtle rounded-2xl shadow-2xl p-2 z-50 space-y-2 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-subtle">
+        <div className="absolute right-0 mt-2 w-72 bg-surface/95 backdrop-blur-xl border border-subtle rounded-lg shadow-2xl p-2 z-50 space-y-2 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-subtle">
           <div className="px-2.5 py-1 flex items-center justify-between border-b border-subtle text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider">
             <span>Visual Theme System</span>
             <Palette className="w-3 h-3 text-accent-primary" />
@@ -97,7 +97,7 @@ export const ThemeDropdownMenu: React.FC<ThemeDropdownMenuProps> = ({
                     onThemeChange(themeKey);
                     setIsOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition ${
+                  className={`w-full flex items-center justify-between p-2 rounded text-left transition ${
                     isSelected ? 'bg-card border border-accent-primary/40 shadow-sm' : 'hover:bg-card/70'
                   }`}
                 >
@@ -136,7 +136,7 @@ export const ThemeDropdownMenu: React.FC<ThemeDropdownMenuProps> = ({
                     onThemeChange(themeKey);
                     setIsOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition ${
+                  className={`w-full flex items-center justify-between p-2 rounded text-left transition ${
                     isSelected ? 'bg-card border border-accent-primary/40 shadow-sm' : 'hover:bg-card/70'
                   }`}
                 >
