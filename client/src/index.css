@@ -1,0 +1,44 @@
+@import '@xyflow/react/dist/style.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0A0D14;
+}
+::-webkit-scrollbar-thumb {
+  background: #1F293D;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #38BDF8;
+}
+
+/* React Flow Dark Styling */
+.react-flow__node {
+  border-radius: 12px;
+}
+.react-flow__handle {
+  width: 10px;
+  height: 10px;
+  background: #38BDF8;
+  border: 2px solid #0A0D14;
+}
+.react-flow__edge-path {
+  stroke: #1F293D;
+  stroke-width: 2.5;
+}
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #38BDF8;
+}
+
+/* Glow effects */
+.glow-accent {
+  box-shadow: 0 0 20px -5px rgba(56, 189, 248, 0.3);
+}

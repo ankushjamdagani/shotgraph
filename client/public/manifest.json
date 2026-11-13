@@ -1,0 +1,16 @@
+{
+  "name": "Visual AI Video Studio",
+  "short_name": "AI Studio",
+  "description": "Desktop-class AI video studio with Version Tree DAG, multi-agent swarm, and DaVinci Resolve handoff",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0D14",
+  "theme_color": "#0A0D14",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
