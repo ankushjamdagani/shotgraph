@@ -274,79 +274,89 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredProjects.map((p) => {
               const isCurrent = p.id === currentProjectId;
-              const AspectIcon =
-                p.aspectRatio === '16:9' ? Monitor : p.aspectRatio === '1:1' ? Square : Smartphone;
 
               return (
                 <div
                   key={p.id}
                   onClick={() => handleOpenProject(p.id)}
-                  className={`group relative p-4 rounded-2xl border text-left cursor-pointer transition flex flex-col justify-between ${
+                  className={`group relative p-3.5 rounded-2xl border text-left cursor-pointer transition-all duration-200 flex flex-col justify-between ${
                     isCurrent
-                      ? 'bg-[#131D33] border-sky-500/80 shadow-lg shadow-sky-950/50 ring-1 ring-sky-500/50'
-                      : 'bg-[#0E1526] border-slate-800/90 hover:border-slate-700 hover:bg-[#11192E]'
+                      ? 'bg-[#11192E] border-sky-500/80 shadow-lg shadow-sky-950/50 ring-1 ring-sky-500/40'
+                      : 'bg-[#0E1526] border-slate-800/80 hover:border-slate-700 hover:bg-[#11192E] hover:-translate-y-0.5'
                   }`}
                 >
-                  {/* Top Bar inside card */}
                   <div>
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className={`w-10 h-10 rounded-xl flex items-center justify-center border ${
-                            isCurrent
-                              ? 'bg-sky-500/10 border-sky-500/30 text-sky-400'
-                              : 'bg-slate-800/50 border-slate-700/50 text-slate-400 group-hover:text-white'
-                          }`}
-                        >
-                          <AspectIcon className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <h4 className="text-sm font-bold text-white group-hover:text-sky-300 transition truncate max-w-[150px]">
-                              {p.name}
-                            </h4>
-                            {isCurrent && (
-                              <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-950 text-sky-300 border border-sky-800">
-                                <CheckCircle2 className="w-3 h-3 text-sky-400" />
-                                Active
-                              </span>
-                            )}
+                    {/* Visual Aspect Ratio Viewport Simulation */}
+                    <div className="w-full h-32 mb-3 rounded-xl bg-[#070A10] border border-slate-800/70 flex items-center justify-center relative overflow-hidden group-hover:border-slate-700 transition">
+                      {p.aspectRatio === '9:16' ? (
+                        <div className="w-[50px] h-[90px] rounded-lg border border-slate-700/80 bg-slate-900/90 relative flex flex-col items-center justify-between p-1 shadow-inner">
+                          <div className="w-3 h-0.5 rounded-full bg-slate-700" />
+                          <div className="w-full flex-1 my-1 border border-dashed border-sky-500/25 rounded flex items-center justify-center">
+                            <Smartphone className="w-3.5 h-3.5 text-sky-400" />
                           </div>
-                          <p className="text-[11px] text-slate-500 truncate max-w-[180px] font-mono">
-                            {p.path}
-                          </p>
+                          <div className="w-3 h-0.5 rounded-full bg-slate-800" />
                         </div>
-                      </div>
+                      ) : p.aspectRatio === '16:9' ? (
+                        <div className="w-[104px] h-[58px] rounded-lg border border-slate-700/80 bg-slate-900/90 relative flex items-center justify-center shadow-inner">
+                          <div className="w-full h-full border border-dashed border-sky-500/25 rounded flex items-center justify-center">
+                            <Monitor className="w-4 h-4 text-sky-400" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-[66px] h-[66px] rounded-lg border border-slate-700/80 bg-slate-900/90 relative flex items-center justify-center shadow-inner">
+                          <div className="w-full h-full border border-dashed border-sky-500/25 rounded flex items-center justify-center">
+                            <Square className="w-4 h-4 text-sky-400" />
+                          </div>
+                        </div>
+                      )}
 
-                      {/* Quick Remove from Recents */}
+                      {/* Active Status Badge in Top Right */}
+                      {isCurrent && (
+                        <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-950/90 text-sky-300 border border-sky-700/80 backdrop-blur-sm">
+                          <CheckCircle2 className="w-3 h-3 text-sky-400" />
+                          <span>Active</span>
+                        </div>
+                      )}
+
+                      {/* Hover action button: Delete from recents */}
                       <button
                         title="Remove from recent list"
                         onClick={(e) => handleRemoveProject(e, p.id, p.name)}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-950/40 transition"
+                        className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 p-1 rounded-lg bg-black/60 text-slate-400 hover:text-red-400 transition"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-3 h-3" />
                       </button>
                     </div>
 
+                    {/* Project Information */}
+                    <div className="mb-2.5">
+                      <h4 className="text-sm font-bold text-white group-hover:text-sky-300 transition truncate">
+                        {p.name}
+                      </h4>
+                      <p className="text-[11px] text-slate-500 truncate font-mono mt-0.5">
+                        {p.path}
+                      </p>
+                    </div>
+
                     {/* Format Badges */}
-                    <div className="flex flex-wrap items-center gap-1.5 mb-4">
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-800/80 text-slate-300 border border-slate-700/60">
-                        {p.aspectRatio || '9:16'}
+                    <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-800/80 text-slate-300 border border-slate-700/60 font-mono">
+                        {p.aspectRatio === '9:16' ? '9:16 REEL' : p.aspectRatio === '16:9' ? '16:9 WIDE' : '1:1 SQUARE'}
                       </span>
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-800/80 text-slate-300 border border-slate-700/60">
-                        {p.fps || 30} fps
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-800/80 text-slate-300 border border-slate-700/60 font-mono">
+                        {p.fps || 30} FPS
                       </span>
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-800/80 text-slate-300 border border-slate-700/60">
-                        {p.targetDurationSec || 30}s duration
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-800/80 text-slate-300 border border-slate-700/60 font-mono">
+                        {p.targetDurationSec || 30}s
                       </span>
                     </div>
                   </div>
 
                   {/* Card Footer */}
-                  <div className="pt-3 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-500">
+                  <div className="pt-2.5 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-500">
                     <div className="flex items-center gap-1">
                       <Clock className="w-3 h-3 text-slate-500" />
-                      <span>Opened {formatRelativeTime(p.lastOpenedAt)}</span>
+                      <span>{formatRelativeTime(p.lastOpenedAt)}</span>
                     </div>
                     <span className="text-sky-400 font-semibold group-hover:translate-x-0.5 transition flex items-center gap-0.5 text-xs">
                       Open <ExternalLink className="w-3 h-3 inline" />

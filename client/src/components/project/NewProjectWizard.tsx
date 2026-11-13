@@ -190,26 +190,47 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
                 {
                   id: 'reel_9_16' as const,
                   label: '9:16 Vertical Reel',
-                  desc: 'Reels, TikTok, Shorts (1080x1920)',
-                  icon: Smartphone,
+                  desc: 'Instagram Reels, TikTok, YouTube Shorts',
+                  dimensions: '1080 × 1920',
                   defaultDur: 30,
+                  silhouette: (
+                    <div className="w-7 h-12 rounded border border-slate-700 bg-slate-900 flex flex-col items-center justify-between p-0.5 mb-2 shadow-inner">
+                      <div className="w-1.5 h-0.5 rounded-full bg-slate-700" />
+                      <div className="w-full flex-1 my-0.5 border border-dashed border-sky-500/30 rounded flex items-center justify-center">
+                        <Smartphone className="w-2.5 h-2.5 text-sky-400" />
+                      </div>
+                    </div>
+                  ),
                 },
                 {
                   id: 'youtube_16_9' as const,
                   label: '16:9 Widescreen',
-                  desc: 'YouTube & Explainer (1920x1080)',
-                  icon: Monitor,
+                  desc: 'YouTube Long-form & Explainer Docs',
+                  dimensions: '1920 × 1080',
                   defaultDur: 60,
+                  silhouette: (
+                    <div className="w-12 h-7 rounded border border-slate-700 bg-slate-900 flex items-center justify-center mb-2 shadow-inner">
+                      <div className="w-full h-full border border-dashed border-sky-500/30 rounded flex items-center justify-center">
+                        <Monitor className="w-3 h-3 text-sky-400" />
+                      </div>
+                    </div>
+                  ),
                 },
                 {
                   id: 'ad_1_1' as const,
                   label: '1:1 Square Ad',
-                  desc: 'Social feed & Carousel (1080x1080)',
-                  icon: Square,
+                  desc: 'Social feed & Carousel Commercials',
+                  dimensions: '1080 × 1080',
                   defaultDur: 15,
+                  silhouette: (
+                    <div className="w-8 h-8 rounded border border-slate-700 bg-slate-900 flex items-center justify-center mb-2 shadow-inner">
+                      <div className="w-full h-full border border-dashed border-sky-500/30 rounded flex items-center justify-center">
+                        <Square className="w-3 h-3 text-sky-400" />
+                      </div>
+                    </div>
+                  ),
                 },
               ].map((item) => {
-                const Icon = item.icon;
                 const isSelected = preset === item.id;
                 return (
                   <button
@@ -221,13 +242,16 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
                     }}
                     className={`p-3.5 rounded-xl border text-left transition flex flex-col items-start ${
                       isSelected
-                        ? 'bg-sky-950/60 border-sky-500 text-white shadow-lg shadow-sky-950/40'
+                        ? 'bg-sky-950/60 border-sky-500 text-white shadow-lg shadow-sky-950/40 ring-1 ring-sky-500/40'
                         : 'bg-[#111726] border-slate-800 text-slate-400 hover:border-slate-700'
                     }`}
                   >
-                    <Icon className={`w-5 h-5 mb-2 ${isSelected ? 'text-sky-400' : 'text-slate-500'}`} />
+                    {item.silhouette}
                     <div className="text-xs font-bold text-white mb-0.5">{item.label}</div>
-                    <div className="text-[10px] text-slate-400 leading-tight">{item.desc}</div>
+                    <div className="text-[10px] text-slate-400 leading-tight mb-2">{item.desc}</div>
+                    <span className="mt-auto px-1.5 py-0.5 rounded text-[9px] font-mono bg-slate-900 text-slate-400 border border-slate-800">
+                      {item.dimensions}
+                    </span>
                   </button>
                 );
               })}
