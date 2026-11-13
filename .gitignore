@@ -1,0 +1,23 @@
+# Logs & Caches
+node_modules/
+.npm
+.pnpm-store
+dist/
+build/
+.cache/
+*.log
+.DS_Store
+
+# Studio Local Render Cache (transient scratch frames)
+.studio/cache/
+compositions/**/.render-cache/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Git LFS candidates / Heavy binaries
+# Uncomment below if not using Git LFS for exports
+# exports/drafts/*.mp4
+# exports/davinci_bundle/**/*.mov

@@ -1,0 +1,26 @@
+{
+  "name": "workflow-video-v1",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Desktop-class Visual AI Video Studio (PWA) with Version Tree DAG, AG-UI protocol, and DaVinci Resolve export",
+  "type": "module",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "health": "tsx scripts/health-check.ts",
+    "dev:server": "npm --workspace=server run dev",
+    "dev:client": "npm --workspace=client run dev",
+    "dev": "npm --workspace=server run dev & npm --workspace=client run dev",
+    "build": "npm --workspace=server run build && npm --workspace=client run build",
+    "check": "npm --workspace=server run check && npm --workspace=client run check",
+    "test": "npm --workspace=server test"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}
