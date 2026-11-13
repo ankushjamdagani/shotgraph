@@ -1,0 +1,120 @@
+{
+  "id": "Wf6Hra89",
+  "name": "server",
+  "projectRoot": "/Users/ankushjamdagani/personal/workflow-video-v1/server",
+  "targetDurationSec": 30,
+  "aspectRatio": "9:16",
+  "fps": 30,
+  "scenes": [
+    {
+      "id": "scene_01",
+      "name": "Scene 1: The Hook",
+      "order": 1,
+      "targetDurationSec": 3
+    },
+    {
+      "id": "scene_02",
+      "name": "Scene 2: Core Value & Problem",
+      "order": 2,
+      "targetDurationSec": 10
+    },
+    {
+      "id": "scene_03",
+      "name": "Scene 3: Proof & Feature Reveal",
+      "order": 3,
+      "targetDurationSec": 12
+    },
+    {
+      "id": "scene_04",
+      "name": "Scene 4: Call to Action",
+      "order": 4,
+      "targetDurationSec": 5
+    }
+  ],
+  "activeCut": {
+    "scene_01": "node_scene_01_v1",
+    "scene_02": "node_scene_02_v1",
+    "scene_03": "node_scene_03_v1",
+    "scene_04": "node_scene_04_v1"
+  },
+  "nodes": {
+    "node_scene_01_v1": {
+      "id": "node_scene_01_v1",
+      "parentId": null,
+      "sceneId": "scene_01",
+      "versionLabel": "v1.0 (Initial Draft)",
+      "stage": "script",
+      "title": "Scene 1: The Hook v1",
+      "modelEngine": "gemini-cli",
+      "prompt": "Draft Scene 1: The Hook for video server",
+      "artifacts": {
+        "textContent": "Initial draft for Scene 1: The Hook"
+      },
+      "metadata": {
+        "createdAt": "2026-11-13T12:21:14.072Z",
+        "status": "idle"
+      }
+    },
+    "node_scene_02_v1": {
+      "id": "node_scene_02_v1",
+      "parentId": null,
+      "sceneId": "scene_02",
+      "versionLabel": "v1.0 (Initial Draft)",
+      "stage": "script",
+      "title": "Scene 2: Core Value & Problem v1",
+      "modelEngine": "gemini-cli",
+      "prompt": "Draft Scene 2: Core Value & Problem for video server",
+      "artifacts": {
+        "textContent": "Initial draft for Scene 2: Core Value & Problem"
+      },
+      "metadata": {
+        "createdAt": "2026-11-13T12:21:14.073Z",
+        "status": "idle"
+      }
+    },
+    "node_scene_03_v1": {
+      "id": "node_scene_03_v1",
+      "parentId": null,
+      "sceneId": "scene_03",
+      "versionLabel": "v1.0 (Initial Draft)",
+      "stage": "script",
+      "title": "Scene 3: Proof & Feature Reveal v1",
+      "modelEngine": "gemini-cli",
+      "prompt": "Draft Scene 3: Proof & Feature Reveal for video server",
+      "artifacts": {
+        "textContent": "Initial draft for Scene 3: Proof & Feature Reveal"
+      },
+      "metadata": {
+        "createdAt": "2026-11-13T12:21:14.073Z",
+        "status": "idle"
+      }
+    },
+    "node_scene_04_v1": {
+      "id": "node_scene_04_v1",
+      "parentId": null,
+      "sceneId": "scene_04",
+      "versionLabel": "v1.0 (Initial Draft)",
+      "stage": "script",
+      "title": "Scene 4: Call to Action v1",
+      "modelEngine": "gemini-cli",
+      "prompt": "Draft Scene 4: Call to Action for video server",
+      "artifacts": {
+        "textContent": "Initial draft for Scene 4: Call to Action"
+      },
+      "metadata": {
+        "createdAt": "2026-11-13T12:21:14.073Z",
+        "status": "idle"
+      }
+    }
+  },
+  "styleMarkdown": "# PROJECT STYLE GUIDE (STYLE.md)\n\n### Archetype & Vibe\n- **Dominant Style**: LIQUID GLASS\n- **Cut Rhythm**: fast_snappy (Average cut: 1.6s)\n\n### Color Palette\n- Background: `#0F172A`\n- Card Container: `#1E293B`\n- Accent: `#38BDF8`\n- Text: `#F8FAFC`\n\n### Typography\n- Display / Headings: `Inter-700` (sentence_case)\n- Body Copy: `Inter-400`\n\n### Motion Engineering\n- Easing Curve: `power3.out`\n- Overshoot: Enabled (tactile bounce)\n- Key Moves: rise, pop, count-up, checklist-tick\n\n### Audio & Sound Design\n- Master Target: -14 LUFS\n- Music Ducking Depth: -15 dB under speech\n- SFX Palette: subtle_click, counter_roll, chime\n\n### Banned Aesthetics (Negative Constraints)\n- No generic AI purple or neon rainbow button glows\n- No cartoonish 3D floating without ground contact shadow\n- No unmotivated whooshes on basic card slides\n- No text inside Instagram safe margins (top 10%, bottom 20%, right 15%)\n",
+  "styleTokens": {
+    "archetype": "liquid_glass",
+    "palette": {
+      "background": "#0F172A",
+      "card": "#1E293B",
+      "accent": "#38BDF8",
+      "text": "#F8FAFC"
+    }
+  }
+}

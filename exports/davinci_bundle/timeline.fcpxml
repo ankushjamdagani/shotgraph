@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE fcpxml>
+<fcpxml version="1.10">
+  <resources>
+    <format id="r_format" name="FFVideoFormat1080x1920p30" frameDuration="100/3000s" width="1080" height="1920"/>
+    <asset id="r_asset_1" name="Scene 1: Kinetic Bold Hook" src="V1_footage/scene_01_take.mp4" start="0s" duration="3s" hasVideo="1" hasAudio="0"/>
+    <asset id="r_asset_2" name="Scene 1: Liquid Glass Card Overlay" src="V2_overlay/card_01.mov" start="0s" duration="2.5s" hasVideo="1" hasAudio="0"/>
+    <asset id="r_asset_3" name="Dialogue Voiceover Master" src="A1_dialogue/voice_master.wav" start="0s" duration="30s" hasVideo="0" hasAudio="1"/>
+    <asset id="r_asset_4" name="Tick Sound Effect" src="A2_sfx/tick.wav" start="0s" duration="0.3s" hasVideo="0" hasAudio="1"/>
+    <asset id="r_asset_5" name="Background Music Ducked (-14 LUFS)" src="A3_music/bed_ducked.wav" start="0s" duration="30s" hasVideo="0" hasAudio="1"/>
+  </resources>
+  <library>
+    <event name="Product Launch Reel v1">
+      <project name="Product Launch Reel v1">
+        <sequence format="r_format" duration="30s">
+          <spine>
+            <clip name="Scene 1: Kinetic Bold Hook" offset="0s" duration="3s" start="0s">
+           <video ref="r_asset_1" offset="0s" duration="3s"/>
+         </clip>
+            <clip name="Scene 1: Liquid Glass Card Overlay" lane="1" offset="0.5s" duration="2.5s" start="0s">
+                <video ref="r_asset_2" offset="0s" duration="2.5s"/>
+              </clip>
+            <clip name="Dialogue Voiceover Master" lane="-1" offset="0s" duration="30s" start="0s">
+                <audio ref="r_asset_3" offset="0s" duration="30s"/>
+              </clip>
+            <clip name="Tick Sound Effect" lane="-2" offset="1.2s" duration="0.3s" start="0s">
+                <audio ref="r_asset_4" offset="0s" duration="0.3s"/>
+              </clip>
+            <clip name="Background Music Ducked (-14 LUFS)" lane="-3" offset="0s" duration="30s" start="0s">
+                <audio ref="r_asset_5" offset="0s" duration="30s"/>
+              </clip>
+          </spine>
+        </sequence>
+      </project>
+    </event>
+  </library>
+</fcpxml>

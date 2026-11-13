@@ -1,0 +1,22 @@
+TITLE: Product Launch Reel v1
+FCM: NON-DROP FRAME
+
+001  AX       V     C        00:00:00:00 00:00:03:00 00:00:00:00 00:00:03:00
+* FROM CLIP NAME: Scene 1: Kinetic Bold Hook
+* FILE PATH: V1_footage/scene_01_take.mp4
+
+002  AX       V     C        00:00:00:00 00:00:02:00 00:00:00:00 00:00:03:00
+* FROM CLIP NAME: Scene 1: Liquid Glass Card Overlay
+* FILE PATH: V2_overlay/card_01.mov
+
+003  AX       A     C        00:00:00:00 00:00:30:00 00:00:00:00 00:00:30:00
+* FROM CLIP NAME: Dialogue Voiceover Master
+* FILE PATH: A1_dialogue/voice_master.wav
+
+004  AX       A     C        00:00:00:00 00:00:00:00 00:00:01:00 00:00:01:00
+* FROM CLIP NAME: Tick Sound Effect
+* FILE PATH: A2_sfx/tick.wav
+
+005  AX       A     C        00:00:00:00 00:00:30:00 00:00:00:00 00:00:30:00
+* FROM CLIP NAME: Background Music Ducked (-14 LUFS)
+* FILE PATH: A3_music/bed_ducked.wav
