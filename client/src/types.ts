@@ -1,4 +1,4 @@
-export type ModelEngine = 'gemini-cli' | 'claude-cli' | 'ollama' | 'hyperframes' | 'external';
+export type ModelEngine = 'antigravity-cli' | 'claude-cli' | 'ollama' | 'hyperframes' | 'external';
 
 export interface VersionNode {
   id: string;

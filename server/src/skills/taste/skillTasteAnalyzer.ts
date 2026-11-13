@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { SkillDefinition, SkillExecutionContext } from '../core/types.js';
-import { runGeminiCLIJson } from '../../runners/geminiRunner.js';
+import { runAntigravityCLIJson } from '../../runners/antigravityRunner.js';
 import { runClaudeCLIJson } from '../../runners/claudeRunner.js';
 
 export const TasteAnalysisInputSchema = z.object({
@@ -114,8 +114,8 @@ Extract the following JSON structure:
       });
       result = response.data;
     } else {
-      // Default to Gemini CLI
-      const response = await runGeminiCLIJson<TasteAnalysisOutput>(prompt, {
+      // Default to Antigravity CLI
+      const response = await runAntigravityCLIJson<TasteAnalysisOutput>(prompt, {
         cwd: context.projectRoot,
         onStdoutChunk: context.onStdoutChunk,
         onThinking: context.onThinking,

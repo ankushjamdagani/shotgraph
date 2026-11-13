@@ -59,9 +59,9 @@ async function runHealthCheck() {
     path: process.execPath,
   });
 
-  // 2. Gemini CLI (Default model runner)
-  const gemini = await checkCommand('gemini');
-  tools.push(gemini);
+  // 2. Antigravity CLI (Default model runner)
+  const agy = await checkCommand('agy');
+  tools.push(agy);
 
   // 3. Claude Code CLI
   const claude = await checkCommand('claude');
@@ -120,7 +120,7 @@ async function runHealthCheck() {
     if (tool.details) {
       console.log(`  └─ Note: ${tool.details}`);
     }
-    if (tool.status === 'missing' && ['node', 'gemini', 'ffmpeg'].includes(tool.name)) {
+    if (tool.status === 'missing' && ['node', 'agy', 'ffmpeg'].includes(tool.name)) {
       hasMissingCritical = true;
     }
   }

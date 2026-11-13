@@ -81,7 +81,7 @@ server.post('/api/skills/execute', async (req, reply) => {
   const project = await ProjectService.loadProject(WORKSPACE_ROOT);
 
   // Update agent status to working
-  const agentId = modelEngine === 'claude-cli' ? 'claude-motion' : 'gemini-director';
+  const agentId = modelEngine === 'claude-cli' ? 'claude-motion' : (modelEngine === 'ollama' ? 'ollama-local' : 'agy-director');
   AgentManager.updatePresence(agentId, {
     status: 'thinking',
     activeNodeId: targetNodeId || null,
@@ -96,7 +96,7 @@ server.post('/api/skills/execute', async (req, reply) => {
   try {
     const result = await SkillRegistry.execute(skillId, input, {
       projectRoot: WORKSPACE_ROOT,
-      modelEngine: modelEngine || 'gemini-cli',
+      modelEngine: modelEngine || 'antigravity-cli',
       styleGuideMd: project.styleMarkdown,
       styleTokensJson: project.styleTokens,
       onStdoutChunk: (chunk) => {

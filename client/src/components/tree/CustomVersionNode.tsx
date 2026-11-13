@@ -21,8 +21,8 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
 
   const getEngineBadge = (engine: string) => {
     switch (engine) {
-      case 'gemini-cli':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-cyan-950 text-cyan-300 border border-cyan-800">Gemini CLI</span>;
+      case 'antigravity-cli':
+        return <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-cyan-950 text-cyan-300 border border-cyan-800">Antigravity CLI</span>;
       case 'claude-cli':
         return <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-950 text-purple-300 border border-purple-800">Claude CLI</span>;
       case 'ollama':

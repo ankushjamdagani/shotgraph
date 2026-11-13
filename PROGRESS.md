@@ -18,14 +18,14 @@ This document tracks all iterative development phases, sub-milestones, active st
 - [x] **Step 1.2**: Define `video_studio_verifier` development subagent.
 - [x] **Step 1.3**: Create `PROGRESS.md` resumption ledger and `.gitignore`.
 - [x] **Step 1.4**: Setup root workspace `package.json` and TypeScript configuration (`tsconfig.json`).
-- [x] **Step 1.5**: Implement `scripts/health-check.ts` to audit all installed local tools (`gemini`, `claude`, `ollama`, `ffmpeg`, `yt-dlp`, `hyperframes`).
+- [x] **Step 1.5**: Implement `scripts/health-check.ts` to audit all installed local tools (`agy`, `claude`, `ollama`, `ffmpeg`, `yt-dlp`, `hyperframes`).
 - [x] **Step 1.6**: Define standardized AG-UI event schemas (`server/src/protocol/aguiEvents.ts`) and A2UI component schemas (`server/src/protocol/a2uiSchema.ts`).
 
 ---
 
 ### Phase 2: Headless Toolchain & Runner Adapters
 - [x] **Step 2.1**: Implement `server/src/runners/base.ts` (child process spawner with timeout, exit code capture, and streaming output).
-- [x] **Step 2.2**: Implement `server/src/runners/geminiRunner.ts` (default headless `gemini -p "..." -y` runner).
+- [x] **Step 2.2**: Implement `server/src/runners/antigravityRunner.ts` (default headless `agy -p "..." --dangerously-skip-permissions` runner with Ollama fallback).
 - [x] **Step 2.3**: Implement `server/src/runners/claudeRunner.ts` (`claude -p "..."` headless adapter).
 - [x] **Step 2.4**: Implement `server/src/runners/ollamaRunner.ts` (local Ollama HTTP API adapter).
 - [x] **Step 2.5**: Implement `server/src/runners/hyperframesRunner.ts` (`npx hyperframes` transcribe, tts, render, snapshot).

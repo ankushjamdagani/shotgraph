@@ -45,7 +45,7 @@
       "versionLabel": "v1.0 (Initial Draft)",
       "stage": "script",
       "title": "Scene 1: The Hook v1",
-      "modelEngine": "gemini-cli",
+      "modelEngine": "antigravity-cli",
       "prompt": "Draft Scene 1: The Hook for video server",
       "artifacts": {
         "textContent": "Initial draft for Scene 1: The Hook"
@@ -62,7 +62,7 @@
       "versionLabel": "v1.0 (Initial Draft)",
       "stage": "script",
       "title": "Scene 2: Core Value & Problem v1",
-      "modelEngine": "gemini-cli",
+      "modelEngine": "antigravity-cli",
       "prompt": "Draft Scene 2: Core Value & Problem for video server",
       "artifacts": {
         "textContent": "Initial draft for Scene 2: Core Value & Problem"
@@ -79,7 +79,7 @@
       "versionLabel": "v1.0 (Initial Draft)",
       "stage": "script",
       "title": "Scene 3: Proof & Feature Reveal v1",
-      "modelEngine": "gemini-cli",
+      "modelEngine": "antigravity-cli",
       "prompt": "Draft Scene 3: Proof & Feature Reveal for video server",
       "artifacts": {
         "textContent": "Initial draft for Scene 3: Proof & Feature Reveal"
@@ -96,13 +96,30 @@
       "versionLabel": "v1.0 (Initial Draft)",
       "stage": "script",
       "title": "Scene 4: Call to Action v1",
-      "modelEngine": "gemini-cli",
+      "modelEngine": "antigravity-cli",
       "prompt": "Draft Scene 4: Call to Action for video server",
       "artifacts": {
         "textContent": "Initial draft for Scene 4: Call to Action"
       },
       "metadata": {
         "createdAt": "2026-11-13T12:21:14.073Z",
+        "status": "idle"
+      }
+    },
+    "node_scene_01_UWECs_": {
+      "id": "node_scene_01_UWECs_",
+      "parentId": "node_scene_01_v1",
+      "sceneId": "scene_01",
+      "versionLabel": "v5.0 Alternate",
+      "stage": "script",
+      "title": "Scene 1: The Hook v1 → v5.0 Alternate",
+      "modelEngine": "antigravity-cli",
+      "prompt": "Iterate on: Draft Scene 1: The Hook for video server",
+      "artifacts": {
+        "textContent": "Initial draft for Scene 1: The Hook"
+      },
+      "metadata": {
+        "createdAt": "2026-11-13T12:46:00.937Z",
         "status": "idle"
       }
     }

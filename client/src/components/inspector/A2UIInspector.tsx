@@ -16,7 +16,7 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
   streamingLog,
 }) => {
   const [copied, setCopied] = useState(false);
-  const [selectedEngine, setSelectedEngine] = useState<ModelEngine>(node?.modelEngine || 'gemini-cli');
+  const [selectedEngine, setSelectedEngine] = useState<ModelEngine>(node?.modelEngine || 'antigravity-cli');
   const [targetPlatform, setTargetPlatform] = useState<'midjourney' | 'flux' | 'kling' | 'runway' | 'elevenlabs'>('midjourney');
   const [promptText, setPromptText] = useState(node?.prompt || '');
   const [refinementInput, setRefinementInput] = useState('');
@@ -86,7 +86,7 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
           </label>
           <div className="grid grid-cols-2 gap-1.5">
             {[
-              { id: 'gemini-cli', label: 'Gemini CLI', desc: 'Default fast model' },
+              { id: 'antigravity-cli', label: 'Antigravity CLI', desc: 'Default powerful assistant' },
               { id: 'claude-cli', label: 'Claude CLI', desc: 'Creative motion graphics' },
               { id: 'ollama', label: 'Local Ollama', desc: '100% offline' },
               { id: 'hyperframes', label: 'HyperFrames', desc: 'TTS & Video engine' },

@@ -9,8 +9,8 @@ import { z } from 'zod';
 // 1. Agent Presence & Cursor Location
 export const AgentPresenceSchema = z.object({
   agentId: z.string(),
-  name: z.string(), // e.g. "Gemini Director", "Claude Motion", "Ollama Script"
-  modelEngine: z.enum(['gemini-cli', 'claude-cli', 'ollama', 'hyperframes', 'ffmpeg', 'external']),
+  name: z.string(), // e.g. "Antigravity Director", "Claude Motion", "Ollama Script"
+  modelEngine: z.enum(['antigravity-cli', 'claude-cli', 'ollama', 'hyperframes', 'ffmpeg', 'external']),
   color: z.string(), // Hex color for cursor and badges, e.g. "#38BDF8"
   activeNodeId: z.string().nullable(), // The DAG node currently being inspected or edited
   targetTimelineBlockId: z.string().nullable(),
@@ -113,7 +113,7 @@ export const AGUIClientMessageSchema = z.discriminatedUnion('event', [
     data: z.object({
       skillId: z.string(),
       nodeId: z.string(),
-      modelEngine: z.enum(['gemini-cli', 'claude-cli', 'ollama', 'hyperframes', 'ffmpeg']),
+      modelEngine: z.enum(['antigravity-cli', 'claude-cli', 'ollama', 'hyperframes', 'ffmpeg']),
       prompt: z.string(),
       context: z.record(z.any()).optional(),
     }),

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { SkillDefinition, SkillExecutionContext } from '../core/types.js';
-import { runGeminiCLIJson } from '../../runners/geminiRunner.js';
+import { runAntigravityCLIJson } from '../../runners/antigravityRunner.js';
 import { runClaudeCLIJson } from '../../runners/claudeRunner.js';
 
 function normalizeVisualType(val: string): 'talking_head' | 'motion_card' | 'kinetic_text' | 'broll_video' | '3d_object' {
@@ -122,7 +122,7 @@ Return JSON in this format:
       });
       return data;
     } else {
-      const { data } = await runGeminiCLIJson<ScriptwriterOutput>(prompt, {
+      const { data } = await runAntigravityCLIJson<ScriptwriterOutput>(prompt, {
         cwd: context.projectRoot,
         onStdoutChunk: context.onStdoutChunk,
         onThinking: context.onThinking,

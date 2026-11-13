@@ -1,5 +1,5 @@
 import { executeProcess, RunResult } from './base.js';
-import { ModelPromptOptions } from './geminiRunner.js';
+import { ModelPromptOptions } from './antigravityRunner.js';
 import { runOllama } from './ollamaRunner.js';
 
 /**
@@ -75,7 +75,7 @@ export async function runClaudeCLIJson<T>(
     return { data, rawText: text, runResult };
   } catch {
     // If not JSON, use the same robust structured fallback
-    const { runGeminiCLIJson } = await import('./geminiRunner.js');
-    return runGeminiCLIJson<T>(prompt, options);
+    const { runAntigravityCLIJson } = await import('./antigravityRunner.js');
+    return runAntigravityCLIJson<T>(prompt, options);
   }
 }

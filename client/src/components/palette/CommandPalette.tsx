@@ -104,13 +104,13 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             <Command.Group heading="Switch Default AI Model" className="text-[10px] font-bold text-slate-500 px-2 py-1 pt-2">
               <Command.Item
                 onSelect={() => {
-                  onSelectModel('gemini-cli');
+                  onSelectModel('antigravity-cli');
                   onClose();
                 }}
                 className="flex items-center gap-2 p-2 rounded-lg text-slate-200 hover:bg-sky-950/60 hover:text-sky-300 cursor-pointer transition"
               >
                 <Cpu className="w-4 h-4 text-cyan-400" />
-                <span>Switch to Gemini CLI</span>
+                <span>Switch to Antigravity CLI</span>
               </Command.Item>
 
               <Command.Item

@@ -1,5 +1,5 @@
 {
-  "id": "uhwZs10T",
+  "id": "MvRY4e2A",
   "name": "Product Launch Reel v1",
   "projectRoot": "/Users/ankushjamdagani/personal/workflow-video-v1",
   "targetDurationSec": 30,
@@ -32,7 +32,7 @@
     }
   ],
   "activeCut": {
-    "scene_01": "node_scene_01_nKnuy1",
+    "scene_01": "node_scene_01_-haudi",
     "scene_02": "node_scene_02_v1",
     "scene_03": "node_scene_03_v1",
     "scene_04": "node_scene_04_v1"
@@ -45,13 +45,13 @@
       "versionLabel": "v1.0 (Initial Draft)",
       "stage": "script",
       "title": "Scene 1: The Hook v1",
-      "modelEngine": "gemini-cli",
+      "modelEngine": "antigravity-cli",
       "prompt": "Draft Scene 1: The Hook for video Product Launch Reel v1",
       "artifacts": {
         "textContent": "Initial draft for Scene 1: The Hook"
       },
       "metadata": {
-        "createdAt": "2026-11-13T12:17:38.052Z",
+        "createdAt": "2026-11-13T12:46:02.564Z",
         "status": "idle"
       }
     },
@@ -62,13 +62,13 @@
       "versionLabel": "v1.0 (Initial Draft)",
       "stage": "script",
       "title": "Scene 2: Core Value & Problem v1",
-      "modelEngine": "gemini-cli",
+      "modelEngine": "antigravity-cli",
       "prompt": "Draft Scene 2: Core Value & Problem for video Product Launch Reel v1",
       "artifacts": {
         "textContent": "Initial draft for Scene 2: Core Value & Problem"
       },
       "metadata": {
-        "createdAt": "2026-11-13T12:17:38.052Z",
+        "createdAt": "2026-11-13T12:46:02.566Z",
         "status": "idle"
       }
     },
@@ -79,13 +79,13 @@
       "versionLabel": "v1.0 (Initial Draft)",
       "stage": "script",
       "title": "Scene 3: Proof & Feature Reveal v1",
-      "modelEngine": "gemini-cli",
+      "modelEngine": "antigravity-cli",
       "prompt": "Draft Scene 3: Proof & Feature Reveal for video Product Launch Reel v1",
       "artifacts": {
         "textContent": "Initial draft for Scene 3: Proof & Feature Reveal"
       },
       "metadata": {
-        "createdAt": "2026-11-13T12:17:38.052Z",
+        "createdAt": "2026-11-13T12:46:02.566Z",
         "status": "idle"
       }
     },
@@ -96,30 +96,30 @@
       "versionLabel": "v1.0 (Initial Draft)",
       "stage": "script",
       "title": "Scene 4: Call to Action v1",
-      "modelEngine": "gemini-cli",
+      "modelEngine": "antigravity-cli",
       "prompt": "Draft Scene 4: Call to Action for video Product Launch Reel v1",
       "artifacts": {
         "textContent": "Initial draft for Scene 4: Call to Action"
       },
       "metadata": {
-        "createdAt": "2026-11-13T12:17:38.052Z",
+        "createdAt": "2026-11-13T12:46:02.566Z",
         "status": "idle"
       }
     },
-    "node_scene_01_nKnuy1": {
-      "id": "node_scene_01_nKnuy1",
+    "node_scene_01_-haudi": {
+      "id": "node_scene_01_-haudi",
       "parentId": "node_scene_01_v1",
       "sceneId": "scene_01",
       "versionLabel": "v2.0 (Kinetic Bold Hook)",
       "stage": "script",
       "title": "Scene 1: The Hook v1 → v2.0 (Kinetic Bold Hook)",
-      "modelEngine": "gemini-cli",
+      "modelEngine": "antigravity-cli",
       "prompt": "Generate bold kinetic hook: Stop losing 80% of viewers in 2 seconds.",
       "artifacts": {
         "textContent": "Initial draft for Scene 1: The Hook"
       },
       "metadata": {
-        "createdAt": "2026-11-13T12:17:38.053Z",
+        "createdAt": "2026-11-13T12:46:02.567Z",
         "status": "idle"
       }
     }

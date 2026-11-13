@@ -9,7 +9,7 @@ export interface VersionNode {
   versionLabel: string; // e.g. "v1", "v2-humorous"
   stage: 'ideation' | 'taste' | 'script' | 'storyboard' | 'voice' | 'motion' | 'render';
   title: string;
-  modelEngine: 'gemini-cli' | 'claude-cli' | 'ollama' | 'hyperframes' | 'external';
+  modelEngine: 'antigravity-cli' | 'claude-cli' | 'ollama' | 'hyperframes' | 'external';
   modelName?: string;
   prompt: string;
   externalFallback?: {
@@ -94,7 +94,7 @@ export class ProjectService {
         versionLabel: 'v1.0 (Initial Draft)',
         stage: 'script',
         title: `${scene.name} v1`,
-        modelEngine: 'gemini-cli',
+        modelEngine: 'antigravity-cli',
         prompt: `Draft ${scene.name} for video ${name}`,
         artifacts: {
           textContent: `Initial draft for ${scene.name}`,

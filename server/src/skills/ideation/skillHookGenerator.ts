@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { SkillDefinition, SkillExecutionContext } from '../core/types.js';
-import { runGeminiCLIJson } from '../../runners/geminiRunner.js';
+import { runAntigravityCLIJson } from '../../runners/antigravityRunner.js';
 import { runClaudeCLIJson } from '../../runners/claudeRunner.js';
 
 export const HookGeneratorInputSchema = z.object({
@@ -78,7 +78,7 @@ Return JSON in this format:
       });
       return data;
     } else {
-      const { data } = await runGeminiCLIJson<HookGeneratorOutput>(prompt, {
+      const { data } = await runAntigravityCLIJson<HookGeneratorOutput>(prompt, {
         cwd: context.projectRoot,
         onStdoutChunk: context.onStdoutChunk,
         onThinking: context.onThinking,

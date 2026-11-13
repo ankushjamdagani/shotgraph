@@ -27,7 +27,7 @@ async function main() {
     firstNodeId,
     'v2.0 (Kinetic Bold Hook)',
     'Generate bold kinetic hook: Stop losing 80% of viewers in 2 seconds.',
-    'gemini-cli'
+    'antigravity-cli'
   );
   console.log(`  ✓ Branched node created: "${branchedNode.id}" (Parent: ${branchedNode.parentId})`);
 

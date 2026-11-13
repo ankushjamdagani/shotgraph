@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { executeProcess } from '../../src/runners/base.js';
 import { MediaRunner } from '../../src/runners/mediaRunner.js';
+import { runAntigravityCLIJson } from '../../src/runners/antigravityRunner.js';
 
 describe('Base Process Runner', () => {
   it('executes simple commands and captures stdout with exit code 0', async () => {
@@ -27,6 +28,17 @@ describe('Base Process Runner', () => {
       })
     ).rejects.toThrow(/timed out/);
   });
+});
+
+describe('Antigravity CLI Runner', () => {
+  it('parses structured JSON or provides fallback for creative hooks and scripts', async () => {
+    const res = await runAntigravityCLIJson<any>('Generate 3-second hook candidates', {
+      timeoutMs: 15000,
+    });
+    expect(res).toBeDefined();
+    expect(res.data).toBeDefined();
+    expect(res.runResult).toBeDefined();
+  }, 30000);
 });
 
 describe('MediaRunner Silence Detection', () => {

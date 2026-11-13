@@ -5,108 +5,80 @@ export interface ModelPromptOptions extends RunOptions {
   systemPrompt?: string;
   temperature?: number;
   model?: string;
+  effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 }
 
+const AGY_BIN_PATH = process.env.AGY_BIN_PATH || '/Users/ankushjamdagani/.local/bin/agy';
+
 /**
- * Headless Gemini CLI Runner (with direct API Key & Ollama fallback)
+ * Headless Antigravity CLI Runner (Default Engine)
+ * Runs non-interactively using `agy -p "<prompt>" --dangerously-skip-permissions`
  */
-export async function runGeminiCLI(
+export async function runAntigravityCLI(
   prompt: string,
   options: ModelPromptOptions = {}
 ): Promise<{ text: string; runResult: RunResult }> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const args = ['-p', prompt, '--dangerously-skip-permissions'];
 
-  // 1. If GEMINI_API_KEY is set in environment, use direct Google AI Studio API
-  if (apiKey) {
-    try {
-      const model = options.model ?? 'gemini-2.5-flash';
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: options.temperature ?? 0.7,
-          },
-        }),
-      });
-
-      if (res.ok) {
-        const data = (await res.json()) as any;
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        options.onStdoutChunk?.(text);
-        return {
-          text,
-          runResult: { exitCode: 0, stdout: text, stderr: '', durationMs: 500 },
-        };
-      }
-    } catch {
-      // fallback to CLI
-    }
-  }
-
-  // 2. Try Gemini CLI execution
-  const args = ['-p', prompt, '-y'];
   if (options.model) {
-    args.push('-m', options.model);
+    args.push('--model', options.model);
+  }
+  if (options.effort) {
+    args.push('--effort', options.effort);
   }
 
-  const runResult = await executeProcess('gemini', args, {
-    cwd: options.cwd,
-    timeoutMs: options.timeoutMs ?? 120000,
-    onStdoutChunk: (chunk) => {
-      options.onStdoutChunk?.(chunk);
-      if (chunk.includes('Thinking') || chunk.includes('thought:')) {
-        options.onThinking?.(chunk);
-      }
-    },
-    onStderrChunk: options.onStderrChunk,
-  });
+  try {
+    const runResult = await executeProcess(AGY_BIN_PATH, args, {
+      cwd: options.cwd,
+      timeoutMs: options.timeoutMs ?? 180000,
+      onStdoutChunk: (chunk) => {
+        options.onStdoutChunk?.(chunk);
+        if (chunk.includes('Thinking') || chunk.includes('thought:') || chunk.includes('reasoning:')) {
+          options.onThinking?.(chunk);
+        }
+      },
+      onStderrChunk: options.onStderrChunk,
+    });
 
-  // Check if Gemini CLI failed due to deprecated individual tier
-  if (
-    runResult.exitCode !== 0 ||
-    runResult.stderr.includes('IneligibleTierError') ||
-    runResult.stdout.includes('IneligibleTierError') ||
-    runResult.stderr.includes('OAuth session expired')
-  ) {
+    if (runResult.exitCode !== 0) {
+      throw new Error(`Antigravity CLI exited with code ${runResult.exitCode}: ${runResult.stderr || runResult.stdout}`);
+    }
+
+    return {
+      text: runResult.stdout,
+      runResult,
+    };
+  } catch (err: any) {
     options.onThinking?.(
-      'Gemini CLI individual tier is deprecated by Google. Falling back to local offline model...'
+      `Antigravity CLI execution notice: ${err.message}. Falling back to local offline model...`
     );
 
-    // 3. Fallback to Local Ollama
+    // Fallback to local Ollama if AGY encounters an issue
     try {
       return await runOllama(prompt, {
         ...options,
         model: 'llama3.2:1b',
       });
-    } catch (ollamaErr) {
-      // 4. Graceful Fallback if Ollama is still downloading
-      const fallbackText = generateCreativeFallback(prompt);
+    } catch {
+      const fallbackText = 'Drafting high-retention video creative structure.';
       return {
         text: fallbackText,
-        runResult: { exitCode: 0, stdout: fallbackText, stderr: '', durationMs: 100 },
+        runResult: { exitCode: 0, stdout: fallbackText, stderr: '', durationMs: 50 },
       };
     }
   }
-
-  return {
-    text: runResult.stdout,
-    runResult,
-  };
 }
 
 /**
- * Helper to run Gemini CLI and parse clean JSON output from markdown fences or bare text
+ * Helper to run Antigravity CLI and parse clean JSON output from markdown fences or text
  */
-export async function runGeminiCLIJson<T>(
+export async function runAntigravityCLIJson<T>(
   prompt: string,
   options: ModelPromptOptions = {}
 ): Promise<{ data: T; rawText: string; runResult: RunResult }> {
   const fullPrompt = `${prompt}\n\nIMPORTANT: Respond ONLY with a valid JSON object matching the requested schema. Return standard \`\`\`json ... \`\`\` blocks.`;
 
-  const { text, runResult } = await runGeminiCLI(fullPrompt, options);
+  const { text, runResult } = await runAntigravityCLI(fullPrompt, options);
 
   let jsonStr = text.trim();
   const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
@@ -122,13 +94,6 @@ export async function runGeminiCLIJson<T>(
     const fallback = generateCreativeFallbackJson<T>(prompt);
     return { data: fallback, rawText: text, runResult };
   }
-}
-
-function generateCreativeFallback(prompt: string): string {
-  if (prompt.includes('hook') || prompt.includes('Hook')) {
-    return 'Most creators lose 80% of viewers in the first 2 seconds. Here is the exact retention framework to keep them hooked.';
-  }
-  return 'Transform your raw footage into high-retention cinematic edits with automated motion cards and precise audio ducking.';
 }
 
 function generateCreativeFallbackJson<T>(prompt: string): T {

@@ -1,5 +1,5 @@
 import { executeProcess, RunResult } from './base.js';
-import { ModelPromptOptions } from './geminiRunner.js';
+import { ModelPromptOptions } from './antigravityRunner.js';
 
 export interface OllamaOptions extends ModelPromptOptions {
   host?: string; // defaults to http://127.0.0.1:11434

@@ -3,16 +3,16 @@ import { AgentPresence } from '../protocol/aguiEvents.js';
 export class AgentManager {
   private static agents = new Map<string, AgentPresence>([
     [
-      'gemini-director',
+      'agy-director',
       {
-        agentId: 'gemini-director',
-        name: 'Gemini Director',
-        modelEngine: 'gemini-cli',
+        agentId: 'agy-director',
+        name: 'Antigravity Director',
+        modelEngine: 'antigravity-cli',
         color: '#38BDF8', // Cyan / Light Blue
         activeNodeId: null,
         targetTimelineBlockId: null,
         status: 'idle',
-        activityMessage: 'Ready for creative direction & script doctoring',
+        activityMessage: 'Ready for creative direction & script doctoring with Antigravity',
         updatedAt: Date.now(),
       },
     ],
