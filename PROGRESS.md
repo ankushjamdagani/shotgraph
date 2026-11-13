@@ -84,3 +84,15 @@ This document tracks all iterative development phases, sub-milestones, active st
 - [x] **Step 7.5**: Multi-Tab Scoped WebSockets (`/ws/ag-ui?projectId=...`) and route synchronization (`?projectId=...`).
 - [x] **Step 7.6**: DaVinci Resolve-style `ProjectHubModal` and format preset `NewProjectWizard`.
 - [x] **Step 7.7**: Unit tests (`server/test/services/projectRegistry.test.ts`) and end-to-end multi-project verification (`scripts/verify-multi-project.ts`).
+
+---
+
+## Phase 8: Rich Context Video Generation Prompts & Project Subject Anchors (COMPLETED)
+- [x] **Step 8.1**: Upgraded `skill-prompt-synthesizer` to v2.0 supporting rich context parameters (durationSec, fps, resolution, lens focal length, aperture, camera movement, motion speed, adjacent scene continuity, and spoken voiceover).
+- [x] **Step 8.2**: Two-Layer Negative Guards architecture merging Layer 1 project aesthetic rules (`STYLE.md`) with Layer 2 video generation artifact guards (anti-morphing, temporal jitter, extra limbs, watermarks).
+- [x] **Step 8.3**: Platform-tailored syntax builders for Runway Gen-3, Kling 1.5/Pro, Luma Dream Machine, Minimax / Hailuo, Local ComfyUI / AnimateDiff, Flux, Midjourney, and ElevenLabs.
+- [x] **Step 8.4**: Project-Level Subject Roster & Asset Preservation (`assets/subjects/<id>/<var>.png`) with `ProjectSubjectAnchor` and `SubjectVariant` data models.
+- [x] **Step 8.5**: Dedicated `SubjectManagerModal.tsx` for creating/editing character, presenter, and product anchors with visual turnaround variants.
+- [x] **Step 8.6**: Interactive Shot Director Card in `A2UIInspector.tsx` with live context badges bar, optics & camera overrides, anchor binding pills, platform tabs with 1-click copy, and in-inspector video dropzone with duration validation.
+- [x] **Step 8.7**: Server REST endpoints for subject anchor CRUD, active variant switching, node subject binding, and shot context synthesis (`server/src/index.ts`).
+- [x] **Step 8.8**: Unit test suite (`server/test/skills/skills.test.ts`) and end-to-end verification script (`scripts/verify-rich-prompts.ts`) passing with 100% accuracy across all platforms.
