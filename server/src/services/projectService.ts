@@ -26,12 +26,29 @@ export interface ProjectSubjectAnchor {
   createdAt: number;
 }
 
+export type ProductionStage =
+  | 'ideation'    // 1. Premise, hooks, angles
+  | 'taste'       // 2. STYLE.md, palette, lighting rules
+  | 'script'      // 3. Master dialogue & scene breakdown
+  | 'assets'      // 4. Characters, products, environment anchors
+  | 'shot'        // 5. Storyboard framing, lens, camera motion & rich prompt
+  | 'storyboard'  // legacy alias for shot
+  | 'footage'     // 6. Concrete rendered MP4 video takes & audio stems
+  | 'motion'      // legacy alias for footage
+  | 'voice'       // legacy alias for audio
+  | 'vfx'         // 7. Alpha channel motion graphics, kinetic text & visual effects (Track V2)
+  | 'assembly'    // 8. Final active cut timeline & DaVinci Resolve FCPXML bundle
+  | 'render';     // legacy alias for assembly
+
 export interface VersionNode {
   id: string;
   parentId: string | null;
-  sceneId: string;
+  sceneId?: string; // Optional: populated for scene, shot, footage, vfx nodes
+  shotId?: string; // Optional: links footage or vfx to a specific shot
+  subjectAnchorId?: string; // Optional: populated for subject asset nodes
   versionLabel: string; // e.g. "v1", "v2-humorous"
-  stage: 'ideation' | 'taste' | 'script' | 'storyboard' | 'voice' | 'motion' | 'render';
+  stage: ProductionStage;
+  stageOrder?: number; // 1 to 8 for horizontal layout
   title: string;
   modelEngine: 'antigravity-cli' | 'claude-cli' | 'ollama' | 'hyperframes' | 'external';
   modelName?: string;
@@ -43,6 +60,17 @@ export interface VersionNode {
     cameraMovement?: string;
     motionSpeed?: 'slow_cinematic' | 'normal' | 'high_energy' | 'time_lapse';
     continuityNotes?: string;
+  };
+  assetMetadata?: {
+    isMasterStyleAnchor?: boolean;
+    styleReferenceAssetUrl?: string; // e.g. points to Anya var_01.png
+    turnaroundAngle?: 'portrait' | 'three_quarter' | 'full_body' | 'macro_detail';
+  };
+  vfxMetadata?: {
+    overlayType?: 'kinetic_text' | 'ui_mockup' | 'callout_badge' | 'atmospheric_vfx';
+    inPointSec?: number;
+    durationSec?: number;
+    blendMode?: 'normal' | 'screen' | 'multiply' | 'additive';
   };
   externalFallback?: {
     platform: string;
@@ -79,6 +107,7 @@ export interface FilmProject {
   activeCut: Record<string, string>; // sceneId -> versionNodeId
   nodes: Record<string, VersionNode>;
   subjectAnchors?: ProjectSubjectAnchor[];
+  masterStyleAnchorAssetUrl?: string; // Designates project-wide style reference
   basePresetId?: string;
   styleOverrides?: Record<string, any>;
   additionalConstraints?: string[];
@@ -278,16 +307,24 @@ export class ProjectService {
       throw new Error(`Parent node "${parentNodeId}" not found in project DAG.`);
     }
 
-    const newNodeId = `node_${parent.sceneId}_${nanoid(6)}`;
+    const prefix = parent.sceneId || parent.stage || 'node';
+    const newNodeId = `node_${prefix}_${nanoid(6)}`;
     const newNode: VersionNode = {
       id: newNodeId,
       parentId: parentNodeId,
       sceneId: parent.sceneId,
+      shotId: parent.shotId,
+      subjectAnchorId: parent.subjectAnchorId,
       versionLabel,
       stage: parent.stage,
-      title: `${parent.title} → ${versionLabel}`,
+      stageOrder: parent.stageOrder,
+      title: `${parent.title} (${versionLabel})`,
       modelEngine: modelEngine || parent.modelEngine,
       prompt,
+      boundSubjectAnchorIds: parent.boundSubjectAnchorIds ? [...parent.boundSubjectAnchorIds] : undefined,
+      shotContextOverrides: parent.shotContextOverrides ? { ...parent.shotContextOverrides } : undefined,
+      assetMetadata: parent.assetMetadata ? { ...parent.assetMetadata } : undefined,
+      vfxMetadata: parent.vfxMetadata ? { ...parent.vfxMetadata } : undefined,
       artifacts: { ...parent.artifacts },
       metadata: {
         createdAt: new Date().toISOString(),

@@ -176,5 +176,23 @@
       "Keep all text outside the Instagram safe margins (top 10%, bottom 20%)"
     ]
   },
-  "subjectAnchors": []
+  "subjectAnchors": [
+    {
+      "id": "subj_EBaW0_",
+      "name": "Rashmi",
+      "category": "character",
+      "coreDescription": "Female, Phd Student, Cute, 32 years age",
+      "variants": [
+        {
+          "id": "var_1794578426477",
+          "label": "Variant 2",
+          "promptDescription": "Female, Phd Student, Cute, 32 years age",
+          "isDefault": true,
+          "createdAt": 1794578426477
+        }
+      ],
+      "activeVariantId": "var_1794578426477",
+      "createdAt": 1794578434994
+    }
+  ]
 }

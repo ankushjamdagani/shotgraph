@@ -19,12 +19,29 @@ export interface ProjectSubjectAnchor {
   createdAt: number;
 }
 
+export type ProductionStage =
+  | 'ideation'    // 1. Premise, hooks, angles
+  | 'taste'       // 2. STYLE.md, palette, lighting rules
+  | 'script'      // 3. Master dialogue & scene breakdown
+  | 'assets'      // 4. Characters, products, environment anchors
+  | 'shot'        // 5. Storyboard framing, lens, camera motion & rich prompt
+  | 'storyboard'  // legacy alias for shot
+  | 'footage'     // 6. Concrete rendered MP4 video takes & audio stems
+  | 'motion'      // legacy alias for footage
+  | 'voice'       // legacy alias for audio
+  | 'vfx'         // 7. Alpha channel motion graphics, kinetic text & visual effects (Track V2)
+  | 'assembly'    // 8. Final active cut timeline & DaVinci Resolve FCPXML bundle
+  | 'render';     // legacy alias for assembly
+
 export interface VersionNode {
   id: string;
   parentId: string | null;
-  sceneId: string;
+  sceneId?: string;
+  shotId?: string;
+  subjectAnchorId?: string;
   versionLabel: string;
-  stage: 'ideation' | 'taste' | 'script' | 'storyboard' | 'voice' | 'motion' | 'render';
+  stage: ProductionStage;
+  stageOrder?: number;
   title: string;
   modelEngine: ModelEngine;
   modelName?: string;
@@ -36,6 +53,17 @@ export interface VersionNode {
     cameraMovement?: string;
     motionSpeed?: 'slow_cinematic' | 'normal' | 'high_energy' | 'time_lapse';
     continuityNotes?: string;
+  };
+  assetMetadata?: {
+    isMasterStyleAnchor?: boolean;
+    styleReferenceAssetUrl?: string;
+    turnaroundAngle?: 'portrait' | 'three_quarter' | 'full_body' | 'macro_detail';
+  };
+  vfxMetadata?: {
+    overlayType?: 'kinetic_text' | 'ui_mockup' | 'callout_badge' | 'atmospheric_vfx';
+    inPointSec?: number;
+    durationSec?: number;
+    blendMode?: 'normal' | 'screen' | 'multiply' | 'additive';
   };
   externalFallback?: {
     platform: string;
@@ -72,6 +100,7 @@ export interface FilmProject {
   activeCut: Record<string, string>; // sceneId -> versionNodeId
   nodes: Record<string, VersionNode>;
   subjectAnchors?: ProjectSubjectAnchor[];
+  masterStyleAnchorAssetUrl?: string;
   basePresetId?: string;
   styleOverrides?: Record<string, any>;
   additionalConstraints?: string[];

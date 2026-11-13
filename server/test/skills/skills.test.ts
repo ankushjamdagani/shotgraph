@@ -19,6 +19,7 @@ describe('Atomic Skill Swarm Suite', () => {
     expect(SkillRegistry.get('skill-hook-generator')).toBeDefined();
     expect(SkillRegistry.get('skill-beat-scriptwriter')).toBeDefined();
     expect(SkillRegistry.get('skill-prompt-synthesizer')).toBeDefined();
+    expect(SkillRegistry.get('skill-asset-generator')).toBeDefined();
     expect(SkillRegistry.get('skill-fcpxml-builder')).toBeDefined();
   });
 
@@ -257,5 +258,66 @@ describe('Atomic Skill Swarm Suite', () => {
     expect(result.fcpxmlContent).toContain('V2_overlay/card_01.mov');
     expect(result.edlContent).toContain('TITLE: AI Reel Project 01');
     expect(result.srtContent).toContain('Voiceover Stem');
+  });
+
+  it('skillAssetGenerator enforces Three-Pillar Style Lock across different subjects (e.g. Girl and Boy)', async () => {
+    // 1. Generate First Asset (Girl / Anya) without Master Anchor
+    const girlAsset: any = await SkillRegistry.execute(
+      'skill-asset-generator',
+      {
+        subjectName: 'Anya - Lead Presenter',
+        category: 'character',
+        coreDescription: 'Early 30s female tech founder, sharp features, short dark hair',
+        variantLabel: 'Formal Charcoal Blazer',
+        turnaroundAngle: 'portrait',
+        targetPlatform: 'midjourney',
+      },
+      {
+        projectRoot: '/tmp',
+        styleTokensJson: {
+          palette: { background: '#0F172A', accent: '#38BDF8' },
+          archetype: 'liquid_glass',
+          negativeConstraints: ['no plastic skin', 'no oversaturated glow'],
+        },
+      }
+    );
+
+    expect(girlAsset.synthesizedPrompt).toContain('Character turnaround portrait of Anya - Lead Presenter');
+    expect(girlAsset.synthesizedPrompt).toContain('50mm prime portrait lens');
+    expect(girlAsset.fullString).toContain('--v 6.1');
+    expect(girlAsset.negativeGuards).toContain('no plastic skin');
+    expect(girlAsset.negativeGuards).toContain('distorted hands'); // 2-layer negative guard
+
+    // 2. Generate Second Asset (Boy / Marcus) WITH Anya as Master Style Anchor (--sref)
+    const anyaAnchorUrl = 'assets/subjects/anya/var_01.png';
+    const boyAsset: any = await SkillRegistry.execute(
+      'skill-asset-generator',
+      {
+        subjectName: 'Marcus - Chief Architect',
+        category: 'character',
+        coreDescription: 'Late 30s male engineer, strong jawline, neat dark beard',
+        variantLabel: 'Studio Turnaround',
+        turnaroundAngle: 'three_quarter',
+        masterStyleAnchorAssetUrl: anyaAnchorUrl,
+        targetPlatform: 'midjourney',
+      },
+      {
+        projectRoot: '/tmp',
+        styleTokensJson: {
+          palette: { background: '#0F172A', accent: '#38BDF8' },
+          archetype: 'liquid_glass',
+          negativeConstraints: ['no plastic skin', 'no oversaturated glow'],
+        },
+      }
+    );
+
+    // Verify Three-Pillar Style Parity Lock
+    expect(boyAsset.synthesizedPrompt).toContain('Character turnaround portrait of Marcus - Chief Architect');
+    expect(boyAsset.synthesizedPrompt).toContain('35mm cinema lens'); // Injected Style DNA
+    // Pillar 2: Master Style Anchor --sref automatically appended
+    expect(boyAsset.fullString).toContain(`--sref ${anyaAnchorUrl} --sw 100`);
+    expect(boyAsset.instructions).toContain(anyaAnchorUrl);
+    // Pillar 3: Identical negative guards
+    expect(boyAsset.negativeGuards).toEqual(girlAsset.negativeGuards);
   });
 });

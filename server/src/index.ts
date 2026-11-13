@@ -897,6 +897,128 @@ server.post('/api/projects/:id/nodes/:nodeId/synthesize-prompt', async (req, rep
   return { success: true, result: synthesisResult, node };
 });
 
+// Set or clear the project Master Style Anchor (Pillar 2 of Style Parity)
+server.post('/api/projects/:id/assets/master-style-anchor', async (req, reply) => {
+  const { id } = req.params as { id: string };
+  const { assetUrl, nodeId } = (req.body as any) || {};
+  const { project } = await resolveProjectRoot(id);
+  if (!project) {
+    reply.status(404);
+    return { success: false, error: 'Project not found' };
+  }
+
+  project.masterStyleAnchorAssetUrl = assetUrl;
+
+  // If a specific node was marked, update its metadata
+  for (const n of Object.values(project.nodes)) {
+    if (n.assetMetadata) {
+      n.assetMetadata.isMasterStyleAnchor = Boolean(nodeId && n.id === nodeId);
+    }
+  }
+
+  await ProjectService.saveProject(project);
+  return { success: true, masterStyleAnchorAssetUrl: project.masterStyleAnchorAssetUrl, project };
+});
+
+// Synthesize turnaround prompt for a subject asset with style parity lock
+server.post('/api/projects/:id/assets/synthesize-turnaround', async (req, reply) => {
+  const { id } = req.params as { id: string };
+  const {
+    subjectName,
+    category = 'character',
+    coreDescription,
+    variantLabel = 'Turnaround Portrait',
+    turnaroundAngle = 'portrait',
+    targetPlatform = 'midjourney',
+    subjectId,
+    variantId,
+  } = (req.body as any) || {};
+
+  const { project, projectRoot } = await resolveProjectRoot(id);
+  if (!project) {
+    reply.status(404);
+    return { success: false, error: 'Project not found' };
+  }
+
+  const result: any = await SkillRegistry.execute(
+    'skill-asset-generator',
+    {
+      subjectName,
+      category,
+      coreDescription,
+      variantLabel,
+      turnaroundAngle,
+      masterStyleAnchorAssetUrl: project.masterStyleAnchorAssetUrl,
+      targetPlatform,
+      subjectId,
+      variantId,
+    },
+    {
+      projectRoot,
+      styleGuideMd: project.styleMarkdown,
+      styleTokensJson: project.styleTokens,
+    }
+  );
+
+  return { success: true, result };
+});
+
+// Spawn a dedicated Asset Node on the 8-Stage DAG
+server.post('/api/projects/:id/assets/spawn-node', async (req, reply) => {
+  const { id } = req.params as { id: string };
+  const {
+    subjectName,
+    coreDescription,
+    variantLabel = 'v1.0 (Turnaround)',
+    subjectAnchorId,
+    mediaUrl,
+  } = (req.body as any) || {};
+
+  const { project } = await resolveProjectRoot(id);
+  if (!project) {
+    reply.status(404);
+    return { success: false, error: 'Project not found' };
+  }
+
+  const anchorId = subjectAnchorId || `subj_${nanoid(6)}`;
+  const nodeId = `node_asset_${nanoid(6)}`;
+
+  // Find taste node if exists to use as parent
+  const tasteNode = Object.values(project.nodes).find((n) => n.stage === 'taste');
+
+  project.nodes[nodeId] = {
+    id: nodeId,
+    parentId: tasteNode ? tasteNode.id : null,
+    stage: 'assets',
+    stageOrder: 4,
+    subjectAnchorId: anchorId,
+    versionLabel: variantLabel,
+    title: subjectName || 'New Subject Asset',
+    modelEngine: 'antigravity-cli',
+    prompt: coreDescription || 'Character turnaround description',
+    assetMetadata: {
+      isMasterStyleAnchor: !project.masterStyleAnchorAssetUrl, // First asset becomes anchor by default
+      styleReferenceAssetUrl: project.masterStyleAnchorAssetUrl,
+      turnaroundAngle: 'portrait',
+    },
+    artifacts: {
+      textContent: coreDescription,
+      mediaUrl,
+    },
+    metadata: {
+      createdAt: new Date().toISOString(),
+      status: mediaUrl ? 'ready' : 'idle',
+    },
+  };
+
+  if (!project.masterStyleAnchorAssetUrl && mediaUrl) {
+    project.masterStyleAnchorAssetUrl = mediaUrl;
+  }
+
+  await ProjectService.saveProject(project);
+  return { success: true, node: project.nodes[nodeId], project };
+});
+
 // ==========================================
 // 8. Multi-Tab Scoped WebSocket AG-UI Gateway
 // ==========================================
