@@ -110,3 +110,16 @@ This document tracks all iterative development phases, sub-milestones, active st
   - **Shot Director Mode**: Optics, camera moves, and platform video prompt synthesizer.
 - [x] **Step 9.6**: Server REST endpoints for Master Style Anchor designation, turnaround prompt synthesis, and asset node spawning on the DAG (`server/src/index.ts`).
 - [x] **Step 9.7**: All 19 Vitest unit tests passing (`server/test/`) and end-to-end verification script (`scripts/verify-asset-parity-dag.ts`) passing with 100% accuracy.
+
+## Phase 10: Playwright Automated Visual UI Inspection & Verification (Completed)
+- [x] **Step 10.1**: Installed and configured Playwright Chromium headless engine with HiDPI 2x Retina scale.
+- [x] **Step 10.2**: Created end-to-end inspection test suite (`scripts/inspect-ui-playwright.ts`).
+- [x] **Step 10.3**: Validated **Projects Hub** (`/`) with project cards, aspect ratio silhouettes, and metadata badges.
+- [x] **Step 10.4**: Validated **8-Stage Pipeline Version Tree DAG** with floating stage ribbon (`1. Idea / Premise` → `2. Taste & Style` → `3. Master Script` → `4. Subject Assets` → `5. Shots & Framing` → `6. Video Takes` → `7. VFX & Overlays` → `8. Master Assembly`).
+- [x] **Step 10.5**: Validated **Project Subject Anchors & Asset Manager Modal** (`SubjectManagerModal.tsx`) with character cards (Anya, Marcus), turnaround variants, and Master Style Anchor controls.
+- [x] **Step 10.6**: Validated **Multi-Mode A2UI Inspector** across:
+  - **Asset Mode**: Master Visual Style Anchor banner, turnaround angle selector (Portrait, 3/4, Full, Macro), `--sref` copy button, PNG turnaround dropzone.
+  - **Shot Director Mode**: Camera & Optics overrides (lens focal length, aperture, motion speed), multi-platform prompt synthesis tabs (Runway Gen-3, Kling 1.5, Luma, Minimax, ComfyUI).
+  - **VFX Mode**: Track V2 alpha overlays, in/out timing controls, transparent ProRes 4444 MOV dropzone.
+- [x] **Step 10.7**: Validated **Taste & Cascading Style System Modal** (`STYLE.md`) and **DaVinci Resolve Multi-Track Export Modal** (Track V1 footage, Track V2 VFX overlays, Track A1/A2 audio stems).
+- [x] **Step 10.8**: Captured 8 high-resolution screenshots saved to `exports/screenshots/` and compiled report in [ui_inspection_report.md](file:///Users/ankushjamdagani/.gemini/antigravity/brain/1e877bfe-554c-487b-bae1-ef18bc0b2cfb/ui_inspection_report.md).
