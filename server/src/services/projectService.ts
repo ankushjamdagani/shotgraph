@@ -83,6 +83,7 @@ export interface VersionNode {
   artifacts: {
     textContent?: string;
     mediaUrl?: string; // e.g. MP4, PNG, WAV
+    audioUrl?: string; // Voice stem or sound design WAV/MP3
     alphaOverlayUrl?: string; // ProRes 4444 MOV with alpha
     wordTimingsJson?: string;
     scriptBeats?: any[];
@@ -538,11 +539,48 @@ export class ProjectService {
 
   /**
    * Deletes a node and safely re-parents downstream child edges.
+   * If deleteFilesFromSystem is true, also deletes or trashes any associated media artifacts on disk.
    */
-  static async deleteVersionNode(project: FilmProject, nodeId: string): Promise<FilmProject> {
+  static async deleteVersionNode(
+    project: FilmProject,
+    nodeId: string,
+    deleteFilesFromSystem = false
+  ): Promise<FilmProject> {
     const target = project.nodes[nodeId];
     if (!target) return project;
     const parentId = target.parentId;
+
+    // If requested, clean up generated media files from system
+    if (deleteFilesFromSystem) {
+      const mediaFilesToDelete: string[] = [];
+      if (target.artifacts?.mediaUrl) {
+        mediaFilesToDelete.push(target.artifacts.mediaUrl);
+      }
+      if (target.artifacts?.alphaOverlayUrl) {
+        mediaFilesToDelete.push(target.artifacts.alphaOverlayUrl);
+      }
+      if (target.artifacts?.audioUrl) {
+        mediaFilesToDelete.push(target.artifacts.audioUrl);
+      }
+      if (target.assetMetadata?.styleReferenceAssetUrl) {
+        mediaFilesToDelete.push(target.assetMetadata.styleReferenceAssetUrl);
+      }
+
+      const root = project.projectRoot || (project as any).path;
+      for (const relPath of mediaFilesToDelete) {
+        if (!relPath) continue;
+        const absPath = path.isAbsolute(relPath) ? relPath : path.join(root, relPath);
+        try {
+          await execAsync(`osascript -e 'tell application "Finder" to delete POSIX file "${absPath}"'`);
+        } catch {
+          try {
+            await fs.rm(absPath, { force: true });
+          } catch {
+            // Ignore missing files or non-critical cleanup failures
+          }
+        }
+      }
+    }
 
     // Re-link children to parent
     for (const node of Object.values(project.nodes)) {

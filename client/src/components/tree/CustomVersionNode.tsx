@@ -252,12 +252,10 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
           <button
             onClick={(e) => {
               e.stopPropagation();
-              if (window.confirm(`Delete node "${node.title}"? Downstream edges will automatically re-link.`)) {
-                onDelete(node.id);
-              }
+              onDelete(node.id);
             }}
             className="p-1 rounded text-text-muted hover:text-red-400 hover:bg-subtle transition"
-            title="Delete node (auto-relink edges)"
+            title="Delete node"
           >
             <Trash2 className="w-3 h-3" />
           </button>

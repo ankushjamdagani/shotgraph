@@ -502,15 +502,22 @@ server.post('/api/tree/active-cut', async (req, reply) => {
   return { success: true, activeCut: project.activeCut };
 });
 
-// Delete node from project DAG with child edge re-linking
+// Delete node from project DAG with child edge re-linking (and optional filesystem cleanup)
 server.delete('/api/projects/:id/nodes/:nodeId', async (req, reply) => {
   const { id, nodeId } = req.params as { id: string; nodeId: string };
+  const query = (req.query as any) || {};
+  const body = (req.body as any) || {};
+  const deleteFiles = Boolean(
+    query.deleteFiles === 'true' || query.deleteFiles === true ||
+    body.deleteFiles === 'true' || body.deleteFiles === true
+  );
+
   const { project } = await resolveProjectRoot(id);
   if (!project) {
     reply.status(404);
     return { success: false, error: 'Project not found' };
   }
-  const updated = await ProjectService.deleteVersionNode(project, nodeId);
+  const updated = await ProjectService.deleteVersionNode(project, nodeId, deleteFiles);
   return { success: true, project: updated };
 });
 

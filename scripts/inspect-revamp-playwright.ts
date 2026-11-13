@@ -59,6 +59,29 @@ async function run() {
     await page.waitForTimeout(400);
 
     // -------------------------------------------------------------
+    // Step 1b: Test Project Deletion Modal (System Trash Option)
+    // -------------------------------------------------------------
+    console.log('📸 Step 1b: Testing Project Delete Confirmation Dialog (System Trash vs Unlist)...');
+    const firstProjectCard = page.locator('.group.relative.flex.flex-col').first();
+    if (await firstProjectCard.isVisible()) {
+      await firstProjectCard.hover();
+      await page.waitForTimeout(300);
+      const projectCardDeleteBtn = firstProjectCard.locator('button[title="Delete or remove project"]');
+      console.log(`   Delete Project Button on card: ${await projectCardDeleteBtn.isVisible() ? 'VISIBLE ✅' : 'MISSING ❌'}`);
+      await projectCardDeleteBtn.click();
+      await page.waitForTimeout(600);
+      const projectDeleteModalHeader = page.getByText('Delete / Remove Project').first();
+      console.log(`   Project Delete Dialog Header: ${await projectDeleteModalHeader.isVisible() ? 'VISIBLE ✅' : 'MISSING ❌'}`);
+      const trashSystemOption = page.getByText('Delete from System (Move to Trash)').first();
+      console.log(`   Delete from System Option: ${await trashSystemOption.isVisible() ? 'VISIBLE ✅' : 'MISSING ❌'}`);
+      await saveShot('14_project_delete_modal.png');
+      // Cancel to avoid deleting test project
+      const cancelBtn = page.getByRole('button', { name: 'Cancel' }).last();
+      await cancelBtn.click();
+      await page.waitForTimeout(400);
+    }
+
+    // -------------------------------------------------------------
     // Step 2: Open New Project Wizard
     // -------------------------------------------------------------
     console.log('📸 Step 2: Opening New Project Wizard with Stage 1 Ideation input...');
@@ -203,6 +226,40 @@ async function run() {
     await workspaceThemeSelect.selectOption('midnight-navy');
     await page.waitForTimeout(600);
     await saveShot('13_workspace_midnight_navy.png');
+
+    // -------------------------------------------------------------
+    // Step 13: Test Canvas Node Deletion Modal (System Trash Option)
+    // -------------------------------------------------------------
+    console.log('📸 Step 13: Testing Node Deletion Dialog on Canvas (Delete from System vs Unlink)...');
+    const nodeCard = page.locator('.group.relative.w-72').first();
+    await nodeCard.hover({ position: { x: 100, y: 50 } });
+    await page.waitForTimeout(400);
+
+    const deleteNodeBtn = page.locator('button[title="Delete node"]').first();
+    console.log(`   Delete Node Button on node: ${await deleteNodeBtn.isVisible() ? 'VISIBLE ✅' : 'MISSING ❌'}`);
+    if (await deleteNodeBtn.isVisible()) {
+      await deleteNodeBtn.click();
+    } else {
+      // Dispatch click directly
+      await deleteNodeBtn.click({ force: true });
+    }
+    await page.waitForTimeout(600);
+
+    const nodeDeleteModalHeader = page.getByText('Delete Node Version').first();
+    console.log(`   Node Delete Dialog Header: ${await nodeDeleteModalHeader.isVisible() ? 'VISIBLE ✅' : 'MISSING ❌'}`);
+
+    const systemTrashChoice = page.getByText('Delete from System as Well (Move to Trash)').first();
+    console.log(`   Node System Trash Option: ${await systemTrashChoice.isVisible() ? 'VISIBLE ✅' : 'MISSING ❌'}`);
+
+    const dagOnlyChoice = page.getByText('Remove Node from DAG Only').first();
+    console.log(`   Node Remove DAG Only Option: ${await dagOnlyChoice.isVisible() ? 'VISIBLE ✅' : 'MISSING ❌'}`);
+
+    await saveShot('15_node_delete_modal.png');
+
+    // Cancel to keep the test project intact
+    const cancelNodeDeleteBtn = page.getByRole('button', { name: 'Cancel' }).last();
+    await cancelNodeDeleteBtn.click();
+    await page.waitForTimeout(400);
 
     console.log('🎉 Comprehensive UI & Theme Revamp Playwright Validation Suite Completed Successfully!');
   } catch (err) {

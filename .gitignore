@@ -12,6 +12,9 @@ build/
 # Studio Local Render Cache (transient scratch frames)
 .studio/cache/
 compositions/**/.render-cache/
+server/5Fci78IA/
+server/XnbqBqR1/
+server/projects/
 
 # Environment
 .env

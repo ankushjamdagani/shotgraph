@@ -352,8 +352,13 @@ export class ProjectRegistry {
         // macOS trash utility or apple script
         await execAsync(`osascript -e 'tell application "Finder" to delete POSIX file "${target.path}"'`);
       } catch (err: any) {
-        // Fallback: don't crash if trash command fails
-        console.warn(`Could not move ${target.path} to Trash: ${err?.message}`);
+        // Fallback: remove directory from disk if Finder trash command is unavailable
+        console.warn(`Could not move ${target.path} to Trash via Finder: ${err?.message}. Removing via fs.rm...`);
+        try {
+          await fs.rm(target.path, { recursive: true, force: true });
+        } catch (rmErr: any) {
+          console.error(`Failed to delete ${target.path} from disk:`, rmErr);
+        }
       }
     }
 

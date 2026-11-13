@@ -26,6 +26,13 @@ import {
   Compass,
   User,
   Sliders,
+  Trash2,
+  Layers,
+  Video,
+  Image as ImageIcon,
+  FileAudio,
+  Loader2,
+  X,
 } from 'lucide-react';
 
 interface SpatialDirectorCanvasProps {
@@ -79,21 +86,29 @@ function SpatialDirectorCanvasInner({
   const [activeHudId, setActiveHudId] = useState<string | null>(null);
   const [pinnedHudIds, setPinnedHudIds] = useState<Set<string>>(new Set());
 
+  // Node deletion confirmation state
+  const [nodeToDelete, setNodeToDelete] = useState<VersionNode | null>(null);
+  const [isDeletingNode, setIsDeletingNode] = useState(false);
+
   // Toggle HUD open/close for a node
   const handleToggleHud = useCallback((nodeId: string) => {
     setActiveHudId((prev) => (prev === nodeId ? null : nodeId));
   }, []);
 
-  // Escape key closes active floating HUD
+  // Escape key closes active floating HUD or delete modal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && activeHudId) {
-        setActiveHudId(null);
+      if (e.key === 'Escape') {
+        if (nodeToDelete) {
+          setNodeToDelete(null);
+        } else if (activeHudId) {
+          setActiveHudId(null);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeHudId]);
+  }, [activeHudId, nodeToDelete]);
 
   const handleTogglePin = useCallback((nodeId: string) => {
     setPinnedHudIds((prev) => {
@@ -107,23 +122,47 @@ function SpatialDirectorCanvasInner({
     });
   }, []);
 
-  // Node deletion with edge re-linking
+  // Prompt node deletion modal
   const handleDeleteNode = useCallback(
-    async (nodeId: string) => {
+    (nodeId: string) => {
+      const target = project.nodes[nodeId];
+      if (target) {
+        setNodeToDelete(target);
+      }
+    },
+    [project.nodes]
+  );
+
+  // Confirm node deletion with optional file cleanup
+  const handleConfirmDeleteNode = useCallback(
+    async (deleteFilesFromSystem: boolean) => {
+      if (!nodeToDelete) return;
+      setIsDeletingNode(true);
       try {
-        const res = await fetch(`http://localhost:3030/api/projects/${project.id}/nodes/${nodeId}`, {
-          method: 'DELETE',
-        });
+        const res = await fetch(
+          `http://localhost:3030/api/projects/${project.id}/nodes/${nodeToDelete.id}?deleteFiles=${deleteFilesFromSystem}`,
+          {
+            method: 'DELETE',
+          }
+        );
         const data = await res.json();
         if (data.success && data.project) {
           onUpdateProject(data.project);
-          if (activeHudId === nodeId) setActiveHudId(null);
+          if (activeHudId === nodeToDelete.id) setActiveHudId(null);
+          setPinnedHudIds((prev) => {
+            const next = new Set(prev);
+            next.delete(nodeToDelete.id);
+            return next;
+          });
+          setNodeToDelete(null);
         }
       } catch (err) {
         console.error('Failed to delete node:', err);
+      } finally {
+        setIsDeletingNode(false);
       }
     },
-    [project.id, onUpdateProject, activeHudId]
+    [project.id, nodeToDelete, onUpdateProject, activeHudId]
   );
 
   // Inline rename node
@@ -464,6 +503,136 @@ function SpatialDirectorCanvasInner({
           </div>
         )}
       </div>
+
+      {/* NODE DELETION CONFIRMATION DIALOG (Studio / System Trash) */}
+      {nodeToDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in"
+          onClick={() => !isDeletingNode && setNodeToDelete(null)}
+        >
+          <div
+            className="w-full max-w-md bg-surface border border-subtle rounded-2xl p-6 shadow-2xl space-y-4 animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-text-primary">Delete Node Version</h3>
+                  <p className="text-xs text-text-muted">Choose removal method for DAG & local files</p>
+                </div>
+              </div>
+              <button
+                onClick={() => !isDeletingNode && setNodeToDelete(null)}
+                className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-card transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Target Node Details Card */}
+            <div className="p-3.5 rounded-xl bg-card border border-subtle space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-surface border border-subtle text-accent-primary">
+                  {nodeToDelete.stage}
+                </span>
+                <span className="text-[11px] font-mono text-text-muted">
+                  {nodeToDelete.versionLabel}
+                </span>
+              </div>
+              <div className="text-xs font-bold text-text-primary truncate">
+                {nodeToDelete.title}
+              </div>
+
+              {/* Media / File info if present */}
+              {(nodeToDelete.artifacts?.mediaUrl ||
+                nodeToDelete.artifacts?.audioUrl ||
+                nodeToDelete.assetMetadata?.styleReferenceAssetUrl) && (
+                <div className="pt-2 border-t border-subtle/60 text-[11px] font-mono text-text-muted space-y-1.5">
+                  {nodeToDelete.artifacts?.mediaUrl && (
+                    <div className="flex items-center gap-1.5 truncate text-amber-400/90">
+                      <Video className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{nodeToDelete.artifacts.mediaUrl}</span>
+                    </div>
+                  )}
+                  {nodeToDelete.artifacts?.audioUrl && (
+                    <div className="flex items-center gap-1.5 truncate text-cyan-400/90">
+                      <FileAudio className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{nodeToDelete.artifacts.audioUrl}</span>
+                    </div>
+                  )}
+                  {nodeToDelete.assetMetadata?.styleReferenceAssetUrl && (
+                    <div className="flex items-center gap-1.5 truncate text-purple-400/90">
+                      <ImageIcon className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{nodeToDelete.assetMetadata.styleReferenceAssetUrl}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Re-parenting notice */}
+            <p className="text-xs text-text-muted leading-relaxed">
+              Downstream child nodes in the DAG will be re-connected to this node's parent version automatically.
+            </p>
+
+            {/* Action Choices */}
+            <div className="space-y-2 pt-1">
+              {/* Option 1: Delete from System as Well */}
+              <button
+                onClick={() => handleConfirmDeleteNode(true)}
+                disabled={isDeletingNode}
+                className="w-full p-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-left transition flex items-center justify-between group disabled:opacity-50"
+              >
+                <div>
+                  <div className="text-xs font-bold text-red-400 flex items-center gap-1.5">
+                    {isDeletingNode ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5" />
+                    )}
+                    <span>Delete from System as Well (Move to Trash)</span>
+                  </div>
+                  <div className="text-[10px] text-text-muted mt-0.5">
+                    Unlinks node and moves associated media/audio files to your Mac Trash.
+                  </div>
+                </div>
+              </button>
+
+              {/* Option 2: Remove Node from DAG Only */}
+              <button
+                onClick={() => handleConfirmDeleteNode(false)}
+                disabled={isDeletingNode}
+                className="w-full p-3 rounded-xl bg-card hover:bg-subtle/50 border border-subtle text-left transition flex items-center justify-between group disabled:opacity-50"
+              >
+                <div>
+                  <div className="text-xs font-bold text-text-primary flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-text-muted" />
+                    <span>Remove Node from DAG Only</span>
+                  </div>
+                  <div className="text-[10px] text-text-muted mt-0.5">
+                    Unlinks node and reconnects children. Generated media remains stored on disk.
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            {/* Footer Cancel */}
+            <div className="flex justify-end pt-2 border-t border-subtle">
+              <button
+                onClick={() => setNodeToDelete(null)}
+                disabled={isDeletingNode}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-text-muted hover:text-text-primary transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

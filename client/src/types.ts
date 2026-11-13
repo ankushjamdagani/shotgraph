@@ -76,6 +76,7 @@ export interface VersionNode {
   artifacts: {
     textContent?: string;
     mediaUrl?: string;
+    audioUrl?: string;
     alphaOverlayUrl?: string;
     wordTimingsJson?: string;
     scriptBeats?: any[];
