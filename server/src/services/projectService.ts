@@ -54,6 +54,9 @@ export interface VersionNode {
   modelName?: string;
   prompt: string;
   boundSubjectAnchorIds?: string[];
+  position?: { x: number; y: number }; // 2D freeform spatial coordinates
+  colorTag?: 'default' | 'white' | 'blue' | 'purple' | 'emerald' | 'amber';
+  isPinned?: boolean;
   shotContextOverrides?: {
     lensFocalLength?: string;
     aperture?: string;
@@ -351,5 +354,74 @@ export class ProjectService {
     }
     project.activeCut[sceneId] = nodeId;
     await this.saveProject(project);
+  }
+
+  /**
+   * Deletes a node and safely re-parents downstream child edges.
+   */
+  static async deleteVersionNode(project: FilmProject, nodeId: string): Promise<FilmProject> {
+    const target = project.nodes[nodeId];
+    if (!target) return project;
+    const parentId = target.parentId;
+
+    // Re-link children to parent
+    for (const node of Object.values(project.nodes)) {
+      if (node.parentId === nodeId) {
+        node.parentId = parentId;
+      }
+    }
+
+    // Clean up activeCut if target was the active cut
+    for (const [sceneId, activeId] of Object.entries(project.activeCut)) {
+      if (activeId === nodeId) {
+        const sibling = Object.values(project.nodes).find(
+          (n) => n.sceneId === sceneId && n.id !== nodeId
+        );
+        if (sibling) {
+          project.activeCut[sceneId] = sibling.id;
+        } else if (parentId && project.nodes[parentId]) {
+          project.activeCut[sceneId] = parentId;
+        } else {
+          delete project.activeCut[sceneId];
+        }
+      }
+    }
+
+    delete project.nodes[nodeId];
+    await this.saveProject(project);
+    return project;
+  }
+
+  /**
+   * Updates fields on an existing node.
+   */
+  static async updateNode(
+    project: FilmProject,
+    nodeId: string,
+    patch: Partial<VersionNode>
+  ): Promise<VersionNode> {
+    if (!project.nodes[nodeId]) {
+      throw new Error(`Node "${nodeId}" not found in project.`);
+    }
+
+    project.nodes[nodeId] = {
+      ...project.nodes[nodeId],
+      ...patch,
+      shotContextOverrides: {
+        ...(project.nodes[nodeId].shotContextOverrides || {}),
+        ...(patch.shotContextOverrides || {}),
+      },
+      assetMetadata: {
+        ...(project.nodes[nodeId].assetMetadata || {}),
+        ...(patch.assetMetadata || {}),
+      },
+      vfxMetadata: {
+        ...(project.nodes[nodeId].vfxMetadata || {}),
+        ...(patch.vfxMetadata || {}),
+      },
+    };
+
+    await this.saveProject(project);
+    return project.nodes[nodeId];
   }
 }

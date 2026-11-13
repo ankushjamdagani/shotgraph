@@ -4,6 +4,52 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ======================================================== */
+/* CSS Variable Theme Engine (Monochrome Minimalist Lab)    */
+/* ======================================================== */
+:root, .theme-studio-dark {
+  --bg-app: #09090B;
+  --bg-surface: #121215;
+  --bg-card: #18181B;
+  --border-subtle: #27272A;
+  --text-primary: #FAFAFA;
+  --text-muted: #A1A1AA;
+  --accent-primary: #E4E4E7;
+  --dot-color: #27272A;
+}
+
+.theme-film-lab-mono {
+  --bg-app: #000000;
+  --bg-surface: #0A0A0A;
+  --bg-card: #121212;
+  --border-subtle: #1F1F1F;
+  --text-primary: #FFFFFF;
+  --text-muted: #888888;
+  --accent-primary: #D4D4D8;
+  --dot-color: #1F1F1F;
+}
+
+.theme-midnight-navy {
+  --bg-app: #060913;
+  --bg-surface: #0B1120;
+  --bg-card: #0F172A;
+  --border-subtle: #1E293B;
+  --text-primary: #F8FAFC;
+  --text-muted: #94A3B8;
+  --accent-primary: #38BDF8;
+  --dot-color: #1E293B;
+}
+
+body {
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+code, .font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 5px;
@@ -13,11 +59,11 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1E293B;
+  background: #27272A;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #38BDF8;
+  background: #3F3F46;
 }
 
 /* Tactile button active push */
@@ -34,25 +80,41 @@ button:active:not(:disabled) {
   }
 }
 
-/* React Flow Dark Styling */
+/* Canvas dot grid */
+.canvas-dots {
+  background-size: 24px 24px;
+  background-image: radial-gradient(circle, var(--dot-color) 1px, transparent 1px);
+}
+
+/* React Flow Minimalist Lab Dark Styling */
 .react-flow__node {
-  border-radius: 12px;
+  border-radius: 16px;
 }
 .react-flow__handle {
-  width: 10px;
-  height: 10px;
-  background: #38BDF8;
-  border: 2px solid #0A0D14;
+  width: 9px;
+  height: 9px;
+  background: #E4E4E7;
+  border: 2px solid var(--bg-app);
 }
 .react-flow__edge-path {
-  stroke: #1F293D;
-  stroke-width: 2.5;
+  stroke: #27272A;
+  stroke-width: 2;
 }
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #38BDF8;
+  stroke: #FAFAFA;
+}
+
+/* Animated Active Cut Wire */
+.wire-active {
+  stroke: #EAB308 !important;
+  stroke-dasharray: 6;
+  animation: dash 1s linear infinite;
+}
+@keyframes dash {
+  to { stroke-dashoffset: -12; }
 }
 
 /* Glow effects */
 .glow-accent {
-  box-shadow: 0 0 20px -5px rgba(56, 189, 248, 0.3);
+  box-shadow: 0 0 20px -5px rgba(234, 179, 8, 0.3);
 }

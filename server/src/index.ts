@@ -500,6 +500,31 @@ server.post('/api/tree/active-cut', async (req, reply) => {
   return { success: true, activeCut: project.activeCut };
 });
 
+// Delete node from project DAG with child edge re-linking
+server.delete('/api/projects/:id/nodes/:nodeId', async (req, reply) => {
+  const { id, nodeId } = req.params as { id: string; nodeId: string };
+  const { project } = await resolveProjectRoot(id);
+  if (!project) {
+    reply.status(404);
+    return { success: false, error: 'Project not found' };
+  }
+  const updated = await ProjectService.deleteVersionNode(project, nodeId);
+  return { success: true, project: updated };
+});
+
+// Update node attributes (position, colorTag, title, overrides)
+server.patch('/api/projects/:id/nodes/:nodeId', async (req, reply) => {
+  const { id, nodeId } = req.params as { id: string; nodeId: string };
+  const patch = req.body as any;
+  const { project } = await resolveProjectRoot(id);
+  if (!project) {
+    reply.status(404);
+    return { success: false, error: 'Project not found' };
+  }
+  const updatedNode = await ProjectService.updateNode(project, nodeId, patch);
+  return { success: true, node: updatedNode, project };
+});
+
 // ==========================================
 // 6. DaVinci Resolve Multi-Track Export
 // ==========================================

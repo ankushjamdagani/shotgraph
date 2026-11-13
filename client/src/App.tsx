@@ -1,15 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FilmProject, AgentPresence, ModelEngine } from './types.js';
-import { VersionTreeCanvas } from './components/tree/VersionTreeCanvas.js';
-import { MultiSceneTimeline } from './components/timeline/MultiSceneTimeline.js';
-import { A2UIInspector } from './components/inspector/A2UIInspector.js';
+import { FilmProject, AgentPresence } from './types.js';
+import { SpatialDirectorCanvas } from './components/canvas/SpatialDirectorCanvas.js';
+import { BottomPlaybackDock } from './components/canvas/BottomPlaybackDock.js';
 import { TasteMixerModal } from './components/taste/TasteMixerModal.js';
 import { DaVinciExportModal } from './components/export/DaVinciExportModal.js';
 import { MediaTrimmerModal } from './components/trimmer/MediaTrimmerModal.js';
 import { SubjectManagerModal } from './components/project/SubjectManagerModal.js';
 import { CommandPalette } from './components/palette/CommandPalette.js';
 import { ProjectHubModal } from './components/project/ProjectHubModal.js';
-import { ThemeCustomizer, StudioTheme, StudioLayout } from './components/ui-ux/ThemeCustomizer.js';
+import { ThemeCustomizer, StudioTheme } from './components/ui-ux/ThemeCustomizer.js';
 import {
   Sliders,
   Film,
@@ -26,7 +25,6 @@ export default function App() {
   const [isLoadingProject, setIsLoadingProject] = useState<boolean>(false);
   const [agents, setAgents] = useState<AgentPresence[]>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [streamingLog, setStreamingLog] = useState<string>('');
 
   // Modals
   const [isProjectHubOpen, setIsProjectHubOpen] = useState(false);
@@ -43,7 +41,6 @@ export default function App() {
 
   // Meta UI/UX
   const [theme, setTheme] = useState<StudioTheme>('studio-dark');
-  const [layout, setLayout] = useState<StudioLayout>('balanced-nle');
 
   // Load project by ID (only when requested via query param or user selection)
   const loadProjectById = useCallback(async (projectId: string) => {
@@ -132,8 +129,6 @@ export default function App() {
               const filtered = prev.filter((a) => a.agentId !== msg.data.agentId);
               return [...filtered, msg.data];
             });
-          } else if (msg.event === 'agent:stream_delta') {
-            setStreamingLog((prev) => `${prev}\n${msg.data.chunk}`);
           } else if (msg.event === 'state:timeline_sync') {
             setProject((prev) =>
               prev ? { ...prev, activeCut: { ...prev.activeCut, ...msg.data.activeCut } } : prev
@@ -213,36 +208,6 @@ export default function App() {
     }
   };
 
-  const handleExecuteSkill = async (skillId: string, modelEngine: ModelEngine, input: any) => {
-    if (!selectedNodeId || !project) return;
-    setStreamingLog(`[Dispatching ${modelEngine}...]`);
-
-    try {
-      const res = await fetch('http://localhost:3030/api/skills/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          skillId,
-          modelEngine,
-          input,
-          targetNodeId: selectedNodeId,
-          projectId: project.id,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        // Refresh project
-        const pRes = await fetch(`http://localhost:3030/api/projects/${project.id}`);
-        const pData = await pRes.json();
-        setProject(pData);
-      } else {
-        alert(`Skill error: ${data.error}`);
-      }
-    } catch (err: any) {
-      alert(`Skill execution failed: ${err.message}`);
-    }
-  };
-
   const handleMediaDrop = (nodeId: string, file: File) => {
     setTrimmerData({
       isOpen: true,
@@ -275,13 +240,12 @@ export default function App() {
     );
   }
 
-  const selectedNode = selectedNodeId ? project.nodes[selectedNodeId] || null : null;
   const totalDuration = project.scenes.reduce((acc, s) => acc + s.targetDurationSec, 0);
 
   return (
-    <div className={`flex flex-col h-screen w-screen bg-[#0A0D14] text-[#F8FAFC] overflow-hidden theme-${theme}`}>
+    <div className={`flex flex-col h-screen w-screen bg-[#09090B] text-[#FAFAFA] overflow-hidden theme-${theme}`}>
       {/* Top Studio Navbar */}
-      <header className="flex items-center justify-between px-4 h-12 bg-[#0E131F] border-b border-slate-800 shrink-0 z-40">
+      <header className="flex items-center justify-between px-4 h-12 bg-[#121215] border-b border-[#27272A] shrink-0 z-40 select-none">
         <div className="flex items-center gap-3">
           {/* Logo & Return to Projects Page button */}
           <button
@@ -289,40 +253,40 @@ export default function App() {
             className="flex items-center gap-2 hover:opacity-80 transition group"
             title="Return to Projects Hub"
           >
-            <div className="p-1 rounded bg-sky-500/20 text-sky-400 border border-sky-500/30">
-              <Video className="w-4 h-4" />
+            <div className="w-6 h-6 rounded-md bg-white text-black font-extrabold text-[11px] flex items-center justify-center font-mono">
+              VS
             </div>
-            <span className="font-extrabold text-xs tracking-wide text-white group-hover:text-sky-300 transition">
-              VISUAL AI STUDIO
+            <span className="font-extrabold text-xs tracking-wider text-white group-hover:text-slate-300 transition">
+              SPATIAL DIRECTOR STUDIO
             </span>
           </button>
 
-          <span className="text-slate-600">|</span>
+          <span className="text-[#3F3F46]">|</span>
 
           {/* All Projects Hub Link */}
           <button
             onClick={handleExitToProjects}
-            className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/60 transition"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold text-[#A1A1AA] hover:text-white hover:bg-[#18181B] transition"
             title="Go to Projects Page"
           >
-            <LayoutGrid className="w-3.5 h-3.5 text-slate-400" />
+            <LayoutGrid className="w-3.5 h-3.5 text-[#A1A1AA]" />
             <span>Projects</span>
           </button>
 
           {/* Active Project Switcher Pill */}
           <button
             onClick={() => setIsProjectHubOpen(true)}
-            className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/50 text-slate-200 transition group"
+            className="flex items-center gap-2 px-3 py-1 rounded-xl bg-[#18181B] hover:bg-[#27272A] border border-[#27272A] text-white transition group"
             title="Switch Project (Cmd+O)"
           >
-            <Folder className="w-3.5 h-3.5 text-sky-400" />
-            <span className="text-xs font-bold text-white group-hover:text-sky-300 transition truncate max-w-[200px]">
+            <Folder className="w-3.5 h-3.5 text-amber-400" />
+            <span className="text-xs font-bold text-white transition truncate max-w-[200px]">
               {project.name}
             </span>
-            <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-slate-900 text-slate-400">
+            <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-[#09090B] text-[#A1A1AA] border border-[#27272A]">
               {project.aspectRatio} • {totalDuration}s
             </span>
-            <ChevronDown className="w-3 h-3 text-slate-400 group-hover:text-slate-200" />
+            <ChevronDown className="w-3 h-3 text-[#71717A] group-hover:text-white" />
           </button>
         </div>
 
@@ -331,24 +295,22 @@ export default function App() {
           <ThemeCustomizer
             currentTheme={theme}
             onThemeChange={setTheme}
-            currentLayout={layout}
-            onLayoutChange={setLayout}
           />
 
           <button
             onClick={() => setIsSubjectManagerOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#0A0D14] border border-slate-800 hover:border-sky-400/50 text-slate-200 transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-[#18181B] border border-[#27272A] hover:border-[#3F3F46] text-[#FAFAFA] transition"
           >
-            <User className="w-3.5 h-3.5 text-sky-400" />
+            <User className="w-3.5 h-3.5 text-purple-400" />
             <span>Subject Anchors</span>
-            <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-slate-800 text-sky-300">
+            <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-[#27272A] text-purple-300">
               {project.subjectAnchors?.length || 0}
             </span>
           </button>
 
           <button
             onClick={() => setIsTasteMixerOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#0A0D14] border border-slate-800 hover:border-amber-400/50 text-slate-200 transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-[#18181B] border border-[#27272A] hover:border-[#3F3F46] text-[#FAFAFA] transition"
           >
             <Sliders className="w-3.5 h-3.5 text-amber-400" />
             <span>Taste & Style (`STYLE.md`)</span>
@@ -356,15 +318,15 @@ export default function App() {
 
           <button
             onClick={() => setIsDaVinciExportOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-sky-500 hover:bg-sky-400 text-slate-950 shadow transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-slate-200 text-black shadow transition font-mono"
           >
-            <Film className="w-3.5 h-3.5 fill-slate-950" />
+            <Film className="w-3.5 h-3.5 fill-black" />
             <span>Export DaVinci Bundle</span>
           </button>
 
           <button
             onClick={() => setIsCmdPaletteOpen(true)}
-            className="p-1.5 rounded-lg bg-[#0A0D14] border border-slate-800 text-slate-400 hover:text-slate-200 transition"
+            className="p-1.5 rounded-xl bg-[#18181B] border border-[#27272A] text-[#A1A1AA] hover:text-white transition"
             title="Command Palette (Cmd+K)"
           >
             <CmdIcon className="w-3.5 h-3.5" />
@@ -372,49 +334,29 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Workspace Body */}
-      <main className="flex-1 flex overflow-hidden">
-        {/* Left Pane: Version Tree Canvas (DAG) */}
-        <div className={layout === 'canvas-focus' ? 'flex-1 h-full' : 'w-[58%] h-full border-r border-slate-800'}>
-          <VersionTreeCanvas
+      {/* Main Spatial Director Workspace */}
+      <main className="flex-1 flex flex-col overflow-hidden relative">
+        <div className="flex-1 relative">
+          <SpatialDirectorCanvas
             project={project}
             agents={agents}
             selectedNodeId={selectedNodeId}
             onSelectNode={setSelectedNodeId}
             onBranchNode={handleBranchNode}
+            onUpdateProject={(updated) => setProject(updated)}
             onSetActiveCut={handleSetActiveCut}
             onMediaDrop={handleMediaDrop}
+            onOpenDaVinciExport={() => setIsDaVinciExportOpen(true)}
+            onOpenSubjectManager={() => setIsSubjectManagerOpen(true)}
+            onOpenTasteMixer={() => setIsTasteMixerOpen(true)}
           />
         </div>
 
-        {/* Right Split: Timeline / Player (Top) & A2UI Inspector (Bottom) */}
-        {layout !== 'canvas-focus' && (
-          <div className="flex-1 flex flex-col h-full overflow-hidden">
-            <div className="h-[48%] min-h-[260px]">
-              <MultiSceneTimeline
-                project={project}
-                selectedNodeId={selectedNodeId}
-                onSelectNode={setSelectedNodeId}
-              />
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <A2UIInspector
-                node={selectedNode}
-                project={project}
-                onUpdateProject={(updated) => setProject(updated)}
-                onUpdatePrompt={(id, prompt) => {
-                  if (project.nodes[id]) {
-                    project.nodes[id].prompt = prompt;
-                  }
-                }}
-                onExecuteSkill={handleExecuteSkill}
-                onOpenSubjectManager={() => setIsSubjectManagerOpen(true)}
-                onMediaDrop={handleMediaDrop}
-                streamingLog={streamingLog}
-              />
-            </div>
-          </div>
-        )}
+        {/* Bottom Playback Scrubber Dock */}
+        <BottomPlaybackDock
+          project={project}
+          onOpenDaVinciExport={() => setIsDaVinciExportOpen(true)}
+        />
       </main>
 
       {/* DaVinci-Style Project Hub Modal (Cmd+O when in editor) */}

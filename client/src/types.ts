@@ -47,6 +47,9 @@ export interface VersionNode {
   modelName?: string;
   prompt: string;
   boundSubjectAnchorIds?: string[];
+  position?: { x: number; y: number };
+  colorTag?: 'default' | 'white' | 'blue' | 'purple' | 'emerald' | 'amber';
+  isPinned?: boolean;
   shotContextOverrides?: {
     lensFocalLength?: string;
     aperture?: string;
