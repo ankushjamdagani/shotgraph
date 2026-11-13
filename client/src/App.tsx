@@ -9,10 +9,19 @@ import { MediaTrimmerModal } from './components/trimmer/MediaTrimmerModal.js';
 import { CommandPalette } from './components/palette/CommandPalette.js';
 import { ProjectHubModal } from './components/project/ProjectHubModal.js';
 import { ThemeCustomizer, StudioTheme, StudioLayout } from './components/ui-ux/ThemeCustomizer.js';
-import { Sliders, Film, Command as CmdIcon, Video, Folder, ChevronDown } from 'lucide-react';
+import {
+  Sliders,
+  Film,
+  Command as CmdIcon,
+  Video,
+  Folder,
+  ChevronDown,
+  LayoutGrid,
+} from 'lucide-react';
 
 export default function App() {
   const [project, setProject] = useState<FilmProject | null>(null);
+  const [isLoadingProject, setIsLoadingProject] = useState<boolean>(false);
   const [agents, setAgents] = useState<AgentPresence[]>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [streamingLog, setStreamingLog] = useState<string>('');
@@ -33,31 +42,59 @@ export default function App() {
   const [theme, setTheme] = useState<StudioTheme>('studio-dark');
   const [layout, setLayout] = useState<StudioLayout>('balanced-nle');
 
-  // Load project on mount (checking ?projectId= query param)
-  const loadProjectById = useCallback(async (projectId?: string) => {
+  // Load project by ID (only when requested via query param or user selection)
+  const loadProjectById = useCallback(async (projectId: string) => {
+    setIsLoadingProject(true);
     try {
-      const url = projectId ? `http://localhost:3030/api/projects/${projectId}` : 'http://localhost:3030/api/project';
-      const res = await fetch(url);
+      const res = await fetch(`http://localhost:3030/api/projects/${projectId}`);
       const data: FilmProject = await res.json();
       if (data && data.id) {
         setProject(data);
         const firstNodeId = Object.keys(data.nodes)[0];
         if (firstNodeId) setSelectedNodeId(firstNodeId);
 
-        // Update URL query param without reload
+        // Synchronize URL query parameter without full reload
         const newUrl = new URL(window.location.href);
         newUrl.searchParams.set('projectId', data.id);
         window.history.replaceState({}, '', newUrl.toString());
+      } else {
+        // If project ID is invalid, clear query and return to projects hub
+        setProject(null);
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('projectId');
+        window.history.replaceState({}, '', newUrl.pathname);
       }
     } catch (err) {
       console.error('Failed to load project:', err);
+      setProject(null);
+    } finally {
+      setIsLoadingProject(false);
     }
   }, []);
 
+  // Mount logic: check if ?projectId= is provided
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const initialProjectId = urlParams.get('projectId') || undefined;
-    loadProjectById(initialProjectId);
+    const initialProjectId = urlParams.get('projectId');
+    if (initialProjectId) {
+      loadProjectById(initialProjectId);
+    }
+    // If no initialProjectId, stay on root Projects Hub page (project = null)
+  }, [loadProjectById]);
+
+  // Support browser Back/Forward navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const pid = urlParams.get('projectId');
+      if (pid) {
+        loadProjectById(pid);
+      } else {
+        setProject(null);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, [loadProjectById]);
 
   // Global Keyboard Shortcuts (Cmd+O for Project Hub, Cmd+K for Command Palette)
@@ -111,6 +148,23 @@ export default function App() {
       ws?.close();
     };
   }, [project?.id]);
+
+  const handleSelectProject = (newProject: FilmProject) => {
+    setProject(newProject);
+    const firstNode = Object.keys(newProject.nodes)[0] || null;
+    setSelectedNodeId(firstNode);
+
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.set('projectId', newProject.id);
+    window.history.pushState({}, '', newUrl.toString());
+  };
+
+  const handleExitToProjects = () => {
+    setProject(null);
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.delete('projectId');
+    window.history.pushState({}, '', newUrl.pathname);
+  };
 
   const handleBranchNode = async (parentNodeId: string) => {
     if (!project) return;
@@ -195,25 +249,26 @@ export default function App() {
     });
   };
 
+  // If loading a specific project from query param
+  if (isLoadingProject) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen w-screen bg-[#0A0D14] text-slate-400 font-mono text-xs gap-3">
+        <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+          <Video className="w-5 h-5 animate-pulse" />
+        </div>
+        <span>Opening project workspace...</span>
+      </div>
+    );
+  }
+
+  // Root view: When on root (no project loaded), show Projects Page directly!
   if (!project) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-[#0A0D14] text-slate-400 font-mono text-xs gap-3">
-        <div className="w-8 h-8 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
-          <Video className="w-4 h-4 animate-pulse" />
-        </div>
-        <span>Loading Visual AI Video Studio...</span>
-        <button
-          onClick={() => setIsProjectHubOpen(true)}
-          className="mt-2 px-3 py-1.5 bg-sky-500 text-slate-950 font-bold rounded-lg text-xs"
-        >
-          Open Project Manager
-        </button>
-        <ProjectHubModal
-          isOpen={isProjectHubOpen}
-          onClose={() => setIsProjectHubOpen(false)}
-          onSelectProject={(p) => setProject(p)}
-        />
-      </div>
+      <ProjectHubModal
+        isOpen={true}
+        isStandalonePage={true}
+        onSelectProject={handleSelectProject}
+      />
     );
   }
 
@@ -225,16 +280,33 @@ export default function App() {
       {/* Top Studio Navbar */}
       <header className="flex items-center justify-between px-4 h-12 bg-[#0E131F] border-b border-slate-800 shrink-0 z-40">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
+          {/* Logo & Return to Projects Page button */}
+          <button
+            onClick={handleExitToProjects}
+            className="flex items-center gap-2 hover:opacity-80 transition group"
+            title="Return to Projects Hub"
+          >
             <div className="p-1 rounded bg-sky-500/20 text-sky-400 border border-sky-500/30">
               <Video className="w-4 h-4" />
             </div>
-            <span className="font-extrabold text-xs tracking-wide text-white">VISUAL AI STUDIO</span>
-          </div>
+            <span className="font-extrabold text-xs tracking-wide text-white group-hover:text-sky-300 transition">
+              VISUAL AI STUDIO
+            </span>
+          </button>
 
           <span className="text-slate-600">|</span>
 
-          {/* Project Hub Switcher Button */}
+          {/* All Projects Hub Link */}
+          <button
+            onClick={handleExitToProjects}
+            className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/60 transition"
+            title="Go to Projects Page"
+          >
+            <LayoutGrid className="w-3.5 h-3.5 text-slate-400" />
+            <span>Projects</span>
+          </button>
+
+          {/* Active Project Switcher Pill */}
           <button
             onClick={() => setIsProjectHubOpen(true)}
             className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/50 text-slate-200 transition group"
@@ -327,18 +399,16 @@ export default function App() {
         )}
       </main>
 
-      {/* DaVinci-Style Project Hub Modal (Cmd+O) */}
+      {/* DaVinci-Style Project Hub Modal (Cmd+O when in editor) */}
       <ProjectHubModal
         isOpen={isProjectHubOpen}
         onClose={() => setIsProjectHubOpen(false)}
         currentProjectId={project.id}
         onSelectProject={(newProj) => {
-          setProject(newProj);
-          setSelectedNodeId(Object.keys(newProj.nodes)[0] || null);
-          const newUrl = new URL(window.location.href);
-          newUrl.searchParams.set('projectId', newProj.id);
-          window.history.pushState({}, '', newUrl.toString());
+          handleSelectProject(newProj);
+          setIsProjectHubOpen(false);
         }}
+        isStandalonePage={false}
       />
 
       {/* Cascading Taste Mixer Modal */}
