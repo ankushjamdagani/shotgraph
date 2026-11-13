@@ -4,10 +4,10 @@ This document tracks all iterative development phases, sub-milestones, active st
 
 ---
 
-## Current Status: Phase 2 Completed -> Entering Phase 3 (Atomic Swarm of Skills)
-**Active Phase**: Phase 3
-**Last Updated**: Phase 2 Complete (Base, Gemini CLI, Claude CLI, Ollama, HyperFrames, MediaRunner)
-**Resumption Instruction**: Run `npm --workspace=server test` to confirm runners pass, then proceed with Phase 3 skills implementation.
+## Current Status: Phase 3 Completed -> Entering Phase 4 (Local Backend Service & AG-UI Hub)
+**Active Phase**: Phase 4
+**Last Updated**: Phase 3 Complete (SkillRegistry, TasteAnalyzer, TasteMixer, HookGenerator, BeatScriptwriter, PromptSynthesizer, FCPXMLBuilder)
+**Resumption Instruction**: Run `npm --workspace=server test` to confirm all 8 unit tests pass, then proceed with Phase 4 backend service and AG-UI WebSocket hub.
 
 ---
 
@@ -35,15 +35,15 @@ This document tracks all iterative development phases, sub-milestones, active st
 ---
 
 ### Phase 3: Atomic Swarm of Skills
-- [ ] **Step 3.1**: Define atomic skill contract (`server/src/skills/core/types.ts`) and `registry.ts`.
-- [ ] **Step 3.2**: `skill-taste-analyzer`: Ingest reference videos, extract palette, fonts, cut cadence, and output `STYLE.md` + negative style guards.
-- [ ] **Step 3.3**: `skill-taste-mixer`: Interactive attribute matrix mixer (*Pacing from Ref 1, Colors from Ref 2*).
-- [ ] **Step 3.4**: `skill-hook-generator` & `skill-beat-scriptwriter`: Ideation hooks and timed beat sheets with on-screen text tags.
-- [ ] **Step 3.5**: `skill-shot-breakdown` & `skill-safezone-audit`: Visual layer mapping and 9:16 Instagram safe margins check.
-- [ ] **Step 3.6**: `skill-audio-manager`: Word-level Whisper transcription, Kokoro TTS synthesis, SFX alignment, and ducking.
-- [ ] **Step 3.7**: `skill-external-prompt-synthesizer`: 1-click prompt generator for Midjourney, Flux, Kling, Runway, ElevenLabs with locked style tokens.
-- [ ] **Step 3.8**: `skill-fcpxml-builder`: Generates DaVinci Resolve FCPXML v1.10 and EDL multi-track bundles with ProRes 4444 alpha overlays.
-- [ ] **Step 3.9**: Unit tests for all skills.
+- [x] **Step 3.1**: Define atomic skill contract (`server/src/skills/core/types.ts`) and `registry.ts`.
+- [x] **Step 3.2**: `skill-taste-analyzer`: Ingest reference videos, extract palette, fonts, cut cadence, and output `STYLE.md` + negative style guards.
+- [x] **Step 3.3**: `skill-taste-mixer`: Interactive attribute matrix mixer (*Pacing from Ref 1, Colors from Ref 2*).
+- [x] **Step 3.4**: `skill-hook-generator` & `skill-beat-scriptwriter`: Ideation hooks and timed beat sheets with on-screen text tags.
+- [x] **Step 3.5**: `skill-shot-breakdown` & `skill-safezone-audit`: Visual layer mapping and 9:16 Instagram safe margins check.
+- [x] **Step 3.6**: `skill-audio-manager`: Word-level Whisper transcription, Kokoro TTS synthesis, SFX alignment, and ducking.
+- [x] **Step 3.7**: `skill-external-prompt-synthesizer`: 1-click prompt generator for Midjourney, Flux, Kling, Runway, ElevenLabs with locked style tokens.
+- [x] **Step 3.8**: `skill-fcpxml-builder`: Generates DaVinci Resolve FCPXML v1.10 and EDL multi-track bundles with ProRes 4444 alpha overlays.
+- [x] **Step 3.9**: Unit tests for all skills (`server/test/skills/skills.test.ts`).
 
 ---
 
