@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { VersionNode, FilmProject } from '../../../types.js';
-import { Volume2, Pin, X, Check } from 'lucide-react';
+import { Volume2, Pin, X, Check, Loader2 } from 'lucide-react';
+import { toast } from '../../../services/toastService.js';
 
 interface ScriptFloatingHudProps {
   node: VersionNode;
@@ -24,10 +25,17 @@ export const ScriptFloatingHud: React.FC<ScriptFloatingHudProps> = ({
   const [selectedSpeaker, setSelectedSpeaker] = useState(
     node.boundSubjectAnchorIds?.[0] || 'subj_anya'
   );
+  const [voicePreset, setVoicePreset] = useState('narrator_daniel');
   const [isSynthesizingVoice, setIsSynthesizingVoice] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
   const subjects = project.subjectAnchors || [];
+
+  const audioSrc = node.artifacts?.audioUrl
+    ? `http://localhost:3030/media/${node.artifacts.audioUrl}`
+    : node.artifacts?.mediaUrl?.endsWith('.wav')
+    ? `http://localhost:3030/media/${node.artifacts.mediaUrl}`
+    : null;
 
   const handleSaveBeat = async () => {
     try {
@@ -53,47 +61,58 @@ export const ScriptFloatingHud: React.FC<ScriptFloatingHudProps> = ({
           },
         });
         setIsSaved(true);
+        toast.success('Script dialogue beat saved');
         setTimeout(() => setIsSaved(false), 2000);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to update script beat:', err);
+      toast.error('Failed to save script beat');
     }
   };
 
   const handleSynthesizeKokoro = async () => {
+    const textToSpeak = dialogueText.trim() || actionText.trim();
+    if (!textToSpeak) {
+      toast.warning('Please enter dialogue text before generating voiceover');
+      return;
+    }
+
     setIsSynthesizingVoice(true);
-    // Simulate offline Kokoro speech generation (0 API keys)
-    setTimeout(async () => {
-      setIsSynthesizingVoice(false);
-      try {
-        const res = await fetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}`, {
-          method: 'PATCH',
+    try {
+      const res = await fetch(
+        `http://localhost:3030/api/projects/${project.id}/nodes/${node.id}/synthesize-voice`,
+        {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            artifacts: {
-              ...node.artifacts,
-              mediaUrl: `assets/voice/${node.id}_kokoro_voice.wav`,
-            },
+            text: textToSpeak,
+            voicePreset,
           }),
-        });
-        const data = await res.json();
-        if (data.success && data.node) {
-          onUpdateProject({
-            ...project,
-            nodes: {
-              ...project.nodes,
-              [node.id]: data.node,
-            },
-          });
         }
-      } catch (e) {
-        console.error(e);
+      );
+      const data = await res.json();
+      if (data.success && data.node) {
+        onUpdateProject({
+          ...project,
+          nodes: {
+            ...project.nodes,
+            [node.id]: data.node,
+          },
+        });
+        toast.success(`Generated voice stem (${data.durationSec}s)`);
+      } else {
+        toast.error(data.error || 'Voice synthesis failed');
       }
-    }, 1200);
+    } catch (err: any) {
+      console.error('Voice synthesis error:', err);
+      toast.error(err.message || 'Voice synthesis service failed');
+    } finally {
+      setIsSynthesizingVoice(false);
+    }
   };
 
   return (
-    <div className="w-84 rounded-2xl bg-surface/95 backdrop-blur-xl border border-subtle shadow-2xl p-4 text-text-primary space-y-3 z-30 select-none animate-in fade-in zoom-in-95 duration-150 ring-1 ring-subtle">
+    <div className="w-88 rounded-2xl bg-surface/95 backdrop-blur-xl border border-subtle shadow-2xl p-4 text-text-primary space-y-3 z-30 select-none animate-in fade-in zoom-in-95 duration-150 ring-1 ring-subtle">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-subtle pb-2">
         <div className="flex items-center gap-1.5">
@@ -146,53 +165,78 @@ export const ScriptFloatingHud: React.FC<ScriptFloatingHudProps> = ({
         />
       </div>
 
-      {/* Speaker Casting Dropdown */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex-1">
+      {/* Speaker Casting & Voice Artist Selection */}
+      <div className="grid grid-cols-2 gap-2">
+        <div>
           <label className="block text-[10px] uppercase font-mono text-text-muted mb-1">Speaker Cast</label>
           <select
             value={selectedSpeaker}
             onChange={(e) => setSelectedSpeaker(e.target.value)}
-            className="w-full p-1.5 rounded-lg bg-card border border-subtle text-xs text-text-primary font-mono focus:outline-none focus:border-accent-primary cursor-pointer"
+            className="w-full p-1.5 rounded-lg bg-card border border-subtle text-xs text-text-primary font-mono focus:outline-none focus:border-accent-primary cursor-pointer truncate"
           >
             {subjects.length > 0 ? (
               subjects.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.name} ({s.category})
+                  {s.name}
                 </option>
               ))
             ) : (
               <>
-                <option value="subj_anya">Anya (Lead Presenter)</option>
-                <option value="subj_marcus">Marcus (Co-Star)</option>
-                <option value="narrator">Neutral Voiceover Narrator</option>
+                <option value="subj_anya">Anya</option>
+                <option value="subj_marcus">Marcus</option>
+                <option value="narrator">Narrator</option>
               </>
             )}
           </select>
         </div>
 
-        <div className="pt-4">
-          <button
-            onClick={handleSaveBeat}
-            className="px-3 py-1.5 rounded-lg bg-card hover:bg-subtle/50 text-text-primary border border-subtle text-xs font-bold font-mono transition flex items-center gap-1"
+        <div>
+          <label className="block text-[10px] uppercase font-mono text-text-muted mb-1">Voice Artist</label>
+          <select
+            value={voicePreset}
+            onChange={(e) => setVoicePreset(e.target.value)}
+            className="w-full p-1.5 rounded-lg bg-card border border-subtle text-xs text-text-primary font-mono focus:outline-none focus:border-accent-primary cursor-pointer truncate"
           >
-            {isSaved ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : null}
-            <span>{isSaved ? 'Saved' : 'Save Beat'}</span>
-          </button>
+            <option value="narrator_daniel">Daniel (Doc)</option>
+            <option value="presenter_eddy">Eddy (US Lead)</option>
+            <option value="presenter_flo">Flo (Narrative)</option>
+            <option value="presenter_aman">Aman (Global)</option>
+          </select>
         </div>
       </div>
 
-      {/* Local Kokoro Speech Synthesis Trigger (0 API keys) */}
-      <div className="pt-2 border-t border-subtle flex items-center justify-between">
-        <div className="text-[10px] font-mono text-text-muted">
-          Engine: <span className="text-text-primary font-bold">Kokoro (Local TTS)</span>
+      {/* Audio Stem Preview Player if Generated */}
+      {audioSrc && (
+        <div className="p-2.5 rounded-xl bg-card border border-subtle space-y-1.5 animate-in fade-in">
+          <div className="flex items-center justify-between text-[11px] font-mono text-text-muted">
+            <span className="flex items-center gap-1 text-emerald-400 font-bold">
+              <Volume2 className="w-3.5 h-3.5" /> Spoken Stem Ready
+            </span>
+          </div>
+          <audio controls src={audioSrc} className="w-full h-7 rounded-lg" />
         </div>
+      )}
+
+      {/* Action Triggers */}
+      <div className="pt-2 border-t border-subtle flex items-center justify-between">
+        <button
+          onClick={handleSaveBeat}
+          className="px-3 py-1.5 rounded-lg bg-card hover:bg-subtle/50 text-text-primary border border-subtle text-xs font-bold font-mono transition flex items-center gap-1"
+        >
+          {isSaved ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : null}
+          <span>{isSaved ? 'Saved' : 'Save Beat'}</span>
+        </button>
+
         <button
           onClick={handleSynthesizeKokoro}
-          disabled={isSynthesizingVoice || !dialogueText.trim()}
+          disabled={isSynthesizingVoice || (!dialogueText.trim() && !actionText.trim())}
           className="px-3 py-1.5 rounded-xl bg-accent-primary hover:opacity-90 disabled:opacity-50 text-app font-bold text-xs flex items-center gap-1.5 shadow-md transition font-mono"
         >
-          <Volume2 className="w-3.5 h-3.5" />
+          {isSynthesizingVoice ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Volume2 className="w-3.5 h-3.5" />
+          )}
           <span>{isSynthesizingVoice ? 'Synthesizing...' : 'Generate Voice 🔊'}</span>
         </button>
       </div>

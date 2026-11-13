@@ -50,6 +50,8 @@ export interface VersionNode {
   position?: { x: number; y: number };
   colorTag?: 'default' | 'white' | 'blue' | 'purple' | 'emerald' | 'amber';
   isPinned?: boolean;
+  isStale?: boolean;
+  staleReason?: string;
   shotContextOverrides?: {
     lensFocalLength?: string;
     aperture?: string;
@@ -110,6 +112,13 @@ export interface FilmProject {
   additionalConstraints?: string[];
   styleMarkdown: string;
   styleTokens: Record<string, any>;
+  stickyNotes?: Array<{
+    id: string;
+    text: string;
+    color: 'yellow' | 'cyan' | 'rose' | 'emerald';
+    isPinned?: boolean;
+    position: { x: number; y: number };
+  }>;
 }
 
 export interface ProjectRegistryEntry {

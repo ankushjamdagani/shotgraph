@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
 import { Command } from 'cmdk';
-import { Film, Sliders, GitBranch, Cpu, ShieldAlert, Sparkles } from 'lucide-react';
+import { Film, Sliders, GitBranch, Cpu, ShieldAlert, Sparkles, Settings } from 'lucide-react';
 
 interface CommandPaletteProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenProjectSettings?: () => void;
   onOpenTasteMixer: () => void;
   onOpenDaVinciExport: () => void;
   onBranchSelected: () => void;
@@ -15,6 +16,7 @@ interface CommandPaletteProps {
 export const CommandPalette: React.FC<CommandPaletteProps> = ({
   isOpen,
   onClose,
+  onOpenProjectSettings,
   onOpenTasteMixer,
   onOpenDaVinciExport,
   onBranchSelected,
@@ -56,6 +58,22 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             </Command.Empty>
 
             <Command.Group heading="Studio Actions" className="text-[10px] font-bold text-text-muted px-2 py-1 font-mono uppercase">
+              {onOpenProjectSettings && (
+                <Command.Item
+                  onSelect={() => {
+                    onOpenProjectSettings();
+                    onClose();
+                  }}
+                  className="flex items-center gap-2 p-2 rounded-lg text-text-primary hover:bg-card hover:text-accent-primary cursor-pointer transition"
+                >
+                  <Settings className="w-4 h-4 text-accent-primary" />
+                  <div className="flex-1 flex items-center justify-between">
+                    <span>Project Settings (Aspect Ratio, Theme, FPS)</span>
+                    <span className="text-[10px] font-mono text-text-muted">Cmd+,</span>
+                  </div>
+                </Command.Item>
+              )}
+
               <Command.Item
                 onSelect={() => {
                   onBranchSelected();

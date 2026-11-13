@@ -1,18 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   FolderPlus,
   FolderOpen,
   Smartphone,
   Monitor,
   Square,
-  Clock,
-  Palette,
-  Check,
+  Sparkles,
+  Layers,
   X,
   Loader2,
-  Sparkles,
+  Film,
 } from 'lucide-react';
-import { GlobalStylePreset, FilmProject } from '../../types';
+import { FilmProject } from '../../types';
 
 interface NewProjectWizardProps {
   isOpen: boolean;
@@ -25,32 +24,14 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
   onClose,
   onProjectCreated,
 }) => {
-  const [name, setName] = useState('New AI Video Project');
+  const [name, setName] = useState('New Video Project');
   const [folderPath, setFolderPath] = useState('');
-  const [ideaPrompt, setIdeaPrompt] = useState(
-    'An intense neon cyberpunk chase scene through rain-soaked streets with high visual contrast and cinematic shallow depth of field.'
-  );
-  const [preset, setPreset] = useState<'reel_9_16' | 'youtube_16_9' | 'ad_1_1'>('reel_9_16');
+  const [aspectRatio, setAspectRatio] = useState<'9:16' | '16:9' | '1:1'>('9:16');
   const [targetDurationSec, setTargetDurationSec] = useState(30);
-  const [basePresetId, setBasePresetId] = useState('liquid_glass');
-  const [stylePresets, setStylePresets] = useState<GlobalStylePreset[]>([]);
+  const [isStarterTemplate, setIsStarterTemplate] = useState(false); // default to clean empty canvas
   const [isPickingDirectory, setIsPickingDirectory] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-
-  useEffect(() => {
-    if (isOpen) {
-      // Fetch available global style presets
-      fetch('http://localhost:3030/api/styles/presets')
-        .then((res) => res.json())
-        .then((presets: GlobalStylePreset[]) => {
-          if (Array.isArray(presets)) {
-            setStylePresets(presets);
-          }
-        })
-        .catch(() => {});
-    }
-  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -92,269 +73,200 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
         body: JSON.stringify({
           name: name.trim(),
           path: folderPath.trim(),
-          ideaPrompt: ideaPrompt.trim(),
-          preset,
+          aspectRatio,
           targetDurationSec,
-          basePresetId,
+          emptyDAG: !isStarterTemplate,
         }),
       });
 
       const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to create project');
+      if (data.success && data.project) {
+        onProjectCreated(data.project);
+        onClose();
+      } else {
+        setErrorMsg(data.error || 'Failed to initialize project.');
       }
-
-      onProjectCreated(data.project);
-      onClose();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Creation failed');
+      setErrorMsg(err.message || 'Server communication error.');
     } finally {
       setIsCreating(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-150">
-      <div className="relative w-full max-w-2xl bg-surface border border-subtle rounded-2xl shadow-2xl overflow-hidden flex flex-col text-text-primary">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in select-none"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-xl bg-surface border border-subtle rounded-3xl shadow-2xl p-6 space-y-5 animate-scale-in"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-subtle bg-surface">
+        <div className="flex items-center justify-between pb-3 border-b border-subtle">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-card border border-subtle flex items-center justify-center text-accent-primary">
+            <div className="w-10 h-10 rounded-2xl bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center text-accent-primary">
               <FolderPlus className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-text-primary leading-tight">Create New Video Project</h2>
-              <p className="text-xs text-text-muted">Configure narrative thesis, canvas format, and initial style guide</p>
+              <h2 className="text-base font-bold text-text-primary">Create New Project</h2>
+              <p className="text-xs text-text-muted">Start fresh or initialize with full 8-stage lineage</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-card transition"
+            className="p-1.5 rounded-xl text-text-muted hover:text-text-primary hover:bg-card transition"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Form Body */}
-        <div className="p-6 space-y-6 overflow-y-auto max-h-[75vh]">
-          {errorMsg && (
-            <div className="p-3 bg-red-950/60 border border-red-800 rounded-xl text-xs text-red-200">
-              {errorMsg}
-            </div>
-          )}
+        {errorMsg && (
+          <div className="p-3 bg-red-950/60 border border-red-800 rounded-2xl text-xs text-red-200">
+            {errorMsg}
+          </div>
+        )}
 
-          {/* 1. Project Name */}
-          <div>
-            <label className="block text-xs font-semibold text-text-primary mb-1.5">Project Title</label>
+        {/* Project Setup Form */}
+        <div className="space-y-4">
+          {/* Project Name */}
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-text-muted uppercase font-mono">Project Name</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Neon Horizon Ep. 1"
-              className="w-full px-3.5 py-2.5 bg-card border border-subtle rounded-xl text-sm text-text-primary placeholder:text-text-muted/60 focus:outline-none focus:border-accent-primary transition"
+              placeholder="e.g. Neo-Tokyo Night Drive"
+              className="w-full px-3 py-2 bg-card border border-subtle rounded-xl text-xs text-text-primary focus:outline-none focus:border-accent-primary transition"
             />
           </div>
 
-          {/* 2. Stage 1 Ideation: Creative Premise & Narrative Thesis */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
-                <Sparkles className="w-3.5 h-3.5 text-accent-primary" />
-                <span>Stage 1: Creative Concept & Narrative Thesis</span>
-              </label>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-card border border-subtle text-accent-primary font-bold">
-                ROOT SEED
-              </span>
-            </div>
-            <textarea
-              rows={3}
-              value={ideaPrompt}
-              onChange={(e) => setIdeaPrompt(e.target.value)}
-              placeholder="Describe the story premise, tone, visual thesis, and core conflict..."
-              className="w-full px-3.5 py-2.5 bg-card border border-subtle rounded-xl text-xs text-text-primary placeholder:text-text-muted/60 focus:outline-none focus:border-accent-primary transition resize-none leading-relaxed font-mono"
-            />
-            <p className="text-[11px] text-text-muted mt-1">
-              Seeds Stage 1 (Ideation) and branches directly into Director Taste DNA, Screenplay Beats, and Shot Lineage.
-            </p>
-          </div>
-
-          {/* 3. Target Directory */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-semibold text-text-primary">Target Folder on Mac</label>
-              <button
-                type="button"
-                onClick={handlePickDirectory}
-                disabled={isPickingDirectory}
-                className="flex items-center gap-1.5 text-xs text-accent-primary hover:opacity-80 transition"
-              >
-                {isPickingDirectory ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <FolderOpen className="w-3.5 h-3.5" />
-                )}
-                <span>Choose in Finder...</span>
-              </button>
-            </div>
-            <div className="relative">
+          {/* Directory Path */}
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-text-muted uppercase font-mono">Project Location on Disk</label>
+            <div className="flex gap-2">
               <input
                 type="text"
                 value={folderPath}
                 onChange={(e) => setFolderPath(e.target.value)}
-                placeholder="/Users/username/videos/my-project"
-                className="w-full px-3.5 py-2.5 bg-card border border-subtle rounded-xl text-xs text-text-primary font-mono placeholder:text-text-muted/60 focus:outline-none focus:border-accent-primary transition"
+                placeholder="/Users/name/projects/my-video"
+                className="flex-1 px-3 py-2 bg-card border border-subtle rounded-xl text-xs text-text-primary font-mono focus:outline-none focus:border-accent-primary transition"
               />
+              <button
+                type="button"
+                onClick={handlePickDirectory}
+                disabled={isPickingDirectory}
+                className="px-3.5 py-2 bg-card hover:bg-subtle/50 text-text-primary border border-subtle rounded-xl text-xs font-semibold flex items-center gap-1.5 transition"
+              >
+                {isPickingDirectory ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <FolderOpen className="w-3.5 h-3.5 text-accent-primary" />
+                )}
+                <span>Browse...</span>
+              </button>
             </div>
-            <p className="text-[11px] text-text-muted mt-1">
-              Creates self-contained `.studio`, `assets`, `raw_footage`, and `exports` inside this folder.
-            </p>
           </div>
 
-          {/* 4. Format Preset */}
-          <div>
-            <label className="block text-xs font-semibold text-text-primary mb-2">Canvas & Aspect Ratio</label>
-            <div className="grid grid-cols-3 gap-3">
+          {/* Canvas Mode Selection (Clean Empty vs Starter Template) */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-text-muted uppercase font-mono">Canvas Initial State</label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setIsStarterTemplate(false)}
+                className={`p-3 rounded-2xl border text-left transition flex items-start gap-2.5 ${
+                  !isStarterTemplate
+                    ? 'border-accent-primary bg-card text-text-primary ring-1 ring-accent-primary'
+                    : 'border-subtle bg-card/50 text-text-muted hover:border-text-muted'
+                }`}
+              >
+                <Layers className="w-4 h-4 text-accent-primary shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-xs font-bold text-text-primary">Empty Project (Clean Canvas)</div>
+                  <div className="text-[10px] text-text-muted mt-0.5 leading-snug">
+                    Zero starter nodes. Build your DAG from scratch with full creative control.
+                  </div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsStarterTemplate(true)}
+                className={`p-3 rounded-2xl border text-left transition flex items-start gap-2.5 ${
+                  isStarterTemplate
+                    ? 'border-accent-primary bg-card text-text-primary ring-1 ring-accent-primary'
+                    : 'border-subtle bg-card/50 text-text-muted hover:border-text-muted'
+                }`}
+              >
+                <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-xs font-bold text-text-primary">Starter Template (8-Stage DAG)</div>
+                  <div className="text-[10px] text-text-muted mt-0.5 leading-snug">
+                    Initializes connected sample nodes across Idea, Script, Asset, Shot, and Takes.
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Format & Aspect Ratio Grid */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-text-muted uppercase font-mono">Video Format & Ratio</label>
+            <div className="grid grid-cols-3 gap-2.5">
               {[
-                {
-                  id: 'reel_9_16' as const,
-                  label: '9:16 Vertical Reel',
-                  desc: 'Instagram Reels, TikTok, YouTube Shorts',
-                  dimensions: '1080 × 1920',
-                  defaultDur: 30,
-                  silhouette: (
-                    <div className="w-7 h-12 rounded border border-subtle bg-app flex flex-col items-center justify-between p-0.5 mb-2 shadow-inner">
-                      <div className="w-1.5 h-0.5 rounded-full bg-subtle" />
-                      <div className="w-full flex-1 my-0.5 border border-dashed border-subtle rounded flex items-center justify-center">
-                        <Smartphone className="w-2.5 h-2.5 text-accent-primary" />
-                      </div>
-                    </div>
-                  ),
-                },
-                {
-                  id: 'youtube_16_9' as const,
-                  label: '16:9 Widescreen',
-                  desc: 'YouTube Long-form & Explainer Docs',
-                  dimensions: '1920 × 1080',
-                  defaultDur: 60,
-                  silhouette: (
-                    <div className="w-12 h-7 rounded border border-subtle bg-app flex items-center justify-center mb-2 shadow-inner">
-                      <div className="w-full h-full border border-dashed border-subtle rounded flex items-center justify-center">
-                        <Monitor className="w-3 h-3 text-accent-primary" />
-                      </div>
-                    </div>
-                  ),
-                },
-                {
-                  id: 'ad_1_1' as const,
-                  label: '1:1 Square Ad',
-                  desc: 'Social feed & Carousel Commercials',
-                  dimensions: '1080 × 1080',
-                  defaultDur: 15,
-                  silhouette: (
-                    <div className="w-8 h-8 rounded border border-subtle bg-app flex items-center justify-center mb-2 shadow-inner">
-                      <div className="w-full h-full border border-dashed border-subtle rounded flex items-center justify-center">
-                        <Square className="w-3 h-3 text-accent-primary" />
-                      </div>
-                    </div>
-                  ),
-                },
-              ].map((item) => {
-                const isSelected = preset === item.id;
+                { id: '9:16', label: '9:16 Vertical', icon: Smartphone, desc: 'Reels, TikTok, Shorts' },
+                { id: '16:9', label: '16:9 Landscape', icon: Monitor, desc: 'YouTube, Web, Cinema' },
+                { id: '1:1', label: '1:1 Square', icon: Square, desc: 'Feed & Social Ads' },
+              ].map((fmt) => {
+                const Icon = fmt.icon;
+                const isSelected = aspectRatio === fmt.id;
                 return (
                   <button
-                    key={item.id}
+                    key={fmt.id}
                     type="button"
-                    onClick={() => {
-                      setPreset(item.id);
-                      setTargetDurationSec(item.defaultDur);
-                    }}
-                    className={`p-3.5 rounded-xl border text-left transition flex flex-col items-start ${
+                    onClick={() => setAspectRatio(fmt.id as any)}
+                    className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between ${
                       isSelected
-                        ? 'bg-card border-accent-primary text-text-primary shadow-lg ring-1 ring-accent-primary/40'
-                        : 'bg-card border-subtle text-text-muted hover:border-text-muted/40 hover:text-text-primary'
+                        ? 'border-accent-primary bg-card text-text-primary ring-1 ring-accent-primary'
+                        : 'border-subtle bg-card/50 text-text-muted hover:border-text-muted'
                     }`}
                   >
-                    {item.silhouette}
-                    <div className="text-xs font-bold text-text-primary mb-0.5">{item.label}</div>
-                    <div className="text-[10px] text-text-muted leading-tight mb-2">{item.desc}</div>
-                    <span className="mt-auto px-1.5 py-0.5 rounded text-[9px] font-mono bg-surface text-text-muted border border-subtle">
-                      {item.dimensions}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <Icon className="w-3.5 h-3.5 text-accent-primary" />
+                      <span className="text-xs font-bold font-mono text-text-primary">{fmt.label}</span>
+                    </div>
+                    <div className="text-[10px] text-text-muted mt-1 leading-tight">{fmt.desc}</div>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* 5. Target Duration */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
-                <Clock className="w-3.5 h-3.5 text-accent-primary" />
-                Target Video Duration
-              </label>
-              <span className="text-xs font-mono font-bold text-accent-primary">{targetDurationSec} seconds</span>
+          {/* Target Duration */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-text-muted uppercase font-mono">Target Duration</label>
+              <span className="text-xs font-mono font-bold text-text-primary">{targetDurationSec}s</span>
             </div>
             <input
               type="range"
-              min={10}
+              min={5}
               max={180}
               step={5}
               value={targetDurationSec}
               onChange={(e) => setTargetDurationSec(Number(e.target.value))}
               className="w-full accent-accent-primary cursor-pointer"
             />
-            <div className="flex justify-between text-[10px] font-mono text-text-muted mt-1">
-              <span>10s (Hook micro)</span>
-              <span>30s (Viral Reel)</span>
-              <span>60s (Deep Dive)</span>
-              <span>180s (3m Master)</span>
-            </div>
-          </div>
-
-          {/* 6. Base Style Preset */}
-          <div>
-            <label className="flex items-center gap-1.5 text-xs font-semibold text-text-primary mb-2">
-              <Palette className="w-3.5 h-3.5 text-accent-primary" />
-              Base Style Preset (Inheritable)
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {stylePresets.map((sp) => {
-                const isSelected = basePresetId === sp.id;
-                return (
-                  <button
-                    key={sp.id}
-                    type="button"
-                    onClick={() => setBasePresetId(sp.id)}
-                    className={`p-3 rounded-xl border text-left transition ${
-                      isSelected
-                        ? 'bg-card border-accent-primary text-text-primary ring-1 ring-accent-primary/40'
-                        : 'bg-card border-subtle text-text-muted hover:border-text-muted/40 hover:text-text-primary'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="text-xs font-bold text-text-primary truncate">{sp.name}</div>
-                      <div
-                        className="w-3 h-3 rounded-full border border-subtle"
-                        style={{ backgroundColor: sp.tokens.palette.accent }}
-                      />
-                    </div>
-                    <div className="text-[10px] text-text-muted line-clamp-2 leading-tight">
-                      {sp.description}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-subtle bg-surface">
+        {/* Footer Actions */}
+        <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-subtle">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-semibold text-text-muted hover:text-text-primary rounded-xl transition"
+            className="px-4 py-2 rounded-xl text-xs font-semibold text-text-muted hover:text-text-primary transition"
           >
             Cancel
           </button>
@@ -362,19 +274,10 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
             type="button"
             onClick={handleCreate}
             disabled={isCreating}
-            className="flex items-center gap-2 px-5 py-2.5 bg-accent-primary hover:opacity-90 text-app font-bold text-xs rounded-xl shadow-lg transition disabled:opacity-50"
+            className="px-5 py-2 bg-accent-primary hover:opacity-90 disabled:opacity-50 text-app font-bold text-xs rounded-xl flex items-center gap-2 shadow-lg transition"
           >
-            {isCreating ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Scaffolding Workspace...</span>
-              </>
-            ) : (
-              <>
-                <Check className="w-4 h-4" />
-                <span>Create & Open Project</span>
-              </>
-            )}
+            {isCreating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Film className="w-3.5 h-3.5" />}
+            <span>{isCreating ? 'Initializing...' : 'Create Project'}</span>
           </button>
         </div>
       </div>

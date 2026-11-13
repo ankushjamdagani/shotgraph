@@ -57,6 +57,8 @@ export interface VersionNode {
   position?: { x: number; y: number }; // 2D freeform spatial coordinates
   colorTag?: 'default' | 'white' | 'blue' | 'purple' | 'emerald' | 'amber';
   isPinned?: boolean;
+  isStale?: boolean;
+  staleReason?: string;
   shotContextOverrides?: {
     lensFocalLength?: string;
     aperture?: string;
@@ -117,6 +119,13 @@ export interface FilmProject {
   additionalConstraints?: string[];
   styleMarkdown: string;
   styleTokens: Record<string, any>;
+  stickyNotes?: Array<{
+    id: string;
+    text: string;
+    color: 'yellow' | 'cyan' | 'rose' | 'emerald';
+    isPinned?: boolean;
+    position: { x: number; y: number };
+  }>;
 }
 
 export interface ProjectInitOptions {
@@ -127,6 +136,7 @@ export interface ProjectInitOptions {
   basePresetId?: string;
   initGit?: boolean;
   ideaPrompt?: string;
+  emptyDAG?: boolean;
 }
 
 export class ProjectService {
@@ -193,32 +203,38 @@ export class ProjectService {
             { id: 'scene_04', name: 'Scene 4: Call to Action', order: 4, targetDurationSec: Math.max(4, targetDurationSec - 3 - Math.floor(targetDurationSec * 0.35) - Math.floor(targetDurationSec * 0.45)) },
           ];
 
-    // Create complete 8-stage video production DAG starting from Idea
+    // Create complete 8-stage video production DAG starting from Idea (or blank if emptyDAG requested)
     const initialNodes: Record<string, VersionNode> = {};
     const activeCut: Record<string, string> = {};
 
-    const ideaPrompt =
-      options?.ideaPrompt?.trim() ||
-      `Launch concept for "${name}": High-energy premise with dynamic visual storytelling, rhythmic pacing, and cinematic punch.`;
+    let finalScenes = scenes;
+    if (options?.emptyDAG) {
+      finalScenes = [
+        { id: 'scene_01', name: 'Scene 1', order: 1, targetDurationSec },
+      ];
+    } else {
+      const ideaPrompt =
+        options?.ideaPrompt?.trim() ||
+        `Launch concept for "${name}": High-energy premise with dynamic visual storytelling, rhythmic pacing, and cinematic punch.`;
 
-    // 1. Stage: Ideation Root Node
-    initialNodes['node_idea_01'] = {
-      id: 'node_idea_01',
-      parentId: null,
-      versionLabel: 'v1.0 (Premise)',
-      stage: 'ideation',
-      title: 'Idea Concept & Thesis',
-      modelEngine: 'antigravity-cli',
-      prompt: ideaPrompt,
-      position: { x: 60, y: 120 },
-      artifacts: {
-        textContent: `Core Premise: ${ideaPrompt}\n\nAudience: Modern creative professionals & trendsetters\nPacing: Fast hook (0-3s), narrative immersion (3-20s), high-impact CTA (20-30s).`,
-      },
-      metadata: {
-        createdAt: new Date().toISOString(),
-        status: 'ready',
-      },
-    };
+      // 1. Stage: Ideation Root Node
+      initialNodes['node_idea_01'] = {
+        id: 'node_idea_01',
+        parentId: null,
+        versionLabel: 'v1.0 (Premise)',
+        stage: 'ideation',
+        title: 'Idea Concept & Thesis',
+        modelEngine: 'antigravity-cli',
+        prompt: ideaPrompt,
+        position: { x: 60, y: 120 },
+        artifacts: {
+          textContent: `Core Premise: ${ideaPrompt}\n\nAudience: Modern creative professionals & trendsetters\nPacing: Fast hook (0-3s), narrative immersion (3-20s), high-impact CTA (20-30s).`,
+        },
+        metadata: {
+          createdAt: new Date().toISOString(),
+          status: 'ready',
+        },
+      };
 
     // 2. Stage: Taste & Style DNA Node
     initialNodes['node_taste_01'] = {
@@ -397,6 +413,7 @@ export class ProjectService {
       };
       activeCut[scene.id] = nodeId;
     });
+  }
 
     const basePresetId = options?.basePresetId || 'liquid_glass';
     const basePreset = await ProjectRegistry.getStylePreset(basePresetId);
@@ -409,7 +426,7 @@ export class ProjectService {
       targetDurationSec,
       aspectRatio,
       fps,
-      scenes,
+      scenes: finalScenes,
       activeCut,
       nodes: initialNodes,
       subjectAnchors: [],

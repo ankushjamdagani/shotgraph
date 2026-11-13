@@ -9,6 +9,7 @@ import { nanoid } from 'nanoid';
 import { initializeSkills, SkillRegistry } from './skills/index.js';
 import { ProjectService, FilmProject, ProjectSubjectAnchor, SubjectVariant } from './services/projectService.js';
 import { ProjectRegistry, GlobalStylePreset } from './services/projectRegistry.js';
+import { VoiceService } from './services/voiceService.js';
 import { AgentManager } from './swarm/agentManager.js';
 import { AGUIServerMessage, AGUIClientMessageSchema } from './protocol/aguiEvents.js';
 
@@ -202,6 +203,7 @@ server.post('/api/projects/create', async (req, reply) => {
     targetDurationSec,
     basePresetId = 'liquid_glass',
     ideaPrompt,
+    emptyDAG = false,
   } = (req.body as any) || {};
 
   if (!name || !dirPath) {
@@ -217,6 +219,7 @@ server.post('/api/projects/create', async (req, reply) => {
       targetDurationSec,
       basePresetId,
       ideaPrompt,
+      emptyDAG: Boolean(emptyDAG),
       initGit: true,
     });
 
@@ -238,6 +241,66 @@ server.get('/api/projects/:id', async (req, reply) => {
   }
   ensureProjectWatcher(project.projectRoot, project.id);
   return project;
+});
+
+// Update project settings, scenes, sticky notes, or metadata
+server.patch('/api/projects/:id', async (req, reply) => {
+  const { id } = req.params as { id: string };
+  const updates = (req.body as any) || {};
+  const { project } = await resolveProjectRoot(id);
+
+  if (!project) {
+    reply.status(404);
+    return { success: false, error: 'Project not found' };
+  }
+
+  if (updates.name !== undefined) project.name = updates.name;
+  if (updates.aspectRatio !== undefined) project.aspectRatio = updates.aspectRatio;
+  if (updates.targetDurationSec !== undefined) project.targetDurationSec = Number(updates.targetDurationSec);
+  if (updates.fps !== undefined) project.fps = Number(updates.fps);
+  if (updates.scenes !== undefined) project.scenes = updates.scenes;
+  if (updates.stickyNotes !== undefined) project.stickyNotes = updates.stickyNotes;
+  if (updates.activeCut !== undefined) project.activeCut = updates.activeCut;
+  if (updates.nodes !== undefined) project.nodes = updates.nodes;
+
+  await ProjectService.saveProject(project);
+  return { success: true, project };
+});
+
+// Add a new node directly to project DAG
+server.post('/api/projects/:id/nodes', async (req, reply) => {
+  const { id } = req.params as { id: string };
+  const nodeData = (req.body as any) || {};
+  const { project } = await resolveProjectRoot(id);
+
+  if (!project) {
+    reply.status(404);
+    return { success: false, error: 'Project not found' };
+  }
+
+  const nodeId = nodeData.id || `node_${nodeData.stage || 'node'}_${nanoid(6)}`;
+  const stage = nodeData.stage || 'script';
+  const newNode = {
+    id: nodeId,
+    parentId: nodeData.parentId || null,
+    sceneId: nodeData.sceneId || project.scenes[0]?.id,
+    stage,
+    versionLabel: nodeData.versionLabel || 'v1.0',
+    title: nodeData.title || `New ${stage.charAt(0).toUpperCase() + stage.slice(1)}`,
+    modelEngine: nodeData.modelEngine || 'antigravity-cli',
+    prompt: nodeData.prompt || '',
+    position: nodeData.position || { x: 360, y: 180 },
+    artifacts: nodeData.artifacts || {},
+    metadata: {
+      createdAt: new Date().toISOString(),
+      status: 'idle',
+      ...nodeData.metadata,
+    },
+  };
+
+  project.nodes[nodeId] = newNode as any;
+  await ProjectService.saveProject(project);
+  return { success: true, node: newNode, project };
 });
 
 // Remove project from recent list (and optionally move to trash)
@@ -929,6 +992,69 @@ server.post('/api/projects/:id/nodes/:nodeId/synthesize-prompt', async (req, rep
   await ProjectService.saveProject(project);
 
   return { success: true, result: synthesisResult, node };
+});
+
+// List available offline voice presets (Zero API keys)
+server.get('/api/voice/presets', async () => {
+  return { success: true, presets: VoiceService.getPresets() };
+});
+
+// Synthesize real dialogue/voiceover audio for a node using local speech stack
+server.post('/api/projects/:id/nodes/:nodeId/synthesize-voice', async (req, reply) => {
+  const { id, nodeId } = req.params as { id: string; nodeId: string };
+  const { text, voicePreset = 'narrator_daniel' } = (req.body as any) || {};
+  const { project, projectRoot } = await resolveProjectRoot(id);
+
+  if (!project) {
+    reply.status(404);
+    return { success: false, error: 'Project not found' };
+  }
+
+  const node = project.nodes[nodeId];
+  if (!node) {
+    reply.status(404);
+    return { success: false, error: 'Node not found' };
+  }
+
+  const dialogueText = text || node.artifacts?.textContent || node.prompt;
+  if (!dialogueText || !dialogueText.trim()) {
+    reply.status(400);
+    return { success: false, error: 'Dialogue text is required for voice synthesis' };
+  }
+
+  try {
+    const result = await VoiceService.synthesizeSpeech(
+      projectRoot,
+      nodeId,
+      dialogueText,
+      voicePreset
+    );
+
+    // Update node with newly synthesized audio artifact
+    node.artifacts = {
+      ...node.artifacts,
+      textContent: dialogueText,
+      audioUrl: result.audioRelPath,
+      mediaUrl: result.audioRelPath,
+    };
+    node.metadata = {
+      ...node.metadata,
+      status: 'ready',
+    };
+
+    await ProjectService.saveProject(project);
+
+    return {
+      success: true,
+      node,
+      project,
+      audioUrl: result.audioRelPath,
+      durationSec: result.durationSec,
+    };
+  } catch (err: any) {
+    reply.status(500);
+    return { success: false, error: err.message || 'Voice synthesis failed' };
+  }
 });
 
 // Set or clear the project Master Style Anchor (Pillar 2 of Style Parity)

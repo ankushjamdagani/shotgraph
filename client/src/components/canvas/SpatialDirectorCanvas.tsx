@@ -12,6 +12,8 @@ import {
   ReactFlowProvider,
 } from '@xyflow/react';
 import { CustomVersionNode } from '../tree/CustomVersionNode.js';
+import { StickyNoteNode, StickyColor } from '../tree/StickyNoteNode.js';
+import { FloatingCanvasToolbar, CanvasToolMode } from './FloatingCanvasToolbar.js';
 import { AgentCursorOverlay } from '../tree/AgentCursorOverlay.js';
 import { FilmProject, AgentPresence, VersionNode } from '../../types.js';
 import { IdeaFloatingHud } from './hud/IdeaFloatingHud.js';
@@ -33,7 +35,14 @@ import {
   FileAudio,
   Loader2,
   X,
+  FileText,
+  Camera,
+  GitBranch,
+  Star,
+  StickyNote,
+  RotateCw,
 } from 'lucide-react';
+import { toast } from '../../services/toastService.js';
 
 interface SpatialDirectorCanvasProps {
   project: FilmProject;
@@ -47,10 +56,12 @@ interface SpatialDirectorCanvasProps {
   onOpenDaVinciExport?: () => void;
   onOpenSubjectManager?: () => void;
   onOpenTasteMixer?: () => void;
+  onOpenProjectSettings?: () => void;
 }
 
-const nodeTypes = {
+const nodeTypes: Record<string, React.ComponentType<any>> = {
   customVersion: CustomVersionNode,
+  stickyNote: StickyNoteNode,
 };
 
 const STAGE_DEFAULT_X: Record<string, number> = {
@@ -79,8 +90,12 @@ function SpatialDirectorCanvasInner({
   onOpenDaVinciExport,
   onOpenSubjectManager,
   onOpenTasteMixer,
+  onOpenProjectSettings,
 }: SpatialDirectorCanvasProps) {
-  const { fitView } = useReactFlow();
+  const { fitView, zoomIn, zoomOut, flowToScreenPosition, screenToFlowPosition } = useReactFlow();
+
+  // Canvas tool mode (Select / Marquee / Pan)
+  const [toolMode, setToolMode] = useState<CanvasToolMode>('select');
 
   // Active in-place floating HUD node ID
   const [activeHudId, setActiveHudId] = useState<string | null>(null);
@@ -90,16 +105,39 @@ function SpatialDirectorCanvasInner({
   const [nodeToDelete, setNodeToDelete] = useState<VersionNode | null>(null);
   const [isDeletingNode, setIsDeletingNode] = useState(false);
 
+  // Context Menu State
+  const [contextMenu, setContextMenu] = useState<{
+    type: 'canvas' | 'node';
+    screenX: number;
+    screenY: number;
+    flowX: number;
+    flowY: number;
+    nodeId?: string;
+  } | null>(null);
+
+  // Handle Growth Quick-Picker State (spawning downstream node on handle drag)
+  const [growthPicker, setGrowthPicker] = useState<{
+    sourceNodeId: string;
+    screenX: number;
+    screenY: number;
+    flowX: number;
+    flowY: number;
+  } | null>(null);
+
   // Toggle HUD open/close for a node
   const handleToggleHud = useCallback((nodeId: string) => {
     setActiveHudId((prev) => (prev === nodeId ? null : nodeId));
   }, []);
 
-  // Escape key closes active floating HUD or delete modal
+  // Escape key closes menus or active floating HUD or delete modal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (nodeToDelete) {
+        if (contextMenu) {
+          setContextMenu(null);
+        } else if (growthPicker) {
+          setGrowthPicker(null);
+        } else if (nodeToDelete) {
           setNodeToDelete(null);
         } else if (activeHudId) {
           setActiveHudId(null);
@@ -108,7 +146,7 @@ function SpatialDirectorCanvasInner({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeHudId, nodeToDelete]);
+  }, [activeHudId, nodeToDelete, contextMenu, growthPicker]);
 
   const handleTogglePin = useCallback((nodeId: string) => {
     setPinnedHudIds((prev) => {
@@ -155,9 +193,13 @@ function SpatialDirectorCanvasInner({
             return next;
           });
           setNodeToDelete(null);
+          toast.success(
+            deleteFilesFromSystem ? 'Node deleted and files moved to Trash' : 'Node removed from DAG'
+          );
         }
       } catch (err) {
         console.error('Failed to delete node:', err);
+        toast.error('Failed to delete node');
       } finally {
         setIsDeletingNode(false);
       }
@@ -183,6 +225,7 @@ function SpatialDirectorCanvasInner({
               [nodeId]: data.node,
             },
           });
+          toast.success('Renamed node');
         }
       } catch (err) {
         console.error('Failed to rename node:', err);
@@ -209,6 +252,7 @@ function SpatialDirectorCanvasInner({
               [nodeId]: data.node,
             },
           });
+          toast.success(`Color tag updated`);
         }
       } catch (err) {
         console.error('Failed to tag color:', err);
@@ -217,85 +261,281 @@ function SpatialDirectorCanvasInner({
     [project, onUpdateProject]
   );
 
-  // Persist node position on drag stop
-  const handleNodeDragStop = useCallback(
-    async (_event: any, flowNode: Node) => {
+  // Re-sync stale node prompt
+  const handleResyncStale = useCallback(
+    async (nodeId: string) => {
+      const target = project.nodes[nodeId];
+      if (!target) return;
+      toast.info('Re-syncing contextual prompt from upstream...');
       try {
-        await fetch(`http://localhost:3030/api/projects/${project.id}/nodes/${flowNode.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ position: flowNode.position }),
-        });
-        if (project.nodes[flowNode.id]) {
-          project.nodes[flowNode.id].position = flowNode.position;
+        const res = await fetch(
+          `http://localhost:3030/api/projects/${project.id}/nodes/${nodeId}/synthesize-prompt`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ targetPlatform: target.modelEngine || 'runway' }),
+          }
+        );
+        const data = await res.json();
+        if (data.success && data.node) {
+          onUpdateProject({
+            ...project,
+            nodes: {
+              ...project.nodes,
+              [nodeId]: {
+                ...data.node,
+                isStale: false,
+                staleReason: undefined,
+              },
+            },
+          });
+          toast.success('Node prompt re-synced with upstream changes');
         }
       } catch (err) {
-        console.error('Failed to persist position:', err);
+        console.error('Failed to re-sync node:', err);
+        toast.error('Re-sync failed');
       }
     },
-    [project]
+    [project, onUpdateProject]
   );
 
-  // Auto-Tidy / Beautify Layout
-  const handleBeautifyFlow = useCallback(() => {
-    const stageYOffsets: Record<string, number> = {};
-    const updatedNodes = { ...project.nodes };
-
-    Object.values(updatedNodes).forEach((n) => {
-      const stage = n.stage || 'script';
-      const defaultX = STAGE_DEFAULT_X[stage] || 600;
-      if (stage === 'taste' && !stageYOffsets['taste']) {
-        stageYOffsets['taste'] = 380;
+  // Drag stop on node
+  const handleNodeDragStop = useCallback(
+    async (_event: any, node: Node) => {
+      // Check if it's a sticky note
+      if (node.type === 'stickyNote') {
+        const updatedNotes = (project.stickyNotes || []).map((n) =>
+          n.id === node.id ? { ...n, position: node.position } : n
+        );
+        onUpdateProject({ ...project, stickyNotes: updatedNotes });
+        try {
+          await fetch(`http://localhost:3030/api/projects/${project.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stickyNotes: updatedNotes }),
+          });
+        } catch {}
+        return;
       }
-      const curY = stageYOffsets[stage] || 120;
-      n.position = { x: defaultX, y: curY };
-      stageYOffsets[stage] = curY + 240;
 
-      // fire patch async
-      fetch(`http://localhost:3030/api/projects/${project.id}/nodes/${n.id}`, {
+      const versionNode = project.nodes[node.id];
+      if (!versionNode) return;
+
+      const updatedNode = {
+        ...versionNode,
+        position: node.position,
+      };
+
+      onUpdateProject({
+        ...project,
+        nodes: {
+          ...project.nodes,
+          [node.id]: updatedNode,
+        },
+      });
+
+      try {
+        await fetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ position: node.position }),
+        });
+      } catch (err) {
+        console.error('Failed to persist node position:', err);
+      }
+    },
+    [project, onUpdateProject]
+  );
+
+  // Handle adding a new node to canvas
+  const handleAddNode = useCallback(
+    async (stage: string, customPos?: { x: number; y: number }, parentId?: string) => {
+      const center = customPos || screenToFlowPosition({
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+      });
+
+      const newId = `node_${stage}_${Math.random().toString(36).slice(2, 7)}`;
+      const title =
+        stage === 'script'
+          ? 'New Screenplay Beat'
+          : stage === 'shot'
+          ? 'New Shot Optics'
+          : stage === 'assets'
+          ? 'New Subject Anchor'
+          : stage === 'footage'
+          ? 'New Video Take'
+          : `New ${stage.charAt(0).toUpperCase() + stage.slice(1)}`;
+
+      const newNode: VersionNode = {
+        id: newId,
+        parentId: parentId || null,
+        sceneId: project.scenes[0]?.id,
+        stage: stage as any,
+        versionLabel: 'v1.0',
+        title,
+        modelEngine: 'antigravity-cli',
+        prompt: `Production prompt for ${title}`,
+        position: center,
+        artifacts: {},
+        metadata: {
+          createdAt: new Date().toISOString(),
+          status: 'idle',
+        },
+      };
+
+      const updatedProject = {
+        ...project,
+        nodes: {
+          ...project.nodes,
+          [newId]: newNode,
+        },
+      };
+
+      onUpdateProject(updatedProject);
+      setActiveHudId(newId);
+      toast.success(`Created ${title}`);
+
+      try {
+        await fetch(`http://localhost:3030/api/projects/${project.id}/nodes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newNode),
+        });
+      } catch {}
+    },
+    [project, onUpdateProject, screenToFlowPosition]
+  );
+
+  // Sticky Note Operations
+  const handleAddStickyNote = useCallback(() => {
+    const center = screenToFlowPosition({
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+    });
+    const newNote = {
+      id: `note_${Math.random().toString(36).slice(2, 7)}`,
+      text: '## Director Note\n- [ ] Check audio stem mix\n- [ ] Review character style parity\n- Pacing timing punch',
+      color: 'yellow' as StickyColor,
+      isPinned: false,
+      position: { x: center.x - 120, y: center.y - 80 },
+    };
+    const updatedNotes = [...(project.stickyNotes || []), newNote];
+    onUpdateProject({ ...project, stickyNotes: updatedNotes });
+    toast.success('Dropped sticky note on canvas');
+
+    fetch(`http://localhost:3030/api/projects/${project.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stickyNotes: updatedNotes }),
+    }).catch(() => {});
+  }, [project, onUpdateProject, screenToFlowPosition]);
+
+  const handleUpdateStickyNote = useCallback(
+    (noteId: string, text: string, color: StickyColor, isPinned: boolean) => {
+      const updatedNotes = (project.stickyNotes || []).map((n) =>
+        n.id === noteId ? { ...n, text, color, isPinned } : n
+      );
+      onUpdateProject({ ...project, stickyNotes: updatedNotes });
+
+      fetch(`http://localhost:3030/api/projects/${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ position: n.position }),
+        body: JSON.stringify({ stickyNotes: updatedNotes }),
       }).catch(() => {});
+    },
+    [project, onUpdateProject]
+  );
+
+  const handleDeleteStickyNote = useCallback(
+    (noteId: string) => {
+      const updatedNotes = (project.stickyNotes || []).filter((n) => n.id !== noteId);
+      onUpdateProject({ ...project, stickyNotes: updatedNotes });
+      toast.info('Sticky note deleted');
+
+      fetch(`http://localhost:3030/api/projects/${project.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stickyNotes: updatedNotes }),
+      }).catch(() => {});
+    },
+    [project, onUpdateProject]
+  );
+
+  // Beautify Flow Auto-Layout
+  const handleBeautifyFlow = useCallback(async () => {
+    const stageYTrackers: Record<string, number> = {};
+    const updatedNodes = { ...project.nodes };
+
+    Object.values(updatedNodes).forEach((node) => {
+      const stageKey = node.stage || 'ideation';
+      const defaultX = STAGE_DEFAULT_X[stageKey] || 60;
+      const currentY = stageYTrackers[stageKey] ?? 100;
+
+      node.position = {
+        x: defaultX,
+        y: currentY,
+      };
+
+      stageYTrackers[stageKey] = currentY + 280;
     });
 
-    onUpdateProject({ ...project, nodes: updatedNodes });
-    setTimeout(() => fitView({ duration: 500 }), 50);
+    onUpdateProject({
+      ...project,
+      nodes: updatedNodes,
+    });
+
+    toast.success('Auto-aligned spatial DAG flow');
+
+    setTimeout(() => {
+      fitView({ duration: 800, padding: 0.2 });
+    }, 50);
   }, [project, onUpdateProject, fitView]);
 
-  // Construct ReactFlow nodes and edges
+  // Connect End Handle Growth Spawning (when handle is dropped on empty canvas)
+  const handleConnectEnd = useCallback(
+    (event: MouseEvent | TouchEvent, connectionState: any) => {
+      if (!connectionState.isValid && connectionState.fromNode) {
+        const mouseEvent = event as MouseEvent;
+        const flowPos = screenToFlowPosition({ x: mouseEvent.clientX, y: mouseEvent.clientY });
+        setGrowthPicker({
+          sourceNodeId: connectionState.fromNode.id,
+          screenX: mouseEvent.clientX,
+          screenY: mouseEvent.clientY,
+          flowX: flowPos.x,
+          flowY: flowPos.y,
+        });
+      }
+    },
+    [screenToFlowPosition]
+  );
+
+  // Build ReactFlow Nodes and Edges
   const { nodes, edges } = useMemo(() => {
     const flowNodes: Node[] = [];
     const flowEdges: Edge[] = [];
-    const stageYCounter: Record<string, number> = {};
 
-    Object.values(project.nodes).forEach((n) => {
-      const stage = n.stage || 'script';
-      let posX = n.position?.x;
-      let posY = n.position?.y;
+    // 1. Version Nodes
+    Object.values(project.nodes).forEach((node) => {
+      const isActiveCut = Boolean(
+        node.sceneId && project.activeCut[node.sceneId] === node.id
+      );
 
-      if (posX === undefined || posY === undefined) {
-        posX = STAGE_DEFAULT_X[stage] || 600;
-        if (stage === 'taste' && !stageYCounter['taste']) {
-          stageYCounter['taste'] = 380;
-        }
-        posY = stageYCounter[stage] || 120;
-        stageYCounter[stage] = posY + 240;
-      }
-
-      const isActiveCut = n.sceneId ? project.activeCut[n.sceneId] === n.id : false;
-      const isSelected = selectedNodeId === n.id;
-      const isHudOpen = activeHudId === n.id || pinnedHudIds.has(n.id);
+      const stageKey = node.stage || 'ideation';
+      const defaultX = STAGE_DEFAULT_X[stageKey] || 60;
+      const defaultY = 120;
+      const position = node.position || { x: defaultX, y: defaultY };
 
       flowNodes.push({
-        id: n.id,
+        id: node.id,
         type: 'customVersion',
-        position: { x: posX, y: posY },
+        position,
+        draggable: toolMode !== 'pan',
         data: {
-          node: n,
+          node,
           isActiveCut,
-          isSelected,
-          isHudOpen,
+          isSelected: selectedNodeId === node.id,
+          isHudOpen: activeHudId === node.id || pinnedHudIds.has(node.id),
           onSelect: onSelectNode,
           onToggleHud: handleToggleHud,
           onBranch: onBranchNode,
@@ -304,47 +544,41 @@ function SpatialDirectorCanvasInner({
           onColorTag: handleColorTagNode,
           onSetActiveCut,
           onMediaDrop,
+          onResyncStale: handleResyncStale,
         },
       });
 
-      // 1. Primary Lineage Edges
-      if (n.parentId && project.nodes[n.parentId]) {
-        const parent = project.nodes[n.parentId];
-        const isEdgeInActiveCut = Boolean(
-          isActiveCut && parent.sceneId && project.activeCut[parent.sceneId] === parent.id
-        );
-
+      // Primary Parent -> Child edge
+      if (node.parentId && project.nodes[node.parentId]) {
         flowEdges.push({
-          id: `e_${n.parentId}_${n.id}`,
-          source: n.parentId,
-          target: n.id,
-          animated: isEdgeInActiveCut,
-          className: isEdgeInActiveCut ? 'wire-active' : undefined,
+          id: `e-${node.parentId}-${node.id}`,
+          source: node.parentId,
+          target: node.id,
+          animated: isActiveCut,
+          style: {
+            stroke: isActiveCut ? '#EAB308' : 'var(--border-subtle)',
+            strokeWidth: isActiveCut ? 2.5 : 1.5,
+          },
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            color: isEdgeInActiveCut ? '#EAB308' : '#3F3F46',
-          },
-          style: {
-            stroke: isEdgeInActiveCut ? '#EAB308' : '#27272A',
-            strokeWidth: isEdgeInActiveCut ? 2.5 : 1.5,
+            color: isActiveCut ? '#EAB308' : 'var(--border-subtle)',
           },
         });
       }
 
-      // 2. Bound Subject Anchor Reference Edges to Shot Nodes
-      if (n.boundSubjectAnchorIds && n.boundSubjectAnchorIds.length > 0) {
-        for (const anchorId of n.boundSubjectAnchorIds) {
-          const assetNode = Object.values(project.nodes).find(
-            (nodeItem) => nodeItem.subjectAnchorId === anchorId || nodeItem.id.includes(anchorId)
+      // Bound Subject Anchor edges (Violet)
+      if (node.boundSubjectAnchorIds && node.boundSubjectAnchorIds.length > 0) {
+        for (const anchorId of node.boundSubjectAnchorIds) {
+          const anchorNode = Object.values(project.nodes).find(
+            (n) => n.stage === 'assets' && (n.subjectAnchorId === anchorId || n.id === anchorId)
           );
-          if (assetNode) {
+          if (anchorNode && anchorNode.id !== node.id) {
             flowEdges.push({
-              id: `e_asset_${assetNode.id}_${n.id}`,
-              source: assetNode.id,
-              target: n.id,
-              animated: false,
+              id: `edge-anchor-${anchorNode.id}-${node.id}`,
+              source: anchorNode.id,
+              target: node.id,
               style: {
-                stroke: '#A855F7',
+                stroke: '#8B5CF6',
                 strokeWidth: 1.5,
                 strokeDasharray: '4 4',
               },
@@ -354,32 +588,74 @@ function SpatialDirectorCanvasInner({
       }
     });
 
+    // 2. Sticky Notes Nodes
+    (project.stickyNotes || []).forEach((note) => {
+      flowNodes.push({
+        id: note.id,
+        type: 'stickyNote',
+        position: note.position,
+        draggable: !note.isPinned && toolMode !== 'pan',
+        data: {
+          id: note.id,
+          text: note.text,
+          color: note.color,
+          isPinned: note.isPinned,
+          onUpdateNote: handleUpdateStickyNote,
+          onDeleteNote: handleDeleteStickyNote,
+        },
+      });
+    });
+
     return { nodes: flowNodes, edges: flowEdges };
   }, [
     project,
     selectedNodeId,
     activeHudId,
     pinnedHudIds,
+    toolMode,
     onSelectNode,
     handleToggleHud,
     onBranchNode,
     handleDeleteNode,
     handleRenameNode,
     handleColorTagNode,
+    handleResyncStale,
     onSetActiveCut,
     onMediaDrop,
+    handleUpdateStickyNote,
+    handleDeleteStickyNote,
   ]);
 
-  // Determine which HUDs to render
-  const hudsToRender = useMemo(() => {
-    const list: string[] = [];
-    if (activeHudId && project.nodes[activeHudId]) list.push(activeHudId);
-    pinnedHudIds.forEach((id) => {
-      if (id !== activeHudId && project.nodes[id]) list.push(id);
-    });
-    return list;
-  }, [activeHudId, pinnedHudIds, project.nodes]);
+  // Compute Viewport-Bounded Coordinates for active HUD
+  const activeHudPosition = useMemo(() => {
+    if (!activeHudId || !project.nodes[activeHudId]) return null;
+    const node = project.nodes[activeHudId];
+    const nodePos = node.position || { x: 300, y: 150 };
 
+    try {
+      const screenPos = flowToScreenPosition({ x: nodePos.x + 320, y: nodePos.y });
+      const hudWidth = 370;
+      const hudHeight = 440;
+      let posX = screenPos.x;
+      let posY = screenPos.y;
+
+      // Flip left if clipping right
+      if (posX + hudWidth > window.innerWidth - 20) {
+        posX = Math.max(20, screenPos.x - hudWidth - 340);
+      }
+      // Offset up if clipping bottom
+      if (posY + hudHeight > window.innerHeight - 80) {
+        posY = Math.max(70, window.innerHeight - hudHeight - 80);
+      }
+      if (posY < 70) posY = 70;
+
+      return { left: posX, top: posY };
+    } catch {
+      return { right: 20, top: 20 };
+    }
+  }, [activeHudId, project.nodes, flowToScreenPosition]);
+
+  // Render HUD for a given node
   const renderFloatingHudForNode = (nodeId: string) => {
     const node = project.nodes[nodeId];
     if (!node) return null;
@@ -441,7 +717,7 @@ function SpatialDirectorCanvasInner({
         <button
           onClick={handleBeautifyFlow}
           className="ml-2 px-2 py-0.5 rounded text-[10px] font-bold bg-card hover:bg-subtle border border-subtle text-text-primary flex items-center gap-1 transition"
-          title="Auto-align and resolve overlapping nodes"
+          title="Auto-align and resolve overlapping nodes (B)"
         >
           <Sparkles className="w-3 h-3 text-amber-400" />
           <span>Beautify Flow</span>
@@ -470,6 +746,18 @@ function SpatialDirectorCanvasInner({
         )}
       </div>
 
+      {/* FLOATING LEFT-SIDE VERTICAL TOOLBAR */}
+      <FloatingCanvasToolbar
+        toolMode={toolMode}
+        onSetToolMode={setToolMode}
+        onAddStickyNote={handleAddStickyNote}
+        onAddNode={(stage) => handleAddNode(stage)}
+        onZoomIn={zoomIn}
+        onZoomOut={zoomOut}
+        onFitView={() => fitView({ duration: 600, padding: 0.2 })}
+        onBeautifyFlow={handleBeautifyFlow}
+      />
+
       {/* Canvas Area */}
       <div className="relative flex-1">
         <AgentCursorOverlay agents={agents} />
@@ -479,27 +767,286 @@ function SpatialDirectorCanvasInner({
           edges={edges}
           nodeTypes={nodeTypes}
           onNodeDragStop={handleNodeDragStop}
-          onPaneClick={() => setActiveHudId(null)}
+          onPaneClick={() => {
+            setActiveHudId(null);
+            setContextMenu(null);
+            setGrowthPicker(null);
+          }}
+          onConnectEnd={handleConnectEnd}
+          onPaneContextMenu={(e) => {
+            e.preventDefault();
+            const flowPos = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+            setContextMenu({
+              type: 'canvas',
+              screenX: e.clientX,
+              screenY: e.clientY,
+              flowX: flowPos.x,
+              flowY: flowPos.y,
+            });
+          }}
+          onNodeContextMenu={(e, node) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setContextMenu({
+              type: 'node',
+              screenX: e.clientX,
+              screenY: e.clientY,
+              flowX: node.position.x,
+              flowY: node.position.y,
+              nodeId: node.id,
+            });
+          }}
           fitView
           minZoom={0.15}
           maxZoom={1.5}
+          panOnDrag={toolMode === 'pan'}
+          selectionOnDrag={toolMode === 'marquee'}
           className="bg-app canvas-dots"
         >
           <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="var(--dot-color)" />
           <Controls className="!bg-surface !border-subtle !text-text-primary !rounded-xl overflow-hidden" />
           <MiniMap
             nodeColor={(n: any) =>
-              n.data?.isActiveCut ? '#EAB308' : n.data?.node?.stage === 'assets' ? '#A855F7' : 'var(--border-subtle)'
+              n.data?.isActiveCut
+                ? '#EAB308'
+                : n.data?.node?.stage === 'assets'
+                ? '#8B5CF6'
+                : n.data?.node?.stage === 'script'
+                ? '#10B981'
+                : n.data?.node?.stage === 'shot'
+                ? '#06B6D4'
+                : n.type === 'stickyNote'
+                ? '#F59E0B'
+                : 'var(--border-subtle)'
             }
             maskColor="rgba(0, 0, 0, 0.75)"
             className="!bg-surface !border-subtle rounded-xl overflow-hidden shadow-2xl"
           />
         </ReactFlow>
 
-        {/* IN-PLACE FLOATING HUDS OVERLAY (Anchored Top-Right or Freely Positioned) */}
-        {hudsToRender.length > 0 && (
+        {/* VIEWPORT-BOUNDED ACTIVE HUD (Floats adjacent to selected node) */}
+        {activeHudId && activeHudPosition && (
+          <div
+            style={activeHudPosition}
+            className="fixed z-40 max-h-[85vh] overflow-y-auto pointer-events-auto transition-all duration-75"
+          >
+            {renderFloatingHudForNode(activeHudId)}
+          </div>
+        )}
+
+        {/* PINNED HUDS (Docked Top-Right) */}
+        {pinnedHudIds.size > 0 && (
           <div className="absolute top-4 right-4 z-30 flex flex-col gap-3 max-h-[85vh] overflow-y-auto pointer-events-auto">
-            {hudsToRender.map((id) => renderFloatingHudForNode(id))}
+            {Array.from(pinnedHudIds)
+              .filter((id) => id !== activeHudId)
+              .map((id) => renderFloatingHudForNode(id))}
+          </div>
+        )}
+
+        {/* CONTEXT MENUS (Canvas & Node) */}
+        {contextMenu && (
+          <div
+            style={{ left: contextMenu.screenX, top: contextMenu.screenY }}
+            onClick={(e) => e.stopPropagation()}
+            className="fixed z-50 w-56 bg-surface border border-subtle rounded-2xl shadow-2xl p-1.5 space-y-1 animate-scale-in text-xs font-mono"
+          >
+            {contextMenu.type === 'canvas' ? (
+              <>
+                <div className="text-[10px] font-bold text-text-muted px-2 py-1 uppercase">
+                  Add to Canvas
+                </div>
+                <button
+                  onClick={() => {
+                    handleAddNode('script', { x: contextMenu.flowX, y: contextMenu.flowY });
+                    setContextMenu(null);
+                  }}
+                  className="w-full flex items-center gap-2 p-2 rounded-xl text-text-primary hover:bg-card hover:text-accent-primary transition text-left"
+                >
+                  <FileText className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Add Screenplay Beat</span>
+                </button>
+                <button
+                  onClick={() => {
+                    handleAddNode('shot', { x: contextMenu.flowX, y: contextMenu.flowY });
+                    setContextMenu(null);
+                  }}
+                  className="w-full flex items-center gap-2 p-2 rounded-xl text-text-primary hover:bg-card hover:text-accent-primary transition text-left"
+                >
+                  <Camera className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Add Shot & Optics</span>
+                </button>
+                <button
+                  onClick={() => {
+                    handleAddNode('assets', { x: contextMenu.flowX, y: contextMenu.flowY });
+                    setContextMenu(null);
+                  }}
+                  className="w-full flex items-center gap-2 p-2 rounded-xl text-text-primary hover:bg-card hover:text-accent-primary transition text-left"
+                >
+                  <User className="w-3.5 h-3.5 text-purple-400" />
+                  <span>Add Subject Anchor</span>
+                </button>
+                <button
+                  onClick={() => {
+                    handleAddNode('footage', { x: contextMenu.flowX, y: contextMenu.flowY });
+                    setContextMenu(null);
+                  }}
+                  className="w-full flex items-center gap-2 p-2 rounded-xl text-text-primary hover:bg-card hover:text-accent-primary transition text-left"
+                >
+                  <Video className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Add Video Take</span>
+                </button>
+                <div className="h-[1px] bg-subtle my-1" />
+                <button
+                  onClick={() => {
+                    handleAddStickyNote();
+                    setContextMenu(null);
+                  }}
+                  className="w-full flex items-center gap-2 p-2 rounded-xl text-text-primary hover:bg-card hover:text-accent-primary transition text-left"
+                >
+                  <StickyNote className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Add Sticky Note (N)</span>
+                </button>
+                <button
+                  onClick={() => {
+                    handleBeautifyFlow();
+                    setContextMenu(null);
+                  }}
+                  className="w-full flex items-center gap-2 p-2 rounded-xl text-text-primary hover:bg-card hover:text-accent-primary transition text-left"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Auto-Align Canvas</span>
+                </button>
+                {onOpenProjectSettings && (
+                  <button
+                    onClick={() => {
+                      onOpenProjectSettings();
+                      setContextMenu(null);
+                    }}
+                    className="w-full flex items-center gap-2 p-2 rounded-xl text-text-primary hover:bg-card hover:text-accent-primary transition text-left"
+                  >
+                    <Sliders className="w-3.5 h-3.5 text-text-muted" />
+                    <span>Project Settings</span>
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="text-[10px] font-bold text-text-muted px-2 py-1 uppercase truncate">
+                  Node: {contextMenu.nodeId}
+                </div>
+                {contextMenu.nodeId && (
+                  <>
+                    <button
+                      onClick={() => {
+                        handleToggleHud(contextMenu.nodeId!);
+                        setContextMenu(null);
+                      }}
+                      className="w-full flex items-center gap-2 p-2 rounded-xl text-text-primary hover:bg-card transition text-left"
+                    >
+                      <Compass className="w-3.5 h-3.5 text-accent-primary" />
+                      <span>Inspect in HUD</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onBranchNode(contextMenu.nodeId!);
+                        setContextMenu(null);
+                      }}
+                      className="w-full flex items-center gap-2 p-2 rounded-xl text-text-primary hover:bg-card transition text-left"
+                    >
+                      <GitBranch className="w-3.5 h-3.5 text-sky-400" />
+                      <span>Branch Parallel Version</span>
+                    </button>
+                    {project.nodes[contextMenu.nodeId]?.sceneId && (
+                      <button
+                        onClick={() => {
+                          const n = project.nodes[contextMenu.nodeId!];
+                          if (n?.sceneId) onSetActiveCut(n.sceneId, n.id);
+                          setContextMenu(null);
+                        }}
+                        className="w-full flex items-center gap-2 p-2 rounded-xl text-text-primary hover:bg-card transition text-left"
+                      >
+                        <Star className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Star as Active Cut</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        handleResyncStale(contextMenu.nodeId!);
+                        setContextMenu(null);
+                      }}
+                      className="w-full flex items-center gap-2 p-2 rounded-xl text-text-primary hover:bg-card transition text-left"
+                    >
+                      <RotateCw className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Re-sync Upstream Prompt</span>
+                    </button>
+                    <div className="h-[1px] bg-subtle my-1" />
+                    <button
+                      onClick={() => {
+                        handleDeleteNode(contextMenu.nodeId!);
+                        setContextMenu(null);
+                      }}
+                      className="w-full flex items-center gap-2 p-2 rounded-xl text-red-400 hover:bg-red-500/10 transition text-left"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete Version...</span>
+                    </button>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* HANDLE-BASED TREE GROWTH PICKER (Triggered when dragging handle to empty canvas) */}
+        {growthPicker && (
+          <div
+            style={{ left: growthPicker.screenX, top: growthPicker.screenY }}
+            onClick={(e) => e.stopPropagation()}
+            className="fixed z-50 w-52 bg-surface border border-subtle rounded-2xl shadow-2xl p-2 space-y-1 animate-scale-in text-xs font-mono"
+          >
+            <div className="text-[10px] font-bold text-text-muted px-2 py-1 uppercase">
+              Connect New Stage
+            </div>
+            <button
+              onClick={() => {
+                handleAddNode('shot', { x: growthPicker.flowX, y: growthPicker.flowY }, growthPicker.sourceNodeId);
+                setGrowthPicker(null);
+              }}
+              className="w-full flex items-center gap-2 p-2 rounded-xl text-text-primary hover:bg-card hover:text-accent-primary transition text-left"
+            >
+              <Camera className="w-3.5 h-3.5 text-sky-400" />
+              <span>Add Shot Optics</span>
+            </button>
+            <button
+              onClick={() => {
+                handleAddNode('footage', { x: growthPicker.flowX, y: growthPicker.flowY }, growthPicker.sourceNodeId);
+                setGrowthPicker(null);
+              }}
+              className="w-full flex items-center gap-2 p-2 rounded-xl text-text-primary hover:bg-card hover:text-accent-primary transition text-left"
+            >
+              <Video className="w-3.5 h-3.5 text-amber-400" />
+              <span>Add Video Take</span>
+            </button>
+            <button
+              onClick={() => {
+                handleAddNode('script', { x: growthPicker.flowX, y: growthPicker.flowY }, growthPicker.sourceNodeId);
+                setGrowthPicker(null);
+              }}
+              className="w-full flex items-center gap-2 p-2 rounded-xl text-text-primary hover:bg-card hover:text-accent-primary transition text-left"
+            >
+              <FileText className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Add Script Beat</span>
+            </button>
+            <button
+              onClick={() => {
+                handleAddNode('assets', { x: growthPicker.flowX, y: growthPicker.flowY }, growthPicker.sourceNodeId);
+                setGrowthPicker(null);
+              }}
+              className="w-full flex items-center gap-2 p-2 rounded-xl text-text-primary hover:bg-card hover:text-accent-primary transition text-left"
+            >
+              <User className="w-3.5 h-3.5 text-purple-400" />
+              <span>Add Subject Anchor</span>
+            </button>
           </div>
         )}
       </div>
@@ -581,7 +1128,6 @@ function SpatialDirectorCanvasInner({
 
             {/* Action Choices */}
             <div className="space-y-2 pt-1">
-              {/* Option 1: Delete from System as Well */}
               <button
                 onClick={() => handleConfirmDeleteNode(true)}
                 disabled={isDeletingNode}
@@ -602,7 +1148,6 @@ function SpatialDirectorCanvasInner({
                 </div>
               </button>
 
-              {/* Option 2: Remove Node from DAG Only */}
               <button
                 onClick={() => handleConfirmDeleteNode(false)}
                 disabled={isDeletingNode}

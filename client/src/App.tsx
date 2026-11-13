@@ -8,7 +8,10 @@ import { MediaTrimmerModal } from './components/trimmer/MediaTrimmerModal.js';
 import { SubjectManagerModal } from './components/project/SubjectManagerModal.js';
 import { CommandPalette } from './components/palette/CommandPalette.js';
 import { ProjectHubModal } from './components/project/ProjectHubModal.js';
-import { ThemeCustomizer, StudioTheme } from './components/ui-ux/ThemeCustomizer.js';
+import { ProjectSettingsModal } from './components/project/ProjectSettingsModal.js';
+import { StudioTheme } from './components/ui-ux/ThemeCustomizer.js';
+import { StudioErrorBoundary } from './components/common/StudioErrorBoundary.js';
+import { ToastContainer } from './components/common/ToastContainer.js';
 import {
   Sliders,
   Film,
@@ -18,9 +21,10 @@ import {
   ChevronDown,
   LayoutGrid,
   User,
+  Settings,
 } from 'lucide-react';
 
-export default function App() {
+function App() {
   const [project, setProject] = useState<FilmProject | null>(null);
   const [isLoadingProject, setIsLoadingProject] = useState<boolean>(false);
   const [agents, setAgents] = useState<AgentPresence[]>([]);
@@ -28,6 +32,7 @@ export default function App() {
 
   // Modals
   const [isProjectHubOpen, setIsProjectHubOpen] = useState(false);
+  const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
   const [isTasteMixerOpen, setIsTasteMixerOpen] = useState(false);
   const [isSubjectManagerOpen, setIsSubjectManagerOpen] = useState(false);
   const [isDaVinciExportOpen, setIsDaVinciExportOpen] = useState(false);
@@ -53,7 +58,15 @@ export default function App() {
   // Apply theme to documentElement
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove('theme-studio-dark', 'theme-film-lab-mono', 'theme-midnight-navy');
+    root.classList.remove(
+      'theme-studio-dark',
+      'theme-film-lab-mono',
+      'theme-midnight-navy',
+      'theme-cinema-tungsten',
+      'theme-paper-ink',
+      'theme-studio-daylight',
+      'theme-nordic-light'
+    );
     root.classList.add(`theme-${theme}`);
     try {
       localStorage.setItem('studio_theme', theme);
@@ -115,12 +128,20 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [loadProjectById]);
 
-  // Global Keyboard Shortcuts (Cmd+O for Project Hub, Cmd+K for Command Palette)
+  // Global Keyboard Shortcuts (Cmd+O for Project Hub, Cmd+K for Command Palette, Cmd+, for Settings)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'o') {
         e.preventDefault();
         setIsProjectHubOpen((prev) => !prev);
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCmdPaletteOpen((prev) => !prev);
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === ',') {
+        e.preventDefault();
+        setIsProjectSettingsOpen((prev) => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -312,10 +333,14 @@ export default function App() {
 
         {/* Center / Right Control Strip */}
         <div className="flex items-center gap-2">
-          <ThemeCustomizer
-            currentTheme={theme}
-            onThemeChange={setTheme}
-          />
+          <button
+            onClick={() => setIsProjectSettingsOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-card border border-subtle hover:bg-subtle text-text-primary transition"
+            title="Project Settings (Cmd+,)"
+          >
+            <Settings className="w-3.5 h-3.5 text-text-muted" />
+            <span>Settings</span>
+          </button>
 
           <button
             onClick={() => setIsSubjectManagerOpen(true)}
@@ -369,12 +394,28 @@ export default function App() {
             onOpenDaVinciExport={() => setIsDaVinciExportOpen(true)}
             onOpenSubjectManager={() => setIsSubjectManagerOpen(true)}
             onOpenTasteMixer={() => setIsTasteMixerOpen(true)}
+            onOpenProjectSettings={() => setIsProjectSettingsOpen(true)}
           />
         </div>
 
         {/* Bottom Playback Scrubber Dock */}
         <BottomPlaybackDock
           project={project}
+          onUpdateProject={(updated) => setProject(updated)}
+          onFocusScene={(sceneId) => {
+            const cutNodeId = project.activeCut?.[sceneId];
+            if (cutNodeId && project.nodes[cutNodeId]) {
+              setSelectedNodeId(cutNodeId);
+            } else {
+              const sceneNode = Object.values(project.nodes).find(
+                (n) => n.sceneId === sceneId
+              );
+              if (sceneNode) {
+                setSelectedNodeId(sceneNode.id);
+              }
+            }
+          }}
+          onSetActiveCut={handleSetActiveCut}
           onOpenDaVinciExport={() => setIsDaVinciExportOpen(true)}
         />
       </main>
@@ -389,6 +430,16 @@ export default function App() {
           setIsProjectHubOpen(false);
         }}
         isStandalonePage={false}
+        currentTheme={theme}
+        onThemeChange={setTheme}
+      />
+
+      {/* Project Settings Modal (Aspect Ratio, Duration, FPS, Typography, Theme) */}
+      <ProjectSettingsModal
+        isOpen={isProjectSettingsOpen}
+        onClose={() => setIsProjectSettingsOpen(false)}
+        project={project}
+        onUpdateProject={(updatedProject) => setProject(updatedProject)}
         currentTheme={theme}
         onThemeChange={setTheme}
       />
@@ -434,6 +485,7 @@ export default function App() {
       <CommandPalette
         isOpen={isCmdPaletteOpen}
         onClose={() => setIsCmdPaletteOpen(false)}
+        onOpenProjectSettings={() => setIsProjectSettingsOpen(true)}
         onOpenTasteMixer={() => setIsTasteMixerOpen(true)}
         onOpenDaVinciExport={() => setIsDaVinciExportOpen(true)}
         onBranchSelected={() => selectedNodeId && handleBranchNode(selectedNodeId)}
@@ -444,6 +496,17 @@ export default function App() {
         }}
         onToggleSafeAreas={() => {}}
       />
+
+      {/* Global Interactive Toast Notification System */}
+      <ToastContainer />
     </div>
+  );
+}
+
+export default function RootApp() {
+  return (
+    <StudioErrorBoundary>
+      <App />
+    </StudioErrorBoundary>
   );
 }

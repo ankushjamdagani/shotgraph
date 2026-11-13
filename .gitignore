@@ -20,6 +20,10 @@ server/projects/
 .env
 .env.local
 .env.*.local
+.agents/
+.claude/
+.hermes/
+skills-lock.json
 
 # Git LFS candidates / Heavy binaries
 # Uncomment below if not using Git LFS for exports
