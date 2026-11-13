@@ -54,6 +54,16 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
   const [isApplying, setIsApplying] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  // Keyboard Escape listener
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   useEffect(() => {
     if (isOpen) {
       fetch('http://localhost:3030/api/styles/presets')

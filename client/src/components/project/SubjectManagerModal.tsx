@@ -27,6 +27,16 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
   const [variants, setVariants] = useState<SubjectVariant[]>([]);
   const [activeVariantId, setActiveVariantId] = useState<string>('');
 
+  // Keyboard Escape listener
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   // Synchronize selection
   React.useEffect(() => {
     if (isCreatingNew) {
