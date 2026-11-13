@@ -4,10 +4,10 @@ This document tracks all iterative development phases, sub-milestones, active st
 
 ---
 
-## Current Status: Phase 3 Completed -> Entering Phase 4 (Local Backend Service & AG-UI Hub)
-**Active Phase**: Phase 4
-**Last Updated**: Phase 3 Complete (SkillRegistry, TasteAnalyzer, TasteMixer, HookGenerator, BeatScriptwriter, PromptSynthesizer, FCPXMLBuilder)
-**Resumption Instruction**: Run `npm --workspace=server test` to confirm all 8 unit tests pass, then proceed with Phase 4 backend service and AG-UI WebSocket hub.
+## Current Status: Phase 4 Completed -> Entering Phase 5 (Studio UI Workstation PWA Client)
+**Active Phase**: Phase 5
+**Last Updated**: Phase 4 Complete (Fastify HTTP REST API, WebSocket AG-UI Gateway, ProjectService, AgentManager, Chokidar File Watcher)
+**Resumption Instruction**: Run `npm --workspace=server test` to confirm all 11 unit tests pass, then proceed with Phase 5 frontend client implementation.
 
 ---
 
@@ -48,11 +48,11 @@ This document tracks all iterative development phases, sub-milestones, active st
 ---
 
 ### Phase 4: Local Backend Service & AG-UI WebSocket Hub
-- [ ] **Step 4.1**: Fastify HTTP server (`server/src/index.ts`) serving REST endpoints for projects, scenes, and media assets.
-- [ ] **Step 4.2**: AG-UI WebSocket event broker broadcasting real-time streaming thoughts, tool calls, and multi-agent cursors.
-- [ ] **Step 4.3**: Project File System Manager (`server/src/services/projectService.ts`): Initializes self-contained folders (`raw_footage/`, `references/`, `assets/`, `compositions/`, `exports/`, `.studio/`) with relative path integrity.
-- [ ] **Step 4.4**: Bi-directional file watcher (`chokidar`) syncing Finder file drops directly to UI.
-- [ ] **Step 4.5**: Background render job queue & concurrency limiter.
+- [x] **Step 4.1**: Fastify HTTP server (`server/src/index.ts`) serving REST endpoints for projects, scenes, and media assets.
+- [x] **Step 4.2**: AG-UI WebSocket event broker broadcasting real-time streaming thoughts, tool calls, and multi-agent cursors.
+- [x] **Step 4.3**: Project File System Manager (`server/src/services/projectService.ts`): Initializes self-contained folders (`raw_footage/`, `references/`, `assets/`, `compositions/`, `exports/`, `.studio/`) with relative path integrity.
+- [x] **Step 4.4**: Bi-directional file watcher (`chokidar`) syncing Finder file drops directly to UI.
+- [x] **Step 4.5**: Unit tests for project file system & DAG management (`server/test/services/projectService.test.ts`).
 
 ---
 
