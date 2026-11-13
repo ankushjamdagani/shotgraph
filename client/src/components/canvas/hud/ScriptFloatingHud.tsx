@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { VersionNode, FilmProject } from '../../../types.js';
-import { Volume2, Pin, X, Check, Loader2 } from 'lucide-react';
+import { Volume2, Pin, X, Check, Loader2, Headphones, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from '../../../services/toastService.js';
 
 interface ScriptFloatingHudProps {
@@ -28,6 +28,11 @@ export const ScriptFloatingHud: React.FC<ScriptFloatingHudProps> = ({
   const [voicePreset, setVoicePreset] = useState('narrator_daniel');
   const [isSynthesizingVoice, setIsSynthesizingVoice] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+
+  // Earshot Foley & Acoustic Cues State
+  const [isGeneratingFoley, setIsGeneratingFoley] = useState(false);
+  const [audioPlan, setAudioPlan] = useState<any>(node.artifacts?.metadata?.foleyPlan || null);
+  const [showFoleyDetails, setShowFoleyDetails] = useState(false);
 
   const subjects = project.subjectAnchors || [];
 
@@ -108,6 +113,59 @@ export const ScriptFloatingHud: React.FC<ScriptFloatingHudProps> = ({
       toast.error(err.message || 'Voice synthesis service failed');
     } finally {
       setIsSynthesizingVoice(false);
+    }
+  };
+
+  const handleGenerateFoley = async () => {
+    const sceneDesc = actionText.trim() || dialogueText.trim() || 'Anya in architectural studio space';
+    setIsGeneratingFoley(true);
+    try {
+      const res = await fetch('http://localhost:3030/api/skills/earshot/audio-cues', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sceneDescription: sceneDesc,
+          dialogueText: dialogueText.trim(),
+          durationSec: 5,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.audioPlan) {
+        setAudioPlan(data.audioPlan);
+        setShowFoleyDetails(true);
+        toast.success(`Earshot generated ${data.audioPlan.foleyCues?.length || 0} foley cues & ambience bed`);
+
+        // Save into node artifacts metadata
+        const updatedArtifacts = {
+          ...node.artifacts,
+          metadata: {
+            ...(node.artifacts?.metadata || {}),
+            foleyPlan: data.audioPlan,
+          },
+        };
+        fetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ artifacts: updatedArtifacts }),
+        }).then((r) => r.json()).then((d) => {
+          if (d.success && d.node) {
+            onUpdateProject({
+              ...project,
+              nodes: {
+                ...project.nodes,
+                [node.id]: d.node,
+              },
+            });
+          }
+        }).catch(() => {});
+      } else {
+        toast.error('Could not generate Earshot foley cues');
+      }
+    } catch (err: any) {
+      console.error('Earshot error:', err);
+      toast.error('Earshot foley generation failed');
+    } finally {
+      setIsGeneratingFoley(false);
     }
   };
 
@@ -203,6 +261,67 @@ export const ScriptFloatingHud: React.FC<ScriptFloatingHudProps> = ({
             <option value="presenter_aman">Aman (Global)</option>
           </select>
         </div>
+      </div>
+
+      {/* Earshot Foley Sound Design (Leonxlnx/earshot + explainroo) */}
+      <div className="p-2.5 rounded-xl bg-card border border-subtle space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <Headphones className="w-3.5 h-3.5 text-accent-primary" />
+            <span className="text-[10px] font-bold font-mono text-text-primary uppercase tracking-wide">
+              Earshot Foley Engine
+            </span>
+            <span className="text-[8px] px-1 py-0.2 rounded bg-surface text-accent-primary font-mono border border-subtle">
+              v1.0
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handleGenerateFoley}
+            disabled={isGeneratingFoley}
+            className="px-2 py-0.5 rounded-md bg-accent-primary/10 hover:bg-accent-primary/20 text-accent-primary text-[10px] font-mono font-bold flex items-center gap-1 transition"
+          >
+            {isGeneratingFoley ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <Sparkles className="w-3 h-3" />
+            )}
+            <span>{isGeneratingFoley ? 'Analyzing...' : 'Generate Cues'}</span>
+          </button>
+        </div>
+
+        {audioPlan ? (
+          <div className="space-y-1.5 text-[9px] font-mono">
+            <div className="p-1.5 rounded-lg bg-surface/80 border border-subtle text-text-muted">
+              <span className="text-text-primary font-bold">Bed:</span> {audioPlan.ambienceBed}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowFoleyDetails(!showFoleyDetails)}
+              className="w-full flex items-center justify-between text-text-muted hover:text-text-primary pt-0.5"
+            >
+              <span>{audioPlan.foleyCues?.length || 0} Foley Hitpoints</span>
+              {showFoleyDetails ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+
+            {showFoleyDetails && audioPlan.foleyCues && (
+              <div className="max-h-24 overflow-y-auto space-y-1 pr-1">
+                {audioPlan.foleyCues.map((c: any, i: number) => (
+                  <div key={i} className="p-1 rounded bg-surface/50 border border-subtle/50 flex items-center justify-between">
+                    <span className="text-accent-primary font-bold">{c.timecode}</span>
+                    <span className="text-text-primary truncate mx-1">{c.soundType}</span>
+                    <span className="text-[8px] text-text-muted shrink-0">{c.intensity}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-[9px] font-mono text-text-muted/70 italic">
+            Procedural acoustic scene analysis & cut-synced foley cues ready to generate.
+          </div>
+        )}
       </div>
 
       {/* Audio Stem Preview Player if Generated */}

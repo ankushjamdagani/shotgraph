@@ -10,6 +10,8 @@ import {
   MarkerType,
   useReactFlow,
   ReactFlowProvider,
+  useNodesState,
+  useEdgesState,
 } from '@xyflow/react';
 import { CustomVersionNode } from '../tree/CustomVersionNode.js';
 import { StickyNoteNode, StickyColor } from '../tree/StickyNoteNode.js';
@@ -92,7 +94,10 @@ function SpatialDirectorCanvasInner({
   onOpenTasteMixer,
   onOpenProjectSettings,
 }: SpatialDirectorCanvasProps) {
-  const { fitView, zoomIn, zoomOut, flowToScreenPosition, screenToFlowPosition } = useReactFlow();
+  const { fitView, zoomIn, zoomOut, flowToScreenPosition, screenToFlowPosition, setCenter } = useReactFlow();
+
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
   // Canvas tool mode (Select / Marquee / Pan)
   const [toolMode, setToolMode] = useState<CanvasToolMode>('select');
@@ -407,6 +412,42 @@ function SpatialDirectorCanvasInner({
     [project, onUpdateProject, screenToFlowPosition]
   );
 
+  // Handle resizing node width
+  const handleResizeNode = useCallback(
+    async (nodeId: string, width: number) => {
+      const vNode = project.nodes[nodeId];
+      if (!vNode) return;
+      onUpdateProject({
+        ...project,
+        nodes: {
+          ...project.nodes,
+          [nodeId]: { ...vNode, width },
+        },
+      });
+      try {
+        await fetch(`http://localhost:3030/api/projects/${project.id}/nodes/${nodeId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ width }),
+        });
+      } catch {}
+    },
+    [project, onUpdateProject]
+  );
+
+  // Handle auto-adding next stage node
+  const handleAutoAddNextStage = useCallback(
+    async (sourceNodeId: string, nextStage: string) => {
+      const sourceNode = project.nodes[sourceNodeId];
+      if (!sourceNode) return;
+      const posX = (sourceNode.position?.x || 100) + (sourceNode.width || 320) + 80;
+      const posY = sourceNode.position?.y || 120;
+      await handleAddNode(nextStage, { x: posX, y: posY }, sourceNodeId);
+      toast.success(`Created downstream ${nextStage} node`);
+    },
+    [project.nodes, handleAddNode]
+  );
+
   // Sticky Note Operations
   const handleAddStickyNote = useCallback(() => {
     const center = screenToFlowPosition({
@@ -511,7 +552,7 @@ function SpatialDirectorCanvasInner({
   );
 
   // Build ReactFlow Nodes and Edges
-  const { nodes, edges } = useMemo(() => {
+  const computedFlow = useMemo(() => {
     const flowNodes: Node[] = [];
     const flowEdges: Edge[] = [];
 
@@ -545,6 +586,8 @@ function SpatialDirectorCanvasInner({
           onSetActiveCut,
           onMediaDrop,
           onResyncStale: handleResyncStale,
+          onResize: handleResizeNode,
+          onAutoAddNextStage: handleAutoAddNextStage,
         },
       });
 
@@ -622,9 +665,16 @@ function SpatialDirectorCanvasInner({
     handleResyncStale,
     onSetActiveCut,
     onMediaDrop,
+    handleResizeNode,
+    handleAutoAddNextStage,
     handleUpdateStickyNote,
     handleDeleteStickyNote,
   ]);
+
+  useEffect(() => {
+    setNodes(computedFlow.nodes);
+    setEdges(computedFlow.edges);
+  }, [computedFlow, setNodes, setEdges]);
 
   // Compute Viewport-Bounded Coordinates for active HUD
   const activeHudPosition = useMemo(() => {
@@ -766,6 +816,8 @@ function SpatialDirectorCanvasInner({
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
           onNodeDragStop={handleNodeDragStop}
           onPaneClick={() => {
             setActiveHudId(null);
@@ -799,13 +851,22 @@ function SpatialDirectorCanvasInner({
           fitView
           minZoom={0.15}
           maxZoom={1.5}
-          panOnDrag={toolMode === 'pan'}
+          panOnDrag={toolMode === 'pan' || toolMode === 'select'}
           selectionOnDrag={toolMode === 'marquee'}
+          selectNodesOnDrag={toolMode === 'marquee'}
           className="bg-app canvas-dots"
         >
           <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="var(--dot-color)" />
           <Controls className="!bg-surface !border-subtle !text-text-primary !rounded-xl overflow-hidden" />
           <MiniMap
+            onNodeClick={(_e, clickedNode) => {
+              if (clickedNode && clickedNode.position) {
+                setCenter(clickedNode.position.x + (clickedNode.width || 320) / 2, clickedNode.position.y + 100, {
+                  duration: 500,
+                });
+                onSelectNode(clickedNode.id);
+              }
+            }}
             nodeColor={(n: any) =>
               n.data?.isActiveCut
                 ? '#EAB308'
@@ -817,10 +878,10 @@ function SpatialDirectorCanvasInner({
                 ? '#06B6D4'
                 : n.type === 'stickyNote'
                 ? '#F59E0B'
-                : 'var(--border-subtle)'
+                : '#71717A'
             }
             maskColor="rgba(0, 0, 0, 0.75)"
-            className="!bg-surface !border-subtle rounded-xl overflow-hidden shadow-2xl"
+            className="!bg-surface !border-subtle rounded-xl overflow-hidden shadow-2xl cursor-pointer"
           />
         </ReactFlow>
 

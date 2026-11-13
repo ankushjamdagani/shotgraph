@@ -6,7 +6,14 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import chokidar, { FSWatcher } from 'chokidar';
 import { nanoid } from 'nanoid';
-import { initializeSkills, SkillRegistry } from './skills/index.js';
+import {
+  initializeSkills,
+  SkillRegistry,
+  CREATIVE_SKILLS_CATALOG,
+  enrichPromptWithCreativeSkills,
+  generateEarshotAudioCues,
+  generateCookMontageRecipe,
+} from './skills/index.js';
 import { ProjectService, FilmProject, ProjectSubjectAnchor, SubjectVariant } from './services/projectService.js';
 import { ProjectRegistry, GlobalStylePreset } from './services/projectRegistry.js';
 import { VoiceService } from './services/voiceService.js';
@@ -502,6 +509,49 @@ server.post('/api/skills/execute', async (req, reply) => {
     reply.status(500);
     return { success: false, error: err.message };
   }
+});
+
+// Creative Suite Skills (Huashu Motion, Rossark Motion, Take-One, Reanimate, Argo, Explainroo, Video Director, Earshot, Cook)
+server.get('/api/skills/creative-suite', async () => {
+  return {
+    success: true,
+    skills: Object.values(CREATIVE_SKILLS_CATALOG),
+  };
+});
+
+server.post('/api/skills/enrich-prompt', async (req) => {
+  const { prompt, stage, activeSkillIds } = req.body as {
+    prompt: string;
+    stage: string;
+    activeSkillIds?: string[];
+  };
+  const enriched = enrichPromptWithCreativeSkills(prompt || '', stage || 'shot', activeSkillIds || []);
+  return {
+    success: true,
+    ...enriched,
+  };
+});
+
+server.post('/api/skills/earshot/audio-cues', async (req) => {
+  const { script } = req.body as { script: string };
+  const cues = generateEarshotAudioCues(script || '');
+  return {
+    success: true,
+    cues,
+  };
+});
+
+server.post('/api/skills/cook/montage-recipe', async (req) => {
+  const { projectName, durationSec, bpm } = req.body as {
+    projectName: string;
+    durationSec: number;
+    bpm?: number;
+  };
+  const recipe = generateCookMontageRecipe(projectName || 'Video', durationSec || 30, bpm || 120);
+  return {
+    success: true,
+    recipe,
+  };
 });
 
 // ==========================================

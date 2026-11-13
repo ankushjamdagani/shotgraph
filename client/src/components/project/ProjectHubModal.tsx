@@ -5,9 +5,6 @@ import {
   Plus,
   Search,
   Clock,
-  Smartphone,
-  Monitor,
-  Square,
   Trash2,
   ExternalLink,
   CheckCircle2,
@@ -15,10 +12,12 @@ import {
   AlertCircle,
   Loader2,
   Video,
+  Film,
 } from 'lucide-react';
 import { ProjectRegistryEntry, FilmProject } from '../../types';
 import { NewProjectWizard } from './NewProjectWizard';
-import { ThemeCustomizer, StudioTheme } from '../ui-ux/ThemeCustomizer';
+import { StudioTheme } from '../ui-ux/ThemeCustomizer';
+import { ThemeDropdownMenu } from '../ui-ux/ThemeDropdownMenu';
 
 interface ProjectHubModalProps {
   isOpen: boolean;
@@ -193,10 +192,10 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
           </div>
         </div>
 
-        {/* Actions & Theme Customizer */}
+        {/* Actions & Theme Dropdown Menu */}
         <div className="flex items-center gap-2.5">
-          {onThemeChange && (
-            <ThemeCustomizer currentTheme={currentTheme} onThemeChange={onThemeChange} />
+          {onThemeChange && currentTheme && (
+            <ThemeDropdownMenu currentTheme={currentTheme} onThemeChange={onThemeChange} />
           )}
 
           <button
@@ -307,27 +306,44 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
                   }`}
                 >
                   <div>
-                    {/* Visual Aspect Ratio Viewport Simulation */}
+                    {/* Visual Aspect Ratio Viewport & Filmstrip Preview */}
                     <div className="w-full h-32 mb-3 rounded-xl bg-app border border-subtle flex items-center justify-center relative overflow-hidden group-hover:border-subtle/80 transition">
-                      {p.aspectRatio === '9:16' ? (
-                        <div className="w-[50px] h-[90px] rounded-lg border border-subtle bg-surface relative flex flex-col items-center justify-between p-1 shadow-inner">
-                          <div className="w-3 h-0.5 rounded-full bg-subtle" />
-                          <div className="w-full flex-1 my-1 border border-dashed border-subtle rounded flex items-center justify-center">
-                            <Smartphone className="w-3.5 h-3.5 text-accent-primary" />
-                          </div>
-                          <div className="w-3 h-0.5 rounded-full bg-subtle" />
-                        </div>
-                      ) : p.aspectRatio === '16:9' ? (
-                        <div className="w-[104px] h-[58px] rounded-lg border border-subtle bg-surface relative flex items-center justify-center shadow-inner">
-                          <div className="w-full h-full border border-dashed border-subtle rounded flex items-center justify-center">
-                            <Monitor className="w-4 h-4 text-accent-primary" />
-                          </div>
-                        </div>
+                      {p.previewThumbnailUrl ? (
+                        <img
+                          src={p.previewThumbnailUrl}
+                          alt={p.name}
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
-                        <div className="w-[66px] h-[66px] rounded-lg border border-subtle bg-surface relative flex items-center justify-center shadow-inner">
-                          <div className="w-full h-full border border-dashed border-subtle rounded flex items-center justify-center">
-                            <Square className="w-4 h-4 text-accent-primary" />
+                        <div className="w-full h-full flex flex-col justify-between p-2.5 bg-gradient-to-br from-card/90 to-app relative overflow-hidden">
+                          {/* Mini DAG Blueprint graphic header */}
+                          <div className="flex items-center justify-between z-10">
+                            <span className="text-[9px] font-mono font-bold text-accent-primary bg-app/80 px-1.5 py-0.5 rounded border border-subtle">
+                              {p.aspectRatio}
+                            </span>
+                            <span className="text-[9px] font-mono text-text-muted bg-app/80 px-1.5 py-0.5 rounded border border-subtle">
+                              {p.targetDurationSec}s
+                            </span>
                           </div>
+
+                          {/* Cinematic Center Mini-Viewport */}
+                          <div className="flex items-center justify-center gap-1.5 z-10 py-1">
+                            <div className="flex items-center gap-1.5 bg-surface/90 backdrop-blur-sm px-2.5 py-1 rounded-xl border border-subtle text-[10px] font-mono text-text-primary shadow">
+                              <Film className="w-3 h-3 text-amber-400 shrink-0" />
+                              <span className="truncate max-w-[130px] font-semibold">{p.name}</span>
+                            </div>
+                          </div>
+
+                          {/* Stage Progress Bar Preview */}
+                          <div className="flex items-center gap-1 z-10">
+                            <div className="h-1 flex-1 rounded-full bg-emerald-500/80" title="Script" />
+                            <div className="h-1 flex-1 rounded-full bg-purple-500/80" title="Assets" />
+                            <div className="h-1 flex-1 rounded-full bg-sky-500/80" title="Shots" />
+                            <div className="h-1 flex-1 rounded-full bg-amber-500/80" title="Takes" />
+                          </div>
+
+                          {/* Subtle background SVG grid pattern */}
+                          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#38BDF8_1px,transparent_1px)] [background-size:12px_12px] pointer-events-none" />
                         </div>
                       )}
 

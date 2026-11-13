@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { VersionNode, FilmProject } from '../../../types.js';
-import { Copy, Check, Pin, X } from 'lucide-react';
+import { Copy, Check, Pin, X, Sparkles } from 'lucide-react';
 
 interface ShotFloatingHudProps {
   node: VersionNode;
@@ -21,6 +21,7 @@ export const ShotFloatingHud: React.FC<ShotFloatingHudProps> = ({
 }) => {
   const [platform, setPlatform] = useState<'runway' | 'kling' | 'comfyui' | 'luma'>('runway');
   const [copied, setCopied] = useState(false);
+  const [activeSkills, setActiveSkills] = useState<string[]>(['video-director', 'take-one', 'rossark-motion']);
 
   const overrides = node.shotContextOverrides || {};
   const lens = overrides.lensFocalLength || '35mm Anamorphic';
@@ -58,8 +59,25 @@ export const ShotFloatingHud: React.FC<ShotFloatingHudProps> = ({
   const srefUrl = project.masterStyleAnchorAssetUrl || 'assets/subjects/anya/three_quarter.png';
   const richSynthesizedPrompt = `Cinematic video: ${node.prompt}, ${lens} lens at ${aperture}, camera: ${cameraMove.toLowerCase()}, warm morning dawn lighting, organic 16mm grain texture, editorial color palette #F5EFEB and #C2412D, motion: 3, duration: 5s, aspect: 9:16, resolution: 4k --sref ${srefUrl} --sw 100`;
 
-  const handleCopyPrompt = () => {
-    navigator.clipboard.writeText(richSynthesizedPrompt);
+  const handleCopyPrompt = async () => {
+    let textToCopy = richSynthesizedPrompt;
+    try {
+      const res = await fetch('http://localhost:3030/api/skills/enrich-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: node.prompt,
+          stage: 'shot',
+          activeSkillIds: activeSkills,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.enrichedPrompt) {
+        textToCopy = `Cinematic video: ${data.enrichedPrompt}, ${lens} at ${aperture}, ${cameraMove}, motion: 3, duration: 5s, aspect: ${project.aspectRatio || '9:16'} --sref ${srefUrl}`;
+      }
+    } catch {}
+
+    navigator.clipboard.writeText(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -144,6 +162,44 @@ export const ShotFloatingHud: React.FC<ShotFloatingHudProps> = ({
             <option value="f/2.8">f/2.8 (Sharp Subject)</option>
             <option value="f/4">f/4 (Deep Field)</option>
           </select>
+        </div>
+      </div>
+
+      {/* Creative Skills Injection (huashu, rossark, take-one, video-director) */}
+      <div>
+        <label className="block text-[10px] uppercase font-mono text-text-muted mb-1.5 flex items-center justify-between">
+          <span className="flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-accent-primary" /> Creative Suite Skills
+          </span>
+          <span className="text-[9px] text-accent-primary font-mono">Auto-Injected</span>
+        </label>
+        <div className="flex flex-wrap gap-1 text-[10px] font-mono">
+          {[
+            { id: 'video-director', label: '🎬 Video Director' },
+            { id: 'take-one', label: '🎯 Take-One Pin' },
+            { id: 'rossark-motion', label: '🎥 Rossark Flow' },
+            { id: 'huashu-motion', label: '⚡ Huashu Spring' },
+          ].map((skill) => {
+            const isActive = activeSkills.includes(skill.id);
+            return (
+              <button
+                key={skill.id}
+                type="button"
+                onClick={() => {
+                  setActiveSkills((prev) =>
+                    isActive ? prev.filter((id) => id !== skill.id) : [...prev, skill.id]
+                  );
+                }}
+                className={`px-2 py-1 rounded-md border text-[10px] transition ${
+                  isActive
+                    ? 'bg-accent-primary/10 border-accent-primary text-accent-primary font-bold'
+                    : 'bg-card border-subtle text-text-muted hover:text-text-primary'
+                }`}
+              >
+                {skill.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 

@@ -16,6 +16,8 @@ import {
   User,
   Video,
   Lightbulb,
+  Film,
+  Wand2,
 } from 'lucide-react';
 
 export type CanvasToolMode = 'select' | 'marquee' | 'pan';
@@ -167,6 +169,28 @@ export const FloatingCanvasToolbar: React.FC<FloatingCanvasToolbarProps> = ({
             >
               <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
               <span>Idea Premise</span>
+            </button>
+
+            <button
+              onClick={() => {
+                onAddNode('vfx');
+                setShowAddMenu(false);
+              }}
+              className="w-full flex items-center gap-2 p-2 rounded-xl text-xs text-text-primary hover:bg-card hover:text-accent-primary transition text-left"
+            >
+              <Wand2 className="w-3.5 h-3.5 text-pink-400" />
+              <span>Motion Graphics & VFX</span>
+            </button>
+
+            <button
+              onClick={() => {
+                onAddNode('assembly');
+                setShowAddMenu(false);
+              }}
+              className="w-full flex items-center gap-2 p-2 rounded-xl text-xs text-text-primary hover:bg-card hover:text-accent-primary transition text-left"
+            >
+              <Film className="w-3.5 h-3.5 text-accent-primary" />
+              <span>Master Composition</span>
             </button>
           </div>
         )}

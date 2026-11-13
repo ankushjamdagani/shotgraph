@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { VersionNode, FilmProject } from '../../../types.js';
-import { Play, Pause, Star, Pin, X, Upload } from 'lucide-react';
+import { Play, Pause, Star, Pin, X, Upload, Sparkles, Copy, Check } from 'lucide-react';
+import { toast } from '../../../services/toastService.js';
 
 interface TakeFloatingHudProps {
   node: VersionNode;
@@ -20,8 +21,35 @@ export const TakeFloatingHud: React.FC<TakeFloatingHudProps> = ({
   onTogglePin,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [coverageType, setCoverageType] = useState('Master Angle');
+  const [copied, setCopied] = useState(false);
+  const [activeSkills, setActiveSkills] = useState(['take-one', 'video-director']);
 
   const isActiveCut = node.sceneId ? project.activeCut[node.sceneId] === node.id : false;
+
+  const handleCopyEnrichedPrompt = async () => {
+    let basePrompt = node.prompt || 'Cinematic footage take';
+    try {
+      const res = await fetch('http://localhost:3030/api/skills/enrich-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: `${basePrompt} [Coverage: ${coverageType}]`,
+          stage: 'take',
+          activeSkillIds: activeSkills,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.enrichedPrompt) {
+        basePrompt = data.enrichedPrompt;
+      }
+    } catch {}
+
+    navigator.clipboard.writeText(basePrompt);
+    setCopied(true);
+    toast.success('Take-One prompt with seed & coverage copied!');
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleMakeActiveCut = async () => {
     if (!node.sceneId) return;
@@ -105,6 +133,75 @@ export const TakeFloatingHud: React.FC<TakeFloatingHudProps> = ({
         <div>Duration: <span className="text-text-primary">5.0s</span></div>
         <div>Format: <span className="text-text-primary">4K 24fps</span></div>
         <div>Resolution: <span className="text-text-primary">2160x3840</span></div>
+      </div>
+
+      {/* Take-One Coverage Matrix & Actor Seed Pinning */}
+      <div className="p-2.5 rounded-xl bg-card border border-subtle space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-accent-primary" />
+            <span className="text-[10px] font-bold font-mono text-text-primary uppercase tracking-wide">
+              Take-One Consistency
+            </span>
+            <span className="text-[8px] px-1 py-0.2 rounded bg-surface text-accent-primary font-mono border border-subtle">
+              Seed #8492019
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handleCopyEnrichedPrompt}
+            className="px-2 py-0.5 rounded-md bg-accent-primary/10 hover:bg-accent-primary/20 text-accent-primary text-[10px] font-mono font-bold flex items-center gap-1 transition"
+          >
+            {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+            <span>{copied ? 'Copied' : 'Take Prompt'}</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-1.5 text-[10px] font-mono">
+          <div>
+            <label className="block text-[9px] uppercase text-text-muted mb-0.5">Coverage Angle</label>
+            <select
+              value={coverageType}
+              onChange={(e) => setCoverageType(e.target.value)}
+              className="w-full p-1 rounded-lg bg-surface border border-subtle text-text-primary font-mono text-[10px] focus:outline-none focus:border-accent-primary"
+            >
+              <option value="Master Angle">Master Angle (Full Scene)</option>
+              <option value="OTS Over-the-Shoulder">OTS (Over-the-Shoulder)</option>
+              <option value="Medium Close-Up">Medium Close-Up (Reaction)</option>
+              <option value="Choker Macro">Choker Macro (Eyes/Detail)</option>
+              <option value="Dutch Angle">Dutch Angle (Tension)</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-[9px] uppercase text-text-muted mb-0.5">Creative Skills</label>
+            <div className="flex items-center gap-1 pt-0.5">
+              {[
+                { id: 'take-one', label: '🎯 Seed' },
+                { id: 'video-director', label: '🎬 Optics' },
+              ].map((s) => {
+                const isAct = activeSkills.includes(s.id);
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveSkills((prev) =>
+                        isAct ? prev.filter((id) => id !== s.id) : [...prev, s.id]
+                      );
+                    }}
+                    className={`flex-1 py-1 rounded text-[9px] border transition ${
+                      isAct
+                        ? 'bg-accent-primary/10 border-accent-primary text-accent-primary font-bold'
+                        : 'bg-surface border-subtle text-text-muted'
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Active Cut Button */}

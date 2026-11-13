@@ -45,16 +45,86 @@ export class AgentManager {
       },
     ],
     [
-      'hyperframes-worker',
+      'video-director',
       {
-        agentId: 'hyperframes-worker',
-        name: 'HyperFrames Engine',
-        modelEngine: 'hyperframes',
-        color: '#F97316', // Orange
+        agentId: 'video-director',
+        name: 'Video Director (win4r)',
+        modelEngine: 'external',
+        color: '#EAB308', // Amber Gold
         activeNodeId: null,
         targetTimelineBlockId: null,
         status: 'idle',
-        activityMessage: 'Ready for rendering, Kokoro TTS, and transcription',
+        activityMessage: 'Anamorphic lens optics, volumetric lighting, and camera blocking active',
+        updatedAt: Date.now(),
+      },
+    ],
+    [
+      'take-one',
+      {
+        agentId: 'take-one',
+        name: 'Take-One Director (talsiach)',
+        modelEngine: 'external',
+        color: '#EC4899', // Pink
+        activeNodeId: null,
+        targetTimelineBlockId: null,
+        status: 'idle',
+        activityMessage: 'Actor facial consistency and multi-take coverage matrix locked',
+        updatedAt: Date.now(),
+      },
+    ],
+    [
+      'huashu-motion',
+      {
+        agentId: 'huashu-motion',
+        name: 'Huashu Motion (alchaincyf)',
+        modelEngine: 'external',
+        color: '#06B6D4', // Cyan
+        activeNodeId: null,
+        targetTimelineBlockId: null,
+        status: 'idle',
+        activityMessage: 'Kinetic typography and Remotion frame sync ready',
+        updatedAt: Date.now(),
+      },
+    ],
+    [
+      'rossark-motion',
+      {
+        agentId: 'rossark-motion',
+        name: 'Rossark Motion (rossark0)',
+        modelEngine: 'external',
+        color: '#8B5CF6', // Purple
+        activeNodeId: null,
+        targetTimelineBlockId: null,
+        status: 'idle',
+        activityMessage: 'Natural 60fps physics, weight shifts, and easing curves calibrated',
+        updatedAt: Date.now(),
+      },
+    ],
+    [
+      'earshot-sound',
+      {
+        agentId: 'earshot-sound',
+        name: 'Earshot Sound Designer (Leonxlnx)',
+        modelEngine: 'external',
+        color: '#10B981', // Emerald
+        activeNodeId: null,
+        targetTimelineBlockId: null,
+        status: 'idle',
+        activityMessage: 'Foley sound cues and acoustic scene analysis ready',
+        updatedAt: Date.now(),
+      },
+    ],
+    [
+      'cook-editor',
+      {
+        agentId: 'cook-editor',
+        name: 'Cook Editorial Chef (Leonxlnx)',
+        modelEngine: 'external',
+        color: '#F43F5E', // Rose
+        activeNodeId: null,
+        targetTimelineBlockId: null,
+        status: 'idle',
+        activityMessage: 'Rhythm cuts, speed ramps, and montage recipe assembly active',
         updatedAt: Date.now(),
       },
     ],

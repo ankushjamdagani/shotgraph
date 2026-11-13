@@ -55,6 +55,7 @@ export interface VersionNode {
   prompt: string;
   boundSubjectAnchorIds?: string[];
   position?: { x: number; y: number }; // 2D freeform spatial coordinates
+  width?: number; // Custom resized width in px (default 320)
   colorTag?: 'default' | 'white' | 'blue' | 'purple' | 'emerald' | 'amber';
   isPinned?: boolean;
   isStale?: boolean;
@@ -89,6 +90,7 @@ export interface VersionNode {
     alphaOverlayUrl?: string; // ProRes 4444 MOV with alpha
     wordTimingsJson?: string;
     scriptBeats?: any[];
+    metadata?: Record<string, any>;
   };
   metadata: {
     createdAt: string;

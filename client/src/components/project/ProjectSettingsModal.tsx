@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FilmProject } from '../../types.js';
 import { StudioTheme, THEME_METADATA } from '../ui-ux/ThemeCustomizer.js';
-import { X, Sliders, Type, Palette, Check, Save } from 'lucide-react';
+import { X, Sliders, Type, Palette, Check, Save, Sparkles, ShieldAlert, Plus, Trash2 } from 'lucide-react';
 import { toast } from '../../services/toastService.js';
 
 interface ProjectSettingsModalProps {
@@ -13,7 +13,7 @@ interface ProjectSettingsModalProps {
   onThemeChange: (theme: StudioTheme) => void;
 }
 
-type SettingsTab = 'general' | 'typography' | 'theme';
+type SettingsTab = 'general' | 'typography' | 'theme' | 'taste';
 
 export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
   isOpen,
@@ -32,6 +32,18 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
   const [fps, setFps] = useState(project.fps || 30);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Taste DNA State
+  const [styleMarkdown, setStyleMarkdown] = useState(project.styleMarkdown || '');
+  const [basePresetId, setBasePresetId] = useState(project.basePresetId || 'liquid_glass');
+  const [accentColor, setAccentColor] = useState(
+    project.styleOverrides?.palette?.accent || project.styleTokens?.palette?.accent || '#38BDF8'
+  );
+  const [cutPacing, setCutPacing] = useState(
+    project.styleOverrides?.pacing?.avgCutDurationSec || project.styleTokens?.pacing?.avgCutDurationSec || 1.6
+  );
+  const [constraints, setConstraints] = useState<string[]>(project.additionalConstraints || []);
+  const [newConstraint, setNewConstraint] = useState('');
+
   if (!isOpen) return null;
 
   const handleSaveGeneral = async () => {
@@ -43,6 +55,14 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
         aspectRatio: aspectRatio as any,
         targetDurationSec: Number(targetDurationSec),
         fps: Number(fps),
+        styleMarkdown,
+        basePresetId,
+        styleOverrides: {
+          ...project.styleOverrides,
+          palette: { ...project.styleOverrides?.palette, accent: accentColor },
+          pacing: { ...project.styleOverrides?.pacing, avgCutDurationSec: cutPacing },
+        },
+        additionalConstraints: constraints,
       };
 
       const res = await fetch(`http://localhost:3030/api/projects/${project.id}`, {
@@ -53,6 +73,10 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
           aspectRatio,
           targetDurationSec: Number(targetDurationSec),
           fps: Number(fps),
+          styleMarkdown,
+          basePresetId,
+          styleOverrides: updatedProject.styleOverrides,
+          additionalConstraints: constraints,
         }),
       });
 
@@ -139,6 +163,18 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
           >
             <Palette className="w-3.5 h-3.5" />
             <span>Visual Theme</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('taste')}
+            className={`flex items-center gap-2 px-4 py-2 border-b-2 font-bold text-xs font-mono transition ${
+              activeTab === 'taste'
+                ? 'border-accent-primary text-text-primary'
+                : 'border-transparent text-text-muted hover:text-text-primary'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>Taste & Style DNA</span>
           </button>
         </div>
 
@@ -317,6 +353,152 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                     );
                   })}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'taste' && (
+            <div className="space-y-6">
+              {/* Base Aesthetic Presets */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-text-muted uppercase font-mono">
+                  Director Base Preset
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { id: 'liquid_glass', label: 'Liquid Glass', desc: 'Glossy modern tech, refractive translucency' },
+                    { id: 'cinema_noir', label: 'Cinema Noir', desc: 'High-contrast shadow play, moody anamorphic' },
+                    { id: 'swiss_brutalist', label: 'Swiss Brutalism', desc: 'Monochrome grids, bold grotesque fonts' },
+                    { id: 'anime_cyberpunk', label: 'Cyberpunk Neon', desc: 'Vibrant chromatic glow & anime line art' },
+                  ].map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => setBasePresetId(preset.id)}
+                      className={`p-3 rounded-2xl border text-left transition ${
+                        basePresetId === preset.id
+                          ? 'border-accent-primary bg-card ring-1 ring-accent-primary'
+                          : 'border-subtle bg-card/60 hover:bg-card'
+                      }`}
+                    >
+                      <div className="text-xs font-bold text-text-primary">{preset.label}</div>
+                      <div className="text-[10px] text-text-muted mt-1 leading-snug">{preset.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Accent Color & Pacing */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-text-muted uppercase font-mono">
+                    Palette Accent Color
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={accentColor}
+                      onChange={(e) => setAccentColor(e.target.value)}
+                      className="w-9 h-9 rounded-xl border border-subtle bg-card cursor-pointer p-0.5"
+                    />
+                    <input
+                      type="text"
+                      value={accentColor}
+                      onChange={(e) => setAccentColor(e.target.value)}
+                      className="flex-1 px-3 py-2 bg-card border border-subtle rounded-xl text-xs font-mono text-text-primary"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-text-muted uppercase font-mono">
+                      Average Cut Pacing (Sec)
+                    </label>
+                    <span className="text-xs font-mono font-bold text-accent-primary">{cutPacing}s</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="5.0"
+                    step="0.1"
+                    value={cutPacing}
+                    onChange={(e) => setCutPacing(parseFloat(e.target.value))}
+                    className="w-full accent-accent-primary cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] font-mono text-text-muted">
+                    <span>0.5s (Montage Blitz)</span>
+                    <span>5.0s (Cinematic Breathe)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Negative Aesthetic Constraints */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-text-muted uppercase font-mono flex items-center gap-1.5">
+                  <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+                  <span>Negative Guard Constraints</span>
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {constraints.map((c, i) => (
+                    <span
+                      key={i}
+                      className="px-2.5 py-1 rounded-xl bg-card border border-subtle text-[11px] font-mono text-text-primary flex items-center gap-1.5"
+                    >
+                      <span>{c}</span>
+                      <button
+                        type="button"
+                        onClick={() => setConstraints(constraints.filter((_, idx) => idx !== i))}
+                        className="text-text-muted hover:text-rose-400"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newConstraint}
+                    onChange={(e) => setNewConstraint(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newConstraint.trim()) {
+                        e.preventDefault();
+                        setConstraints([...constraints, newConstraint.trim()]);
+                        setNewConstraint('');
+                      }
+                    }}
+                    placeholder="Add negative style guard (e.g. no 3D cartoon, no oversaturated bloom)..."
+                    className="flex-1 px-3 py-1.5 bg-card border border-subtle rounded-xl text-xs text-text-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (newConstraint.trim()) {
+                        setConstraints([...constraints, newConstraint.trim()]);
+                        setNewConstraint('');
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-card border border-subtle rounded-xl text-xs font-bold hover:bg-subtle text-text-primary flex items-center gap-1"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Add</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Raw STYLE.md Guidelines Editor */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-text-muted uppercase font-mono">
+                  Master Style Directives (`STYLE.md`)
+                </label>
+                <textarea
+                  value={styleMarkdown}
+                  onChange={(e) => setStyleMarkdown(e.target.value)}
+                  rows={5}
+                  placeholder="# Director Visual System..."
+                  className="w-full px-3 py-2 bg-card border border-subtle rounded-xl text-xs font-mono text-text-primary leading-relaxed focus:outline-none focus:border-accent-primary"
+                />
               </div>
             </div>
           )}

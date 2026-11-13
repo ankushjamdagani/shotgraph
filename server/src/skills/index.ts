@@ -26,3 +26,4 @@ export * from './script/skillBeatScriptwriter.js';
 export * from './prompt/skillPromptSynthesizer.js';
 export * from './asset/skillAssetGenerator.js';
 export * from './export/skillFCPXMLBuilder.js';
+export * from './external/creativeSuite.js';

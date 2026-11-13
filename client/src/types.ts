@@ -48,6 +48,7 @@ export interface VersionNode {
   prompt: string;
   boundSubjectAnchorIds?: string[];
   position?: { x: number; y: number };
+  width?: number;
   colorTag?: 'default' | 'white' | 'blue' | 'purple' | 'emerald' | 'amber';
   isPinned?: boolean;
   isStale?: boolean;
@@ -82,6 +83,7 @@ export interface VersionNode {
     alphaOverlayUrl?: string;
     wordTimingsJson?: string;
     scriptBeats?: any[];
+    metadata?: Record<string, any>;
   };
   metadata: {
     createdAt: string;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Handle, Position } from '@xyflow/react';
+import { Handle, Position, NodeResizeControl, ResizeControlVariant } from '@xyflow/react';
 import { VersionNode } from '../../types.js';
 import {
   GitBranch,
@@ -21,7 +21,24 @@ import {
   RotateCw,
   Play,
   Volume2,
+  Plus,
 } from 'lucide-react';
+
+const NEXT_STAGE_MAP: Record<string, Array<{ stage: string; label: string; icon: string }>> = {
+  ideation: [{ stage: 'script', label: 'Script Beat', icon: '📝' }],
+  taste: [{ stage: 'script', label: 'Script Beat', icon: '📝' }],
+  script: [
+    { stage: 'assets', label: 'Character Asset', icon: '👤' },
+    { stage: 'shot', label: 'Shot Framing', icon: '🎥' },
+  ],
+  assets: [{ stage: 'shot', label: 'Shot Framing', icon: '🎥' }],
+  shot: [{ stage: 'footage', label: 'Video Take', icon: '🎬' }],
+  storyboard: [{ stage: 'footage', label: 'Video Take', icon: '🎬' }],
+  footage: [{ stage: 'vfx', label: 'VFX / Motion', icon: '✨' }],
+  motion: [{ stage: 'vfx', label: 'VFX / Motion', icon: '✨' }],
+  vfx: [{ stage: 'assembly', label: 'Active Cut', icon: '🎞️' }],
+  assembly: [{ stage: 'render', label: 'Final Master', icon: '🚀' }],
+};
 
 interface CustomVersionNodeProps {
   data: {
@@ -38,6 +55,8 @@ interface CustomVersionNodeProps {
     onSetActiveCut: (sceneId: string, nodeId: string) => void;
     onMediaDrop: (nodeId: string, file: File) => void;
     onResyncStale?: (nodeId: string) => void;
+    onResize?: (nodeId: string, width: number) => void;
+    onAutoAddNextStage?: (nodeId: string, nextStage: string) => void;
   };
 }
 
@@ -56,12 +75,18 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
     onSetActiveCut,
     onMediaDrop,
     onResyncStale,
+    onResize,
+    onAutoAddNextStage,
   } = data;
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(node.title);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [showNextStagePicker, setShowNextStagePicker] = useState(false);
+
+  const nextStages = NEXT_STAGE_MAP[node.stage];
 
   // Stage Design Configurations (Silhouettes & Accents)
   const getStageDesign = (stage: string) => {
@@ -170,11 +195,17 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
 
   return (
     <div
+      style={{ width: node.width || 320 }}
       onClick={() => {
         onSelect(node.id);
         if (onToggleHud) onToggleHud(node.id);
       }}
       onDoubleClick={() => onToggleHud && onToggleHud(node.id)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => {
+        setIsHovered(false);
+        setShowNextStagePicker(false);
+      }}
       onDragOver={(e) => {
         e.preventDefault();
         setIsDragOver(true);
@@ -187,10 +218,35 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
           onMediaDrop(node.id, e.dataTransfer.files[0]);
         }
       }}
-      className={`group relative w-76 rounded-2xl bg-surface transition-all duration-150 cursor-pointer shadow-xl border overflow-hidden ${getColorTagBorder(
+      className={`group relative rounded-2xl bg-surface transition-shadow duration-150 cursor-pointer shadow-xl border overflow-hidden ${getColorTagBorder(
         node.colorTag
       )} ${isDragOver ? 'ring-2 ring-emerald-500 bg-emerald-950/20' : ''}`}
     >
+      {isSelected && (
+        <>
+          <NodeResizeControl
+            position="right"
+            variant={ResizeControlVariant.Line}
+            minWidth={280}
+            maxWidth={640}
+            className="!border-r-2 !border-dashed !border-accent-primary"
+            onResize={(_e, params) => {
+              if (onResize) onResize(node.id, params.width);
+            }}
+          />
+          <NodeResizeControl
+            position="left"
+            variant={ResizeControlVariant.Line}
+            minWidth={280}
+            maxWidth={640}
+            className="!border-l-2 !border-dashed !border-accent-primary"
+            onResize={(_e, params) => {
+              if (onResize) onResize(node.id, params.width);
+            }}
+          />
+        </>
+      )}
+
       <Handle type="target" position={Position.Left} className="!bg-accent-primary !w-2.5 !h-2.5" />
       <Handle type="target" position={Position.Top} className="!bg-accent-primary !w-2.5 !h-2.5" id="top" />
 
@@ -501,6 +557,59 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
 
       <Handle type="source" position={Position.Right} className="!bg-[#E4E4E7] !w-2.5 !h-2.5" />
       <Handle type="source" position={Position.Bottom} className="!bg-[#E4E4E7] !w-2.5 !h-2.5" id="bottom" />
+
+      {/* CONTEXTUAL AUTO-ADD NEXT STAGE BADGE ON HOVER */}
+      {isHovered && nextStages && nextStages.length > 0 && (
+        <div className="absolute -right-3.5 top-1/2 -translate-y-1/2 z-30 flex items-center animate-in fade-in zoom-in-95 duration-100">
+          {nextStages.length === 1 ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onAutoAddNextStage) onAutoAddNextStage(node.id, nextStages[0].stage);
+              }}
+              className="px-2 py-0.5 rounded-full bg-accent-primary text-app font-bold text-[9px] shadow-lg flex items-center gap-1 hover:scale-105 transition font-mono border border-surface cursor-pointer"
+              title={`Auto-Add Next Stage: ${nextStages[0].label}`}
+            >
+              <Plus className="w-2.5 h-2.5" />
+              <span>{nextStages[0].label}</span>
+            </button>
+          ) : (
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowNextStagePicker(!showNextStagePicker);
+                }}
+                className="w-5 h-5 rounded-full bg-accent-primary text-app font-bold text-[10px] shadow-lg flex items-center justify-center hover:scale-105 transition font-mono border border-surface cursor-pointer"
+                title="Auto-Add Next Stage"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+              {showNextStagePicker && (
+                <div className="absolute left-6 top-1/2 -translate-y-1/2 w-40 bg-surface border border-subtle rounded-xl shadow-2xl p-1 z-40 space-y-0.5 animate-scale-in">
+                  <div className="text-[9px] font-mono text-text-muted px-2 py-0.5 uppercase font-bold">
+                    Add Next Stage
+                  </div>
+                  {nextStages.map((nxt) => (
+                    <button
+                      key={nxt.stage}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowNextStagePicker(false);
+                        if (onAutoAddNextStage) onAutoAddNextStage(node.id, nxt.stage);
+                      }}
+                      className="w-full text-left px-2 py-1.5 rounded-lg text-[10px] font-semibold text-text-primary hover:bg-card hover:text-accent-primary transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <span>{nxt.icon}</span>
+                      <span>{nxt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

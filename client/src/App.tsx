@@ -9,19 +9,19 @@ import { SubjectManagerModal } from './components/project/SubjectManagerModal.js
 import { CommandPalette } from './components/palette/CommandPalette.js';
 import { ProjectHubModal } from './components/project/ProjectHubModal.js';
 import { ProjectSettingsModal } from './components/project/ProjectSettingsModal.js';
+import { ProjectNameMenu } from './components/project/ProjectNameMenu.js';
 import { StudioTheme } from './components/ui-ux/ThemeCustomizer.js';
 import { StudioErrorBoundary } from './components/common/StudioErrorBoundary.js';
 import { ToastContainer } from './components/common/ToastContainer.js';
 import {
-  Sliders,
   Film,
   Command as CmdIcon,
   Video,
   Folder,
-  ChevronDown,
   LayoutGrid,
   User,
   Settings,
+  Trash2,
 } from 'lucide-react';
 
 function App() {
@@ -37,6 +37,8 @@ function App() {
   const [isSubjectManagerOpen, setIsSubjectManagerOpen] = useState(false);
   const [isDaVinciExportOpen, setIsDaVinciExportOpen] = useState(false);
   const [isCmdPaletteOpen, setIsCmdPaletteOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeletingActiveProject, setIsDeletingActiveProject] = useState(false);
   const [trimmerData, setTrimmerData] = useState<{
     isOpen: boolean;
     fileName: string;
@@ -268,6 +270,27 @@ function App() {
     );
   }
 
+  const handleConfirmDeleteActiveProject = async (moveToTrash: boolean) => {
+    if (!project) return;
+    setIsDeletingActiveProject(true);
+    try {
+      const res = await fetch(`http://localhost:3030/api/projects/${project.id}/remove`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ moveToTrash }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setProject(null);
+        setIsDeleteModalOpen(false);
+      }
+    } catch (err) {
+      console.error('Error deleting project:', err);
+    } finally {
+      setIsDeletingActiveProject(false);
+    }
+  };
+
   // Root view: When on root (no project loaded), show Projects Page directly!
   if (!project) {
     return (
@@ -314,21 +337,16 @@ function App() {
             <span>Projects</span>
           </button>
 
-          {/* Active Project Switcher Pill */}
-          <button
-            onClick={() => setIsProjectHubOpen(true)}
-            className="flex items-center gap-2 px-3 py-1 rounded-xl bg-card hover:bg-subtle border border-subtle text-text-primary transition group"
-            title="Switch Project (Cmd+O)"
-          >
-            <Folder className="w-3.5 h-3.5 text-amber-400" />
-            <span className="text-xs font-bold text-text-primary transition truncate max-w-[200px]">
-              {project.name}
-            </span>
-            <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-app text-text-muted border border-subtle">
-              {project.aspectRatio} • {totalDuration}s
-            </span>
-            <ChevronDown className="w-3 h-3 text-text-muted group-hover:text-text-primary" />
-          </button>
+          {/* Active Project Switcher Menu Dropdown */}
+          <ProjectNameMenu
+            project={project}
+            onUpdateProject={(updated) => setProject(updated)}
+            onSelectProject={(newProj) => handleSelectProject(newProj)}
+            onOpenProjectSettings={() => setIsProjectSettingsOpen(true)}
+            onOpenDaVinciExport={() => setIsDaVinciExportOpen(true)}
+            onOpenProjectsHub={() => setIsProjectHubOpen(true)}
+            onDeleteProject={() => setIsDeleteModalOpen(true)}
+          />
         </div>
 
         {/* Center / Right Control Strip */}
@@ -336,7 +354,7 @@ function App() {
           <button
             onClick={() => setIsProjectSettingsOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-card border border-subtle hover:bg-subtle text-text-primary transition"
-            title="Project Settings (Cmd+,)"
+            title="Project Settings & Taste DNA (Cmd+,)"
           >
             <Settings className="w-3.5 h-3.5 text-text-muted" />
             <span>Settings</span>
@@ -351,14 +369,6 @@ function App() {
             <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-subtle text-purple-300">
               {project.subjectAnchors?.length || 0}
             </span>
-          </button>
-
-          <button
-            onClick={() => setIsTasteMixerOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-card border border-subtle hover:bg-subtle text-text-primary transition"
-          >
-            <Sliders className="w-3.5 h-3.5 text-amber-400" />
-            <span>Taste & Style (`STYLE.md`)</span>
           </button>
 
           <button
@@ -496,6 +506,74 @@ function App() {
         }}
         onToggleSafeAreas={() => {}}
       />
+
+      {/* Active Project Delete / Remove Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-150 select-none">
+          <div className="relative w-full max-w-md bg-surface border border-subtle rounded-2xl shadow-2xl p-6 text-text-primary space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-text-primary">Delete / Remove Project</h3>
+                <p className="text-xs text-text-muted">Choose removal method for active project</p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-card border border-subtle space-y-1">
+              <div className="text-xs font-bold text-text-primary truncate">{project.name}</div>
+              <div className="text-[11px] font-mono text-text-muted truncate flex items-center gap-1.5">
+                <Folder className="w-3.5 h-3.5 text-text-muted/60 shrink-0" />
+                <span className="truncate">{project.projectRoot}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-1">
+              <button
+                onClick={() => handleConfirmDeleteActiveProject(true)}
+                disabled={isDeletingActiveProject}
+                className="w-full p-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-left transition flex items-center justify-between group disabled:opacity-50"
+              >
+                <div>
+                  <div className="text-xs font-bold text-red-400 flex items-center gap-1.5">
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete from System (Move to Trash)</span>
+                  </div>
+                  <div className="text-[10px] text-text-muted mt-0.5">
+                    Permanently unlists from Studio and moves project directory to Mac Trash.
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleConfirmDeleteActiveProject(false)}
+                disabled={isDeletingActiveProject}
+                className="w-full p-3 rounded-xl bg-card hover:bg-subtle/50 border border-subtle text-left transition flex items-center justify-between group disabled:opacity-50"
+              >
+                <div>
+                  <div className="text-xs font-bold text-text-primary">
+                    Remove from Studio Only
+                  </div>
+                  <div className="text-[10px] text-text-muted mt-0.5">
+                    Unlists project from Studio hub while keeping disk files untouched.
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-subtle">
+              <button
+                onClick={() => setIsDeleteModalOpen(false)}
+                disabled={isDeletingActiveProject}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-text-muted hover:text-text-primary transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Global Interactive Toast Notification System */}
       <ToastContainer />

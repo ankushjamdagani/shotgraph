@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { SkillDefinition, SkillExecutionContext } from '../core/types.js';
+import { enrichPromptWithCreativeSkills } from '../external/creativeSuite.js';
 
 export const PromptSynthesizerInputSchema = z.object({
   targetPlatform: z
@@ -7,6 +8,7 @@ export const PromptSynthesizerInputSchema = z.object({
     .optional()
     .default('runway'),
   shotConcept: z.string(), // What the shot needs to depict
+  creativeSkills: z.array(z.string()).optional().default(['video-director', 'take-one', 'rossark-motion']),
   aspectRatio: z.enum(['9:16', '16:9', '1:1']).optional().default('9:16'),
   durationSec: z.number().optional().default(4), // derived from scene.targetDurationSec
   fps: z.number().optional().default(30),
@@ -213,6 +215,14 @@ export const skillPromptSynthesizer: SkillDefinition<PromptSynthesizerInput, Pro
     const continuityText = input.continuityContext ? ` Continuity: ${input.continuityContext}.` : '';
     const spokenText = input.spokenVoiceover ? ` Spoken line aligned: "${input.spokenVoiceover}".` : '';
 
+    // Enrich shotConcept with creative skills directives (Video Director, Take-One, Rossark Motion)
+    const creativeResult = enrichPromptWithCreativeSkills(
+      input.shotConcept,
+      'shot',
+      input.creativeSkills || ['video-director', 'take-one', 'rossark-motion']
+    );
+    const enrichedConcept = creativeResult.enrichedPrompt;
+
     // Motion score mapping
     const motionSpeedMap: Record<string, { runwayMotion: number; label: string }> = {
       slow_cinematic: { runwayMotion: 3, label: 'gentle cinematic cadence' },
@@ -237,7 +247,7 @@ export const skillPromptSynthesizer: SkillDefinition<PromptSynthesizerInput, Pro
     const allPlatformPrompts: Record<string, PlatformPromptDetail> = {};
 
     // A. Runway Gen-3
-    const runwayCore = `Cinematic video: ${subjectAnchorPromptText}${input.shotConcept}, ${shotTypeLabel}, ${moveDetails.narrative}, ${lightingAndLens}, color palette influenced by ${palette.background} and ${palette.accent}, ${styleKeywords}.${continuityText}`;
+    const runwayCore = `Cinematic video: ${subjectAnchorPromptText}${enrichedConcept}, ${shotTypeLabel}, ${moveDetails.narrative}, ${lightingAndLens}, color palette influenced by ${palette.background} and ${palette.accent}, ${styleKeywords}.${continuityText}`;
     const runwayParams = `${moveDetails.runwayTag}, motion: ${motionInfo.runwayMotion}, duration: ${runwayDuration}, aspect: ${input.aspectRatio}, resolution: 4k`;
     allPlatformPrompts['runway'] = {
       platform: 'Runway Gen-3',
@@ -249,7 +259,7 @@ export const skillPromptSynthesizer: SkillDefinition<PromptSynthesizerInput, Pro
     };
 
     // B. Kling 1.5 / Pro
-    const klingCore = `Shot of ${subjectAnchorPromptText}${input.shotConcept}, ${shotTypeLabel}, ${moveDetails.narrative}, ${lightingAndLens}, color tones of ${palette.accent}, ${styleKeywords}.${spokenText}`;
+    const klingCore = `Shot of ${subjectAnchorPromptText}${enrichedConcept}, ${shotTypeLabel}, ${moveDetails.narrative}, ${lightingAndLens}, color tones of ${palette.accent}, ${styleKeywords}.${spokenText}`;
     const klingFull = `${klingCore}\n${moveDetails.klingTag}, Quality: Pro Mode, Duration: ${runwayDuration}\nNegative: ${combinedNegativeGuards}`;
     allPlatformPrompts['kling'] = {
       platform: 'Kling 1.5 / Pro',
@@ -262,7 +272,7 @@ export const skillPromptSynthesizer: SkillDefinition<PromptSynthesizerInput, Pro
     };
 
     // C. Luma Dream Machine
-    const lumaCore = `${subjectAnchorPromptText}${input.shotConcept}, ${shotTypeLabel}, physical camera trajectory with ${moveDetails.narrative}, ${lightingAndLens}, consistent palette (${palette.background}, ${palette.accent}), seamless temporal continuity, ultra-detailed 4k.${continuityText}`;
+    const lumaCore = `${subjectAnchorPromptText}${enrichedConcept}, ${shotTypeLabel}, physical camera trajectory with ${moveDetails.narrative}, ${lightingAndLens}, consistent palette (${palette.background}, ${palette.accent}), seamless temporal continuity, ultra-detailed 4k.${continuityText}`;
     allPlatformPrompts['luma'] = {
       platform: 'Luma Dream Machine',
       prompt: lumaCore,
@@ -273,7 +283,7 @@ export const skillPromptSynthesizer: SkillDefinition<PromptSynthesizerInput, Pro
     };
 
     // D. Minimax / Hailuo
-    const minimaxPrompt = `A high-end cinematic take of ${subjectAnchorPromptText}${input.shotConcept}. The shot is framed as a ${shotTypeLabel} captured on a ${lens} lens at ${aperture}. ${moveDetails.narrative} with a ${motionInfo.label}. The scene is illuminated by ${lightingAndLens}, with color harmony balanced around ${palette.accent} and ${palette.background}. Motion remains stable, temporally coherent, and free of anatomical or perspective distortion.${continuityText}`;
+    const minimaxPrompt = `A high-end cinematic take of ${subjectAnchorPromptText}${enrichedConcept}. The shot is framed as a ${shotTypeLabel} captured on a ${lens} lens at ${aperture}. ${moveDetails.narrative} with a ${motionInfo.label}. The scene is illuminated by ${lightingAndLens}, with color harmony balanced around ${palette.accent} and ${palette.background}. Motion remains stable, temporally coherent, and free of anatomical or perspective distortion.${continuityText}`;
     allPlatformPrompts['minimax'] = {
       platform: 'Minimax / Hailuo',
       prompt: minimaxPrompt,
@@ -283,7 +293,7 @@ export const skillPromptSynthesizer: SkillDefinition<PromptSynthesizerInput, Pro
     };
 
     // E. Local ComfyUI / AnimateDiff / SVD
-    const comfyPositive = `${subjectAnchorPromptText}${input.shotConcept}, ${shotTypeLabel}, ${lens}, ${aperture}, ${moveDetails.label}, ${lightingAndLens}, ${styleKeywords}, palette ${palette.accent}`;
+    const comfyPositive = `${subjectAnchorPromptText}${enrichedConcept}, ${shotTypeLabel}, ${lens}, ${aperture}, ${moveDetails.label}, ${lightingAndLens}, ${styleKeywords}, palette ${palette.accent}`;
     const comfyFull = `Prompt: ${comfyPositive}\nNegative: ${combinedNegativeGuards}\n[ComfyUI Settings]: Width=${dims.width}, Height=${dims.height}, Frames=${totalFrames}, FPS=${fps}, CFG=7.5, MotionBucket=127`;
     allPlatformPrompts['comfyui'] = {
       platform: 'Local ComfyUI',
