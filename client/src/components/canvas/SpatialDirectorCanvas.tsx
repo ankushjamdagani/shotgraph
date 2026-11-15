@@ -6,6 +6,7 @@ import {
   MiniMap,
   Node,
   Edge,
+  Connection,
   BackgroundVariant,
   MarkerType,
   useReactFlow,
@@ -15,9 +16,18 @@ import {
 } from '@xyflow/react';
 import { CustomVersionNode } from '../tree/CustomVersionNode.js';
 import { StickyNoteNode, StickyColor } from '../tree/StickyNoteNode.js';
+import { AssetGroupFrame } from './frames/AssetGroupFrame.js';
+import { PrevisThreeJsNode } from './nodes/PrevisThreeJsNode.js';
 import { FloatingCanvasToolbar, CanvasToolMode } from './FloatingCanvasToolbar.js';
 import { AgentCursorOverlay } from '../tree/AgentCursorOverlay.js';
-import { FilmProject, AgentPresence, VersionNode } from '../../types.js';
+import { FilmProject, AgentPresence, VersionNode, GraphEdge } from '../../types.js';
+import {
+  wouldCreateCycle,
+  getActiveLineageNodeIds,
+  arePortsCompatible,
+  getDefaultPortsForType,
+  PORT_COLOR_MAP,
+} from '../../utils/graphTopology.js';
 import { IdeaFloatingHud } from './hud/IdeaFloatingHud.js';
 import { TasteFloatingHud } from './hud/TasteFloatingHud.js';
 import { AssetFloatingHud } from './hud/AssetFloatingHud.js';
@@ -64,6 +74,8 @@ interface SpatialDirectorCanvasProps {
 const nodeTypes: Record<string, React.ComponentType<any>> = {
   customVersion: CustomVersionNode,
   stickyNote: StickyNoteNode,
+  assetGroupFrame: AssetGroupFrame,
+  previsThreeJs: PrevisThreeJsNode,
 };
 
 const STAGE_DEFAULT_X: Record<string, number> = {
@@ -533,6 +545,89 @@ function SpatialDirectorCanvasInner({
     }, 50);
   }, [project, onUpdateProject, fitView]);
 
+  // Handle direct typed wire connections
+  const handleConnect = useCallback(
+    (connection: Connection) => {
+      if (!connection.source || !connection.target) return;
+      if (connection.source === connection.target) {
+        toast.error('Cannot connect node to itself');
+        return;
+      }
+
+      // 1. Cycle detection
+      if (wouldCreateCycle(connection.source, connection.target, project.edges || {})) {
+        toast.error('Connection rejected: would create a circular dependency loop');
+        return;
+      }
+
+      // 2. Port compatibility check
+      const sourceNode = project.nodes[connection.source];
+      const targetNode = project.nodes[connection.target];
+      if (sourceNode && targetNode) {
+        const sourcePorts =
+          sourceNode.outputPorts ||
+          getDefaultPortsForType(sourceNode.type || sourceNode.stage).outputPorts;
+        const targetPorts =
+          targetNode.inputPorts ||
+          getDefaultPortsForType(targetNode.type || targetNode.stage).inputPorts;
+        const sourcePort = connection.sourceHandle
+          ? sourcePorts[connection.sourceHandle]
+          : Object.values(sourcePorts)[0];
+        const targetPort = connection.targetHandle
+          ? targetPorts[connection.targetHandle]
+          : Object.values(targetPorts)[0];
+
+        if (sourcePort && targetPort && !arePortsCompatible(sourcePort, targetPort)) {
+          toast.warning(
+            `Port mismatch: ${sourcePort.name} (${sourcePort.type}) cannot directly feed into ${targetPort.name} (${targetPort.type})`
+          );
+          return;
+        }
+      }
+
+      // 3. Create explicit typed edge
+      const edgeId = `edge_${connection.source}_${connection.target}_${Date.now()}`;
+      const newEdge: GraphEdge = {
+        id: edgeId,
+        sourceNodeId: connection.source,
+        sourcePortId: connection.sourceHandle || 'out_primary',
+        targetNodeId: connection.target,
+        targetPortId: connection.targetHandle || 'in_primary',
+        type: 'primary',
+      };
+
+      const updatedEdges = {
+        ...(project.edges || {}),
+        [edgeId]: newEdge,
+      };
+
+      // Also set parentId if target had no parent
+      const updatedNodes = { ...project.nodes };
+      if (!updatedNodes[connection.target].parentId) {
+        updatedNodes[connection.target] = {
+          ...updatedNodes[connection.target],
+          parentId: connection.source,
+        };
+      }
+
+      const updatedProject = {
+        ...project,
+        nodes: updatedNodes,
+        edges: updatedEdges,
+      };
+
+      onUpdateProject(updatedProject);
+      toast.success('Connected nodes');
+
+      fetch(`http://localhost:3030/api/projects/${project.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nodes: updatedNodes, edges: updatedEdges }),
+      }).catch(() => {});
+    },
+    [project, onUpdateProject]
+  );
+
   // Connect End Handle Growth Spawning (when handle is dropped on empty canvas)
   const handleConnectEnd = useCallback(
     (event: MouseEvent | TouchEvent, connectionState: any) => {
@@ -556,6 +651,18 @@ function SpatialDirectorCanvasInner({
     const flowNodes: Node[] = [];
     const flowEdges: Edge[] = [];
 
+    // Calculate active lineage
+    const activeSinkId =
+      project.activeSinkNodeId ||
+      Object.keys(project.nodes).find((id) => project.nodes[id].stage === 'assembly') ||
+      '';
+    const activeLineageList = getActiveLineageNodeIds(
+      activeSinkId,
+      project.nodes,
+      project.edges || {}
+    );
+    const activeLineageSet = new Set(activeLineageList);
+
     // 1. Version Nodes
     Object.values(project.nodes).forEach((node) => {
       const isActiveCut = Boolean(
@@ -566,70 +673,155 @@ function SpatialDirectorCanvasInner({
       const defaultX = STAGE_DEFAULT_X[stageKey] || 60;
       const defaultY = 120;
       const position = node.position || { x: defaultX, y: defaultY };
+      const isNodeActiveLineage = activeLineageSet.size === 0 || activeLineageSet.has(node.id);
+      const isPrevis =
+        node.type === 'previs.threejs' ||
+        node.stage === ('previs' as any) ||
+        node.id.includes('previs');
 
       flowNodes.push({
         id: node.id,
-        type: 'customVersion',
+        type: isPrevis ? 'previsThreeJs' : 'customVersion',
         position,
         draggable: toolMode !== 'pan',
-        data: {
-          node,
-          isActiveCut,
-          isSelected: selectedNodeId === node.id,
-          isHudOpen: activeHudId === node.id || pinnedHudIds.has(node.id),
-          onSelect: onSelectNode,
-          onToggleHud: handleToggleHud,
-          onBranch: onBranchNode,
-          onDelete: handleDeleteNode,
-          onRename: handleRenameNode,
-          onColorTag: handleColorTagNode,
-          onSetActiveCut,
-          onMediaDrop,
-          onResyncStale: handleResyncStale,
-          onResize: handleResizeNode,
-          onAutoAddNextStage: handleAutoAddNextStage,
-        },
+        data: isPrevis
+          ? {
+              id: node.id,
+              title: node.title,
+              durationSec:
+                node.shotContextOverrides?.motionSpeed === 'slow_cinematic' ? 4.5 : 3.0,
+              initialMoveType:
+                node.shotContextOverrides?.cameraMovement?.toLowerCase().includes('orbit')
+                  ? 'orbit'
+                  : node.shotContextOverrides?.cameraMovement?.toLowerCase().includes('crane')
+                  ? 'crane'
+                  : 'push_in',
+              isSelected: selectedNodeId === node.id,
+              onSelect: onSelectNode,
+              onAnimaticRendered: (nodeId: string, videoUrl: string) => {
+                const updatedNodes = {
+                  ...project.nodes,
+                  [nodeId]: {
+                    ...project.nodes[nodeId],
+                    artifacts: {
+                      ...project.nodes[nodeId]?.artifacts,
+                      mediaUrl: videoUrl,
+                    },
+                  },
+                };
+                onUpdateProject({ ...project, nodes: updatedNodes });
+              },
+            }
+          : {
+              node,
+              isActiveCut,
+              isSelected: selectedNodeId === node.id,
+              isHudOpen: activeHudId === node.id || pinnedHudIds.has(node.id),
+              isDimmed: !isNodeActiveLineage,
+              onSelect: (nodeId: string) => {
+                onSelectNode(nodeId);
+                if (project.nodes[nodeId]?.stage === 'assembly') {
+                  onUpdateProject({ ...project, activeSinkNodeId: nodeId });
+                }
+              },
+              onToggleHud: handleToggleHud,
+              onBranch: onBranchNode,
+              onDelete: handleDeleteNode,
+              onRename: handleRenameNode,
+              onColorTag: handleColorTagNode,
+              onSetActiveCut,
+              onMediaDrop,
+              onResyncStale: handleResyncStale,
+              onResize: handleResizeNode,
+              onAutoAddNextStage: handleAutoAddNextStage,
+            },
       });
+    });
 
-      // Primary Parent -> Child edge
-      if (node.parentId && project.nodes[node.parentId]) {
+    // 2. Edges
+    if (project.edges && Object.keys(project.edges).length > 0) {
+      Object.values(project.edges).forEach((edge) => {
+        const sourceNode = project.nodes[edge.sourceNodeId];
+        const targetNode = project.nodes[edge.targetNodeId];
+        if (!sourceNode || !targetNode) return;
+
+        const isBothActive =
+          activeLineageSet.has(edge.sourceNodeId) && activeLineageSet.has(edge.targetNodeId);
+
+        const defaultPorts = getDefaultPortsForType(sourceNode.type || sourceNode.stage);
+        const sourcePort =
+          (sourceNode.outputPorts || defaultPorts.outputPorts)[edge.sourcePortId];
+        const portColor = sourcePort
+          ? PORT_COLOR_MAP[sourcePort.type] || '#A1A1AA'
+          : '#A1A1AA';
+
+        const strokeColor = isBothActive ? portColor || '#38BDF8' : '#52525B';
+        const strokeWidth = isBothActive ? 2.5 : 1.5;
+        const opacity = isBothActive ? 1 : 0.35;
+
         flowEdges.push({
-          id: `e-${node.parentId}-${node.id}`,
-          source: node.parentId,
-          target: node.id,
-          animated: isActiveCut,
+          id: edge.id,
+          source: edge.sourceNodeId,
+          sourceHandle: edge.sourcePortId,
+          target: edge.targetNodeId,
+          targetHandle: edge.targetPortId,
+          animated: isBothActive,
           style: {
-            stroke: isActiveCut ? '#EAB308' : 'var(--border-subtle)',
-            strokeWidth: isActiveCut ? 2.5 : 1.5,
+            stroke: strokeColor,
+            strokeWidth,
+            opacity,
           },
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            color: isActiveCut ? '#EAB308' : 'var(--border-subtle)',
+            color: strokeColor,
           },
         });
-      }
+      });
+    } else {
+      // Fallback for legacy parent-child relationships
+      Object.values(project.nodes).forEach((node) => {
+        if (node.parentId && project.nodes[node.parentId]) {
+          const isBothActive =
+            activeLineageSet.has(node.parentId) && activeLineageSet.has(node.id);
+          flowEdges.push({
+            id: `e-${node.parentId}-${node.id}`,
+            source: node.parentId,
+            target: node.id,
+            animated: isBothActive,
+            style: {
+              stroke: isBothActive ? '#38BDF8' : 'var(--border-subtle)',
+              strokeWidth: isBothActive ? 2.5 : 1.5,
+              opacity: isBothActive ? 1 : 0.35,
+            },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: isBothActive ? '#38BDF8' : 'var(--border-subtle)',
+            },
+          });
+        }
 
-      // Bound Subject Anchor edges (Violet)
-      if (node.boundSubjectAnchorIds && node.boundSubjectAnchorIds.length > 0) {
-        for (const anchorId of node.boundSubjectAnchorIds) {
-          const anchorNode = Object.values(project.nodes).find(
-            (n) => n.stage === 'assets' && (n.subjectAnchorId === anchorId || n.id === anchorId)
-          );
-          if (anchorNode && anchorNode.id !== node.id) {
-            flowEdges.push({
-              id: `edge-anchor-${anchorNode.id}-${node.id}`,
-              source: anchorNode.id,
-              target: node.id,
-              style: {
-                stroke: '#8B5CF6',
-                strokeWidth: 1.5,
-                strokeDasharray: '4 4',
-              },
-            });
+        // Bound Subject Anchor edges (Violet)
+        if (node.boundSubjectAnchorIds && node.boundSubjectAnchorIds.length > 0) {
+          for (const anchorId of node.boundSubjectAnchorIds) {
+            const anchorNode = Object.values(project.nodes).find(
+              (n) => n.stage === 'assets' && (n.subjectAnchorId === anchorId || n.id === anchorId)
+            );
+            if (anchorNode && anchorNode.id !== node.id) {
+              flowEdges.push({
+                id: `edge-anchor-${anchorNode.id}-${node.id}`,
+                source: anchorNode.id,
+                target: node.id,
+                style: {
+                  stroke: '#8B5CF6',
+                  strokeWidth: 1.5,
+                  strokeDasharray: '4 4',
+                },
+              });
+            }
           }
         }
-      }
-    });
+      });
+    }
 
     // 2. Sticky Notes Nodes
     (project.stickyNotes || []).forEach((note) => {
@@ -648,6 +840,29 @@ function SpatialDirectorCanvasInner({
         },
       });
     });
+
+    // 3. Asset Group Frame (if project has subject anchors)
+    const subjectAnchors = project.subjectAnchors || [];
+    if (subjectAnchors.length > 0) {
+      const charCount = subjectAnchors.filter((a) => a.category === 'character').length;
+      const prodCount = subjectAnchors.filter((a) => a.category === 'product' || a.category === 'prop').length;
+
+      flowNodes.push({
+        id: 'frame_asset_group_main',
+        type: 'assetGroupFrame',
+        position: { x: 780, y: 20 },
+        draggable: toolMode !== 'pan',
+        data: {
+          id: 'frame_asset_group_main',
+          title: 'Hero Cast & Props Frame',
+          assetCount: subjectAnchors.length,
+          characterCount: charCount,
+          productCount: prodCount,
+          isSelected: selectedNodeId === 'frame_asset_group_main',
+          onSelect: onSelectNode,
+        },
+      });
+    }
 
     return { nodes: flowNodes, edges: flowEdges };
   }, [
@@ -759,7 +974,7 @@ function SpatialDirectorCanvasInner({
       <div className="absolute top-3 left-4 z-20 flex items-center gap-2 bg-surface/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-subtle shadow-xl text-xs font-mono">
         <span className="text-text-primary font-bold flex items-center gap-1.5">
           <Compass className="w-3.5 h-3.5 text-accent-primary" />
-          <span>SPATIAL CANVAS</span>
+          <span>Spatial Canvas</span>
         </span>
         <span className="text-subtle">|</span>
         <span className="text-text-muted">{Object.keys(project.nodes).length} Nodes</span>
@@ -824,6 +1039,7 @@ function SpatialDirectorCanvasInner({
             setContextMenu(null);
             setGrowthPicker(null);
           }}
+          onConnect={handleConnect}
           onConnectEnd={handleConnectEnd}
           onPaneContextMenu={(e) => {
             e.preventDefault();

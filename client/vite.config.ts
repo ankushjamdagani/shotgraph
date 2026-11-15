@@ -14,4 +14,15 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor_three: ['three'],
+          vendor_xyflow: ['@xyflow/react'],
+          vendor_lucide: ['lucide-react'],
+        },
+      },
+    },
+  },
 });

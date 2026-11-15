@@ -20,9 +20,12 @@ import {
   HardDrive,
 } from 'lucide-react';
 import { ProjectRegistryEntry, FilmProject } from '../../types';
-import { NewProjectWizard } from './NewProjectWizard';
 import { StudioTheme } from '../ui-ux/ThemeCustomizer';
 import { ThemeDropdownMenu } from '../ui-ux/ThemeDropdownMenu';
+
+const NewProjectWizard = React.lazy(() =>
+  import('./NewProjectWizard').then((m) => ({ default: m.NewProjectWizard }))
+);
 
 interface ProjectHubModalProps {
   isOpen: boolean;
@@ -848,15 +851,19 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     <>
       {isStandalonePage ? content : <div className={modalWrapperClasses}>{content}</div>}
 
-      {/* New Project Wizard Modal */}
-      <NewProjectWizard
-        isOpen={isWizardOpen}
-        onClose={() => setIsWizardOpen(false)}
-        onProjectCreated={(newProject) => {
-          onSelectProject(newProject);
-          onClose?.();
-        }}
-      />
+      {/* New Project Wizard Modal (Lazy Loaded) */}
+      {isWizardOpen && (
+        <React.Suspense fallback={null}>
+          <NewProjectWizard
+            isOpen={isWizardOpen}
+            onClose={() => setIsWizardOpen(false)}
+            onProjectCreated={(newProject) => {
+              onSelectProject(newProject);
+              onClose?.();
+            }}
+          />
+        </React.Suspense>
+      )}
 
       {/* Delete / Remove Project Confirmation Modal */}
       {projectToDelete && (

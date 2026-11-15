@@ -14,9 +14,13 @@ import {
   generateEarshotAudioCues,
   generateCookMontageRecipe,
 } from './skills/index.js';
+import { runAntigravityCLIJson } from './runners/antigravityRunner.js';
+import { runClaudeCLIJson } from './runners/claudeRunner.js';
+import { runOllama } from './runners/ollamaRunner.js';
 import { ProjectService, FilmProject, ProjectSubjectAnchor, SubjectVariant } from './services/projectService.js';
 import { ProjectRegistry, GlobalStylePreset } from './services/projectRegistry.js';
 import { VoiceService } from './services/voiceService.js';
+import { BlenderBridge } from './bridges/blenderBridge.js';
 import { AgentManager } from './swarm/agentManager.js';
 import { AGUIServerMessage, AGUIClientMessageSchema } from './protocol/aguiEvents.js';
 
@@ -200,7 +204,7 @@ server.post('/api/projects/open', async (req, reply) => {
   }
 });
 
-// Create new project with format presets
+// Create new project with format presets & Genesis flow
 server.post('/api/projects/create', async (req, reply) => {
   const {
     name,
@@ -211,22 +215,31 @@ server.post('/api/projects/create', async (req, reply) => {
     basePresetId = 'liquid_glass',
     ideaPrompt,
     emptyDAG = false,
+    genesisConfig,
   } = (req.body as any) || {};
 
-  if (!name || !dirPath) {
-    reply.status(400);
-    return { success: false, error: 'Name and directory path are required' };
-  }
+  const projectName = (name && name.trim()) || 'Untitled Video Project';
+  const sanitized = projectName.toLowerCase().replace(/[^a-z0-9_-]/g, '_') || 'untitled_project';
+  const defaultDir = path.join(
+    process.env.HOME || process.env.USERPROFILE || '.',
+    'Movies',
+    'VS_Projects',
+    sanitized
+  );
+  const targetDir = dirPath && dirPath.trim() ? dirPath.trim() : defaultDir;
 
   try {
-    const resolvedPath = path.resolve(dirPath);
-    const project = await ProjectService.initProject(resolvedPath, name, {
+    const resolvedPath = path.resolve(targetDir);
+    await fs.mkdir(resolvedPath, { recursive: true });
+
+    const project = await ProjectService.initProject(resolvedPath, projectName, {
       preset,
       aspectRatio,
       targetDurationSec,
       basePresetId,
       ideaPrompt,
       emptyDAG: Boolean(emptyDAG),
+      genesisConfig,
       initGit: true,
     });
 
@@ -235,6 +248,72 @@ server.post('/api/projects/create', async (req, reply) => {
   } catch (err: any) {
     reply.status(500);
     return { success: false, error: err.message };
+  }
+});
+
+// Real AI Mood & Tone Analysis for Genesis Flow
+server.post('/api/ai/suggest-moods', async (req, reply) => {
+  const { prompt, modelEngine = 'antigravity-cli' } = (req.body as any) || {};
+
+  if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+    reply.status(400);
+    return { success: false, error: 'A film premise prompt is required to analyze moods.' };
+  }
+
+  const aiPrompt = `You are an award-winning cinematic director and film composer.
+Analyze this video film premise:
+"${prompt.trim()}"
+
+Extract and generate 4 distinct, highly tailored mood directions.
+For each mood direction, provide:
+- key: short lowercase identifier (e.g. "adrenaline", "contemplative", "kinetic", "noir")
+- title: expressive title with an emoji (e.g. "⚡ Adrenaline & Speed")
+- desc: 1-2 sentence description detailing the cut cadence, audio sound design/tempo, and camera lighting.
+- isRecommended: boolean (true for the single best fit)
+
+Return valid JSON with the exact structure:
+{
+  "moods": [
+    {
+      "key": "short_snake_case_key",
+      "title": "Title with emoji",
+      "desc": "1-2 sentence description of cut cadence, sound design, and lighting.",
+      "isRecommended": boolean
+    }
+  ],
+  "reasoning": "1 sentence explanation of the mood analysis"
+}`;
+
+  try {
+    let resultData: any;
+    if (modelEngine === 'claude-cli') {
+      const res = await runClaudeCLIJson<{ moods: any[]; reasoning: string }>(aiPrompt, { timeoutMs: 45000 });
+      resultData = res.data;
+    } else if (modelEngine === 'ollama') {
+      const res = await runOllama(aiPrompt, { timeoutMs: 45000 });
+      const jsonMatch = res.text.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || [null, res.text];
+      resultData = JSON.parse(jsonMatch[1] || res.text);
+    } else {
+      // Default: Antigravity CLI
+      const res = await runAntigravityCLIJson<{ moods: any[]; reasoning: string }>(aiPrompt, { timeoutMs: 45000 });
+      resultData = res.data;
+    }
+
+    if (!resultData || !Array.isArray(resultData.moods) || resultData.moods.length === 0) {
+      throw new Error('AI runner returned invalid mood structure.');
+    }
+
+    return {
+      success: true,
+      moods: resultData.moods,
+      reasoning: resultData.reasoning || '',
+    };
+  } catch (err: any) {
+    reply.status(502);
+    return {
+      success: false,
+      error: `AI Mood Generation failed: ${err.message || 'Runner offline or timed out'}`,
+    };
   }
 });
 
@@ -743,6 +822,27 @@ server.post('/api/export/davinci', async (req, reply) => {
     totalDurationSec: currentTime,
     clipCount: clips.length,
     instructions: exportResult.instructions,
+  };
+});
+
+// 6b. Blender Scene Assembly Export
+server.post('/api/export/blender', async (req, reply) => {
+  const { projectId } = req.body as { projectId: string };
+  const { project, projectRoot } = await resolveProjectRoot(projectId);
+  if (!project) {
+    reply.status(404);
+    return { success: false, error: 'Project not found' };
+  }
+
+  const exportResult = await BlenderBridge.exportBlenderBundle(projectRoot, {
+    fps: project.fps || 30,
+    aspectRatio: project.aspectRatio || '9:16',
+  });
+
+  return {
+    success: true,
+    ...exportResult,
+    instructions: `Execute in terminal: ${exportResult.cliCommand} or open scene_assembly.py inside Blender and click Run Script.`,
   };
 });
 

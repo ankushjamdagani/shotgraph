@@ -16,6 +16,7 @@
     "build": "npm --workspace=server run build && npm --workspace=client run build",
     "check": "npm --workspace=server run check && npm --workspace=client run check",
     "test": "npm --workspace=server test",
+    "test:e2e": "playwright test",
     "ast-grep": "ast-grep",
     "repomix": "repomix",
     "rtk": "rtk",
@@ -23,6 +24,7 @@
   },
   "devDependencies": {
     "@ast-grep/cli": "^0.51.2",
+    "@playwright/test": "^1.65.1",
     "@types/node": "^22.13.0",
     "playwright": "^1.65.0",
     "repomix": "^1.19.0",

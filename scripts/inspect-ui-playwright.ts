@@ -57,7 +57,7 @@ async function run() {
     await page.waitForTimeout(2000);
 
     // Verify top mini-nav strip
-    const canvasPill = page.locator('text=SPATIAL CANVAS').first();
+    const canvasPill = page.locator('text=/spatial canvas/i').first();
     console.log(`   Spatial Canvas Indicator: ${await canvasPill.isVisible() ? 'VISIBLE ✅' : 'MISSING ❌'}`);
 
     const beautifyBtn = page.getByRole('button', { name: /Beautify Flow/i }).first();

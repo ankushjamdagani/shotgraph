@@ -1,18 +1,33 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { FilmProject, AgentPresence } from './types.js';
 import { SpatialDirectorCanvas } from './components/canvas/SpatialDirectorCanvas.js';
 import { BottomPlaybackDock } from './components/canvas/BottomPlaybackDock.js';
-import { TasteMixerModal } from './components/taste/TasteMixerModal.js';
-import { DaVinciExportModal } from './components/export/DaVinciExportModal.js';
-import { MediaTrimmerModal } from './components/trimmer/MediaTrimmerModal.js';
-import { SubjectManagerModal } from './components/project/SubjectManagerModal.js';
 import { CommandPalette } from './components/palette/CommandPalette.js';
 import { ProjectHubModal } from './components/project/ProjectHubModal.js';
-import { ProjectSettingsModal } from './components/project/ProjectSettingsModal.js';
 import { ProjectNameMenu } from './components/project/ProjectNameMenu.js';
 import { StudioTheme } from './components/ui-ux/ThemeCustomizer.js';
 import { StudioErrorBoundary } from './components/common/StudioErrorBoundary.js';
 import { ToastContainer } from './components/common/ToastContainer.js';
+
+// Lazy-loaded on-demand modals (Vercel rule: bundle-dynamic-imports)
+const TasteMixerModal = lazy(() =>
+  import('./components/taste/TasteMixerModal.js').then((m) => ({ default: m.TasteMixerModal }))
+);
+const DaVinciExportModal = lazy(() =>
+  import('./components/export/DaVinciExportModal.js').then((m) => ({ default: m.DaVinciExportModal }))
+);
+const MediaTrimmerModal = lazy(() =>
+  import('./components/trimmer/MediaTrimmerModal.js').then((m) => ({ default: m.MediaTrimmerModal }))
+);
+const SubjectManagerModal = lazy(() =>
+  import('./components/project/SubjectManagerModal.js').then((m) => ({ default: m.SubjectManagerModal }))
+);
+const NewProjectWizard = lazy(() =>
+  import('./components/project/NewProjectWizard.js').then((m) => ({ default: m.NewProjectWizard }))
+);
+const ProjectSettingsModal = lazy(() =>
+  import('./components/project/ProjectSettingsModal.js').then((m) => ({ default: m.ProjectSettingsModal }))
+);
 import {
   Film,
   Command as CmdIcon,
@@ -31,6 +46,7 @@ function App() {
 
   // Modals
   const [isProjectHubOpen, setIsProjectHubOpen] = useState(false);
+  const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
   const [isTasteMixerOpen, setIsTasteMixerOpen] = useState(false);
   const [isSubjectManagerOpen, setIsSubjectManagerOpen] = useState(false);
@@ -132,6 +148,10 @@ function App() {
   // Global Keyboard Shortcuts (Cmd+O for Project Hub, Cmd+K for Command Palette, Cmd+, for Settings, Cmd+E for DaVinci Export)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        setIsNewProjectOpen(true);
+      }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'o') {
         e.preventDefault();
         setIsProjectHubOpen((prev) => !prev);
@@ -307,7 +327,10 @@ function App() {
     );
   }
 
-  const totalDuration = project.scenes.reduce((acc, s) => acc + s.targetDurationSec, 0);
+  const totalDuration =
+    project.scenes && project.scenes.length > 0
+      ? project.scenes.reduce((acc, s) => acc + s.targetDurationSec, 0)
+      : project.targetDurationSec || 30;
 
   return (
     <div className={`flex flex-col h-screen w-screen bg-app text-text-primary overflow-hidden theme-${theme}`}>
@@ -349,6 +372,7 @@ function App() {
             onOpenDaVinciExport={() => setIsDaVinciExportOpen(true)}
             onOpenProjectsHub={() => setIsProjectHubOpen(true)}
             onDeleteProject={() => setIsDeleteModalOpen(true)}
+            onOpenNewProject={() => setIsNewProjectOpen(true)}
           />
         </div>
 
@@ -413,26 +437,28 @@ function App() {
           />
         </div>
 
-        {/* Bottom Playback Scrubber Dock */}
-        <BottomPlaybackDock
-          project={project}
-          onUpdateProject={(updated) => setProject(updated)}
-          onFocusScene={(sceneId) => {
-            const cutNodeId = project.activeCut?.[sceneId];
-            if (cutNodeId && project.nodes[cutNodeId]) {
-              setSelectedNodeId(cutNodeId);
-            } else {
-              const sceneNode = Object.values(project.nodes).find(
-                (n) => n.sceneId === sceneId
-              );
-              if (sceneNode) {
-                setSelectedNodeId(sceneNode.id);
+        {/* Bottom Playback Scrubber Dock (Only rendered when concrete scenes exist) */}
+        {project.scenes && project.scenes.length > 0 && (
+          <BottomPlaybackDock
+            project={project}
+            onUpdateProject={(updated) => setProject(updated)}
+            onFocusScene={(sceneId) => {
+              const cutNodeId = project.activeCut?.[sceneId];
+              if (cutNodeId && project.nodes[cutNodeId]) {
+                setSelectedNodeId(cutNodeId);
+              } else {
+                const sceneNode = Object.values(project.nodes).find(
+                  (n) => n.sceneId === sceneId
+                );
+                if (sceneNode) {
+                  setSelectedNodeId(sceneNode.id);
+                }
               }
-            }
-          }}
-          onSetActiveCut={handleSetActiveCut}
-          onOpenDaVinciExport={() => setIsDaVinciExportOpen(true)}
-        />
+            }}
+            onSetActiveCut={handleSetActiveCut}
+            onOpenDaVinciExport={() => setIsDaVinciExportOpen(true)}
+          />
+        )}
       </main>
 
       {/* DaVinci-Style Project Hub Modal (Cmd+O when in editor) */}
@@ -449,52 +475,75 @@ function App() {
         onThemeChange={setTheme}
       />
 
-      {/* Project Settings Modal (Aspect Ratio, Duration, FPS, Typography, Theme) */}
-      <ProjectSettingsModal
-        isOpen={isProjectSettingsOpen}
-        onClose={() => setIsProjectSettingsOpen(false)}
-        project={project}
-        onUpdateProject={(updatedProject) => setProject(updatedProject)}
-        currentTheme={theme}
-        onThemeChange={setTheme}
-      />
+      {/* Lazy Suspense Boundary for On-Demand Modals */}
+      <Suspense fallback={null}>
+        {/* Genesis Room Wizard (Cmd+N) */}
+        {isNewProjectOpen && (
+          <NewProjectWizard
+            isOpen={isNewProjectOpen}
+            onClose={() => setIsNewProjectOpen(false)}
+            onProjectCreated={(newProj) => {
+              handleSelectProject(newProj);
+              setIsNewProjectOpen(false);
+            }}
+          />
+        )}
 
-      {/* Cascading Taste Mixer Modal */}
-      <TasteMixerModal
-        isOpen={isTasteMixerOpen}
-        onClose={() => setIsTasteMixerOpen(false)}
-        project={project}
-        onUpdateProject={(updatedProject) => setProject(updatedProject)}
-      />
+        {/* Project Settings Modal (Aspect Ratio, Duration, FPS, Typography, Theme) */}
+        {isProjectSettingsOpen && (
+          <ProjectSettingsModal
+            isOpen={isProjectSettingsOpen}
+            onClose={() => setIsProjectSettingsOpen(false)}
+            project={project}
+            onUpdateProject={(updatedProject) => setProject(updatedProject)}
+            currentTheme={theme}
+            onThemeChange={setTheme}
+          />
+        )}
 
-      {/* Project Subject Anchors & Asset Manager Modal */}
-      <SubjectManagerModal
-        isOpen={isSubjectManagerOpen}
-        onClose={() => setIsSubjectManagerOpen(false)}
-        project={project}
-        onUpdateProject={(updatedProject) => setProject(updatedProject)}
-      />
+        {/* Cascading Taste Mixer Modal */}
+        {isTasteMixerOpen && (
+          <TasteMixerModal
+            isOpen={isTasteMixerOpen}
+            onClose={() => setIsTasteMixerOpen(false)}
+            project={project}
+            onUpdateProject={(updatedProject) => setProject(updatedProject)}
+          />
+        )}
 
-      {/* DaVinci Multi-Track Export Modal */}
-      <DaVinciExportModal
-        isOpen={isDaVinciExportOpen}
-        onClose={() => setIsDaVinciExportOpen(false)}
-        projectName={project.name}
-        totalDurationSec={totalDuration}
-      />
+        {/* Project Subject Anchors & Asset Manager Modal */}
+        {isSubjectManagerOpen && (
+          <SubjectManagerModal
+            isOpen={isSubjectManagerOpen}
+            onClose={() => setIsSubjectManagerOpen(false)}
+            project={project}
+            onUpdateProject={(updatedProject) => setProject(updatedProject)}
+          />
+        )}
 
-      {/* Media Trimmer Modal */}
-      {trimmerData && (
-        <MediaTrimmerModal
-          isOpen={trimmerData.isOpen}
-          onClose={() => setTrimmerData(null)}
-          fileName={trimmerData.fileName}
-          targetDurationSec={trimmerData.targetDurationSec}
-          onConfirmTrim={(start, dur) => {
-            alert(`Trimmed ${trimmerData.fileName} from ${start}s for ${dur}s and attached to node!`);
-          }}
-        />
-      )}
+        {/* DaVinci Multi-Track Export Modal */}
+        {isDaVinciExportOpen && (
+          <DaVinciExportModal
+            isOpen={isDaVinciExportOpen}
+            onClose={() => setIsDaVinciExportOpen(false)}
+            projectName={project.name}
+            totalDurationSec={totalDuration}
+          />
+        )}
+
+        {/* Media Trimmer Modal */}
+        {trimmerData && (
+          <MediaTrimmerModal
+            isOpen={trimmerData.isOpen}
+            onClose={() => setTrimmerData(null)}
+            fileName={trimmerData.fileName}
+            targetDurationSec={trimmerData.targetDurationSec}
+            onConfirmTrim={(start, dur) => {
+              alert(`Trimmed ${trimmerData.fileName} from ${start}s for ${dur}s and attached to node!`);
+            }}
+          />
+        )}
+      </Suspense>
 
       {/* Command Palette */}
       <CommandPalette

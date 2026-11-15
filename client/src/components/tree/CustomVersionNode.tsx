@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Handle, Position, NodeResizeControl, ResizeControlVariant } from '@xyflow/react';
 import { VersionNode } from '../../types.js';
+import { PORT_COLOR_MAP, getDefaultPortsForType } from '../../utils/graphTopology.js';
 import {
   GitBranch,
   Star,
@@ -54,6 +55,7 @@ interface CustomVersionNodeProps {
     isActiveCut: boolean;
     isSelected: boolean;
     isHudOpen?: boolean;
+    isDimmed?: boolean;
     onSelect: (nodeId: string) => void;
     onToggleHud?: (nodeId: string) => void;
     onBranch: (nodeId: string) => void;
@@ -68,12 +70,13 @@ interface CustomVersionNodeProps {
   };
 }
 
-export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) => {
+const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) => {
   const {
     node,
     isActiveCut,
     isSelected,
     isHudOpen,
+    isDimmed,
     onSelect,
     onToggleHud,
     onBranch,
@@ -191,6 +194,10 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
   const stage = getStageDesign(node.stage);
   const isMasterAnchor = node.assetMetadata?.isMasterStyleAnchor;
 
+  const defaultPorts = getDefaultPortsForType(node.type || node.stage);
+  const inputPortList = Object.values(node.inputPorts || defaultPorts.inputPorts);
+  const outputPortList = Object.values(node.outputPorts || defaultPorts.outputPorts);
+
   return (
     <div
       style={{ width: node.width || 320 }}
@@ -216,9 +223,11 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
           onMediaDrop(node.id, e.dataTransfer.files[0]);
         }
       }}
-      className={`group relative rounded bg-surface transition-all duration-150 cursor-pointer border overflow-hidden ${getNodeBorderState(
-        node.colorTag
-      )} ${isDragOver ? 'ring-2 ring-emerald-400/80 bg-emerald-950/20' : ''}`}
+      className={`group relative rounded bg-surface transition-all duration-150 cursor-pointer border overflow-hidden ${
+        isDimmed ? 'opacity-35 hover:opacity-95' : 'opacity-100'
+      } ${getNodeBorderState(node.colorTag)} ${
+        isDragOver ? 'ring-2 ring-emerald-400/80 bg-emerald-950/20' : ''
+      }`}
     >
       {isSelected && (
         <>
@@ -245,11 +254,39 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
         </>
       )}
 
-      <Handle
-        type="target"
-        position={Position.Left}
-        className="!bg-zinc-400 hover:!bg-white !w-2.5 !h-2.5 !border !border-black transition-colors"
-      />
+      {/* Typed Input Ports on Left */}
+      {inputPortList.length > 0 ? (
+        inputPortList.map((port, idx) => {
+          const topPercent =
+            inputPortList.length === 1
+              ? 50
+              : 20 + (idx * 60) / (inputPortList.length - 1);
+          const color = PORT_COLOR_MAP[port.type] || '#A1A1AA';
+          return (
+            <div key={port.id} className="group/port">
+              <Handle
+                type="target"
+                position={Position.Left}
+                id={port.id}
+                style={{ top: `${topPercent}%`, backgroundColor: color }}
+                className="!w-2.5 !h-2.5 !border !border-black transition-transform hover:!scale-150 !z-30 after:absolute after:-inset-2 after:content-[''] cursor-crosshair"
+              />
+              <span
+                style={{ top: `${topPercent}%` }}
+                className="absolute left-3.5 -translate-y-1/2 hidden group-hover/port:inline-block z-50 px-1.5 py-0.5 rounded text-[9px] font-mono whitespace-nowrap bg-zinc-900/95 border border-white/20 text-white shadow-xl pointer-events-none"
+              >
+                {port.name}
+              </span>
+            </div>
+          );
+        })
+      ) : (
+        <Handle
+          type="target"
+          position={Position.Left}
+          className="!bg-zinc-400 hover:!bg-white !w-2.5 !h-2.5 !border !border-black transition-colors"
+        />
+      )}
       <Handle
         type="target"
         position={Position.Top}
@@ -615,11 +652,39 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
         </div>
       </div>
 
-      <Handle
-        type="source"
-        position={Position.Right}
-        className="!bg-zinc-400 hover:!bg-white !w-2.5 !h-2.5 !border !border-black transition-colors"
-      />
+      {/* Typed Output Ports on Right */}
+      {outputPortList.length > 0 ? (
+        outputPortList.map((port, idx) => {
+          const topPercent =
+            outputPortList.length === 1
+              ? 50
+              : 20 + (idx * 60) / (outputPortList.length - 1);
+          const color = PORT_COLOR_MAP[port.type] || '#A1A1AA';
+          return (
+            <div key={port.id} className="group/port">
+              <Handle
+                type="source"
+                position={Position.Right}
+                id={port.id}
+                style={{ top: `${topPercent}%`, backgroundColor: color }}
+                className="!w-2.5 !h-2.5 !border !border-black transition-transform hover:!scale-150 !z-30 after:absolute after:-inset-2 after:content-[''] cursor-crosshair"
+              />
+              <span
+                style={{ top: `${topPercent}%` }}
+                className="absolute right-3.5 -translate-y-1/2 hidden group-hover/port:inline-block z-50 px-1.5 py-0.5 rounded text-[9px] font-mono whitespace-nowrap bg-zinc-900/95 border border-white/20 text-white shadow-xl pointer-events-none"
+              >
+                {port.name}
+              </span>
+            </div>
+          );
+        })
+      ) : (
+        <Handle
+          type="source"
+          position={Position.Right}
+          className="!bg-zinc-400 hover:!bg-white !w-2.5 !h-2.5 !border !border-black transition-colors"
+        />
+      )}
       <Handle
         type="source"
         position={Position.Bottom}
@@ -691,3 +756,23 @@ export const CustomVersionNode: React.FC<CustomVersionNodeProps> = ({ data }) =>
     </div>
   );
 };
+
+export const CustomVersionNode = React.memo(CustomVersionNodeComponent, (prev, next) => {
+  return (
+    prev.data.node.id === next.data.node.id &&
+    prev.data.node.versionLabel === next.data.node.versionLabel &&
+    prev.data.node.title === next.data.node.title &&
+    prev.data.node.prompt === next.data.node.prompt &&
+    prev.data.node.status === next.data.node.status &&
+    prev.data.node.isDirty === next.data.node.isDirty &&
+    prev.data.node.position?.x === next.data.node.position?.x &&
+    prev.data.node.position?.y === next.data.node.position?.y &&
+    prev.data.node.width === next.data.node.width &&
+    prev.data.isSelected === next.data.isSelected &&
+    prev.data.isActiveCut === next.data.isActiveCut &&
+    prev.data.isHudOpen === next.data.isHudOpen &&
+    prev.data.isDimmed === next.data.isDimmed &&
+    prev.data.node.artifacts === next.data.node.artifacts &&
+    prev.data.node.metadata === next.data.node.metadata
+  );
+});

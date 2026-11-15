@@ -33,22 +33,60 @@ export type ProductionStage =
   | 'assembly'    // 8. Final active cut timeline & DaVinci Resolve FCPXML bundle
   | 'render';     // legacy alias for assembly
 
-export interface VersionNode {
+export type PortType =
+  | 'story'         // Screenplay, dialogue, prompts, negative guards
+  | 'style'         // Aesthetic tokens, color palettes, prompt DNA
+  | 'spatial_3d'    // Camera trajectories, 3D meshes, transforms, lighting
+  | 'media'         // Rendered frames, MP4 video streams, alpha mattes
+  | 'audio'         // Dialogue voice stems, sound effects, music tracks
+  | 'control_curve' // Continuous scalar/vector curves (FOV zoom, ease curves)
+  | 'code_spec';    // Three.js scene graphs, Remotion JSX, Blender Python
+
+export interface TypedPortDefinition {
   id: string;
-  parentId: string | null;
+  name: string;
+  type: PortType;
+  schemaUri: string; // e.g. 'urn:vs:screenplay:v1', 'urn:vs:camera-spline:v1', 'urn:vs:video-stream:v1'
+  direction: 'input' | 'output';
+  allowMultiple?: boolean;
+}
+
+export interface GraphEdge {
+  id: string;
+  sourceNodeId: string;
+  sourcePortId: string;
+  targetNodeId: string;
+  targetPortId: string;
+  type?: 'primary' | 'asset_binding' | 'effect_feed' | 'camera_control' | 'audio_sync';
+}
+
+export interface UniversalGraphNode<TData = any, TArtifacts = any> {
+  id: string;
+  type?: string; // e.g. 'creative.idea', 'director.taste', 'story.master_script', 'story.scene_beat', 'cinematography.shot', 'previs.threejs', 'gen.video_take', 'sink.video_assembly'
+  title: string;
+  versionLabel: string;
+  position: { x: number; y: number };
+  width?: number;
+  height?: number;
+  inputPorts?: Record<string, TypedPortDefinition>;
+  outputPorts?: Record<string, TypedPortDefinition>;
+  data?: TData;
+  config?: Record<string, any>;
+  artifacts: TArtifacts;
+  status?: 'idle' | 'generating' | 'ready' | 'error';
+  hash?: string;       // SHA256 of node config + input hashes
+  isDirty?: boolean;  // Cache invalidation flag
+  // Backward compatibility with legacy VersionNode
+  parentId?: string | null;
+  stage?: ProductionStage;
+  stageOrder?: number;
   sceneId?: string;
   shotId?: string;
   subjectAnchorId?: string;
-  versionLabel: string;
-  stage: ProductionStage;
-  stageOrder?: number;
-  title: string;
-  modelEngine: ModelEngine;
+  modelEngine?: ModelEngine;
   modelName?: string;
-  prompt: string;
+  prompt?: string;
   boundSubjectAnchorIds?: string[];
-  position?: { x: number; y: number };
-  width?: number;
   colorTag?: 'default' | 'white' | 'blue' | 'purple' | 'emerald' | 'amber';
   isPinned?: boolean;
   isStale?: boolean;
@@ -71,11 +109,22 @@ export interface VersionNode {
     durationSec?: number;
     blendMode?: 'normal' | 'screen' | 'multiply' | 'additive';
   };
-  externalFallback?: {
-    platform: string;
-    synthesizedPrompt: string;
-    status: 'prompt_copied' | 'asset_imported';
+  metadata?: {
+    createdAt: string;
+    status: 'idle' | 'generating' | 'ready' | 'error';
+    errorLog?: string;
   };
+}
+
+export interface VersionNode extends UniversalGraphNode {
+  // Explicitly preserves legacy VersionNode contracts
+  id: string;
+  parentId: string | null;
+  stage: ProductionStage;
+  title: string;
+  versionLabel: string;
+  prompt: string;
+  modelEngine: ModelEngine;
   artifacts: {
     textContent?: string;
     mediaUrl?: string;
@@ -121,7 +170,14 @@ export interface FilmProject {
     isPinned?: boolean;
     position: { x: number; y: number };
   }>;
+  // Phase 1 Universal Graph extensions:
+  schemaVersion?: number;
+  edges?: Record<string, GraphEdge>;
+  activeSinkNodeId?: string;
+  activePathNodeIds?: string[];
 }
+
+export type StudioProjectGraph = FilmProject;
 
 export interface ProjectRegistryEntry {
   id: string;

@@ -14,7 +14,12 @@ build/
 compositions/**/.render-cache/
 server/5Fci78IA/
 server/XnbqBqR1/
+server/Vguj34w5/
 server/projects/
+
+# Testing & Playwright
+test-results/
+playwright-report/
 
 # Environment
 .env

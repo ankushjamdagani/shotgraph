@@ -20,6 +20,7 @@ import {
   X,
   Layers,
   Scissors,
+  Code,
 } from 'lucide-react';
 import { toast } from '../../services/toastService.js';
 
@@ -91,6 +92,31 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
 
   const animFrameRef = useRef<number | null>(null);
   const scrubberTrackRef = useRef<HTMLDivElement | null>(null);
+
+  const [isExportingBlender, setIsExportingBlender] = useState(false);
+
+  const handleExportBlender = useCallback(async () => {
+    setIsExportingBlender(true);
+    try {
+      const res = await fetch('http://localhost:3030/api/export/blender', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: project.id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        navigator.clipboard.writeText(data.cliCommand);
+        toast.success('Exported Blender script! Command copied to clipboard.');
+      } else {
+        toast.error('Blender export failed');
+      }
+    } catch (err) {
+      console.error('Blender export failed:', err);
+      toast.error('Failed to connect to export service');
+    } finally {
+      setIsExportingBlender(false);
+    }
+  }, [project.id]);
 
   const fps = project.fps || 30;
   const totalDuration = project.scenes.reduce((acc, s) => acc + s.targetDurationSec, 0) || 30;
@@ -619,6 +645,16 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
               <span>Export DaVinci</span>
             </button>
           )}
+
+          <button
+            onClick={handleExportBlender}
+            disabled={isExportingBlender}
+            className="px-2.5 py-1 rounded text-xs font-bold bg-card hover:bg-hover border border-subtle text-text-primary flex items-center gap-1.5 active:scale-[0.97] transition-all"
+            title="Export Blender 3D Scene Assembly Script"
+          >
+            <Code className="w-3.5 h-3.5 text-purple-400" />
+            <span>{isExportingBlender ? 'Exporting...' : 'Blender'}</span>
+          </button>
 
           <button
             onClick={() => setIsExpanded(!isExpanded)}

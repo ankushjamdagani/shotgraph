@@ -11,6 +11,7 @@ import {
   Check,
   ChevronRight,
   LayoutGrid,
+  Plus,
 } from 'lucide-react';
 import { FilmProject, ProjectRegistryEntry } from '../../types.js';
 import { toast } from '../../services/toastService.js';
@@ -23,6 +24,7 @@ interface ProjectNameMenuProps {
   onOpenDaVinciExport: () => void;
   onOpenProjectsHub: () => void;
   onDeleteProject: () => void;
+  onOpenNewProject?: () => void;
 }
 
 export const ProjectNameMenu: React.FC<ProjectNameMenuProps> = ({
@@ -33,6 +35,7 @@ export const ProjectNameMenu: React.FC<ProjectNameMenuProps> = ({
   onOpenDaVinciExport,
   onOpenProjectsHub,
   onDeleteProject,
+  onOpenNewProject,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
@@ -265,6 +268,23 @@ export const ProjectNameMenu: React.FC<ProjectNameMenuProps> = ({
             </div>
             <span className="text-[10px] font-mono text-text-muted">F2</span>
           </button>
+
+          {/* Action: New Project (Genesis) */}
+          {onOpenNewProject && (
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                onOpenNewProject();
+              }}
+              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-sm text-xs font-medium text-text-primary hover:bg-subtle transition-colors group text-left"
+            >
+              <div className="flex items-center gap-2">
+                <Plus className="w-3.5 h-3.5 text-text-muted group-hover:text-text-primary transition-colors" />
+                <span>New Project</span>
+              </div>
+              <span className="text-[10px] font-mono text-text-muted">⌘N</span>
+            </button>
+          )}
 
           {/* Action 2: Duplicate Project */}
           <button

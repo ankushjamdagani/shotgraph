@@ -4,6 +4,8 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { nanoid } from 'nanoid';
 import { ProjectRegistry, GlobalStylePreset } from './projectRegistry.js';
+import { ProjectMigrationService } from './projectMigrationService.js';
+import { GraphEdge, TypedPortDefinition, StudioProjectGraph } from './graphEngine.js';
 
 const execAsync = promisify(exec);
 
@@ -42,6 +44,11 @@ export type ProductionStage =
 
 export interface VersionNode {
   id: string;
+  type?: string;
+  inputPorts?: Record<string, TypedPortDefinition>;
+  outputPorts?: Record<string, TypedPortDefinition>;
+  hash?: string;
+  isDirty?: boolean;
   parentId: string | null;
   sceneId?: string; // Optional: populated for scene, shot, footage, vfx nodes
   shotId?: string; // Optional: links footage or vfx to a specific shot
@@ -128,6 +135,30 @@ export interface FilmProject {
     isPinned?: boolean;
     position: { x: number; y: number };
   }>;
+  schemaVersion?: number;
+  edges?: Record<string, GraphEdge>;
+  activeSinkNodeId?: string;
+  activePathNodeIds?: string[];
+}
+
+export interface GenesisBranchConfig {
+  id: number;
+  title: string;
+  aesthetic: string;
+  customLook?: string;
+  beats?: Array<{ label: string; text: string }>;
+}
+
+export type ModelEngineType = 'antigravity-cli' | 'claude-cli' | 'ollama' | 'hyperframes' | 'external';
+
+export interface GenesisProjectConfig {
+  mood?: string;
+  customMood?: string;
+  modelEngine?: ModelEngineType;
+  directorDirective?: string;
+  branches?: GenesisBranchConfig[];
+  referenceUrls?: string[];
+  customSpecs?: string;
 }
 
 export interface ProjectInitOptions {
@@ -139,6 +170,7 @@ export interface ProjectInitOptions {
   initGit?: boolean;
   ideaPrompt?: string;
   emptyDAG?: boolean;
+  genesisConfig?: GenesisProjectConfig;
 }
 
 export class ProjectService {
@@ -211,9 +243,93 @@ export class ProjectService {
 
     let finalScenes = scenes;
     if (options?.emptyDAG) {
-      finalScenes = [
-        { id: 'scene_01', name: 'Scene 1', order: 1, targetDurationSec },
-      ];
+      finalScenes = []; // No scenes until scripted!
+      const ideaPrompt =
+        options?.ideaPrompt?.trim() ||
+        `Launch concept for "${name}": High-energy premise with dynamic visual storytelling.`;
+
+      initialNodes['node_idea_01'] = {
+        id: 'node_idea_01',
+        parentId: null,
+        versionLabel: 'v1.0 (Idea)',
+        stage: 'ideation',
+        title: name,
+        modelEngine: (options?.genesisConfig?.modelEngine as ModelEngineType) || 'antigravity-cli',
+        prompt: ideaPrompt,
+        position: { x: 120, y: 120 },
+        artifacts: {
+          textContent: `Core Premise: ${ideaPrompt}`,
+          metadata: { genesisConfig: options?.genesisConfig },
+        },
+        metadata: {
+          createdAt: new Date().toISOString(),
+          status: 'ready',
+        },
+      };
+    } else if (options?.genesisConfig?.branches && options.genesisConfig.branches.length > 0) {
+      // Genesis: Independent, detached root Idea nodes stacked vertically (No default scenes)
+      finalScenes = [];
+      const genConfig = options.genesisConfig;
+      const branches = genConfig.branches || [];
+
+      branches.forEach((branch, idx) => {
+        const nodeId = `node_idea_var_${idx + 1}`;
+        const beatsText = branch.beats && branch.beats.length > 0
+          ? branch.beats.map((b) => `${b.label}: ${b.text}`).join('\n\n')
+          : branch.title;
+
+        const fullDescription = `${beatsText}\n\nVisual Aesthetic: ${branch.aesthetic}${branch.customLook ? ` (${branch.customLook})` : ''}\nMood Energy: ${genConfig.mood || 'Adrenaline & Speed'}${genConfig.customMood ? `\nCustom Mood Notes: ${genConfig.customMood}` : ''}${genConfig.referenceUrls?.length ? `\nReferences: ${genConfig.referenceUrls.join(', ')}` : ''}`;
+
+        initialNodes[nodeId] = {
+          id: nodeId,
+          parentId: null, // Fully detached independent root!
+          versionLabel: `v1.0 (Idea Branch ${idx + 1})`,
+          stage: 'ideation',
+          title: branch.title,
+          modelEngine: (genConfig.modelEngine as ModelEngineType) || 'antigravity-cli',
+          prompt: beatsText,
+          position: { x: 120, y: 120 + idx * 320 }, // Vertically stacked
+          artifacts: {
+            textContent: fullDescription,
+            metadata: {
+              genesisConfig: genConfig,
+              aesthetic: branch.aesthetic,
+              customLook: branch.customLook,
+              mood: genConfig.mood,
+              referenceUrls: genConfig.referenceUrls || [],
+              beats: branch.beats || [],
+            },
+          },
+          metadata: {
+            createdAt: new Date().toISOString(),
+            status: 'ready',
+          },
+        };
+
+        const tasteNodeId = `node_taste_var_${idx + 1}`;
+        initialNodes[tasteNodeId] = {
+          id: tasteNodeId,
+          parentId: nodeId,
+          versionLabel: `v1.0 (${branch.aesthetic})`,
+          stage: 'taste',
+          title: `${branch.aesthetic} DNA`,
+          modelEngine: (genConfig.modelEngine as ModelEngineType) || 'antigravity-cli',
+          prompt: `Visual Aesthetic: ${branch.aesthetic}${branch.customLook ? ` - ${branch.customLook}` : ''}\nLighting, color grading, and lens optics.`,
+          position: { x: 480, y: 120 + idx * 320 },
+          artifacts: {
+            textContent: `Style DNA: ${branch.aesthetic}\nCustom Look: ${branch.customLook || 'Standard Studio'}\nMood: ${genConfig.mood || 'Dynamic'}`,
+            metadata: {
+              aesthetic: branch.aesthetic,
+              customLook: branch.customLook,
+              mood: genConfig.mood,
+            },
+          },
+          metadata: {
+            createdAt: new Date().toISOString(),
+            status: 'ready',
+          },
+        };
+      });
     } else {
       const ideaPrompt =
         options?.ideaPrompt?.trim() ||
@@ -421,7 +537,7 @@ export class ProjectService {
     const basePreset = await ProjectRegistry.getStylePreset(basePresetId);
     const resolvedStyle = ProjectRegistry.resolveCompositeStyle(basePreset, {}, []);
 
-    const project: FilmProject = {
+    const initialProject: FilmProject = {
       id: nanoid(8),
       name,
       projectRoot,
@@ -438,6 +554,8 @@ export class ProjectService {
       styleMarkdown: resolvedStyle.markdown,
       styleTokens: resolvedStyle.tokens,
     };
+
+    const project = ProjectMigrationService.migrateProjectV2toV3(initialProject) as FilmProject;
 
     // Save project state files
     await fs.writeFile(
@@ -464,7 +582,8 @@ export class ProjectService {
     const projectJsonPath = path.join(projectRoot, '.studio', 'project.json');
     try {
       const data = await fs.readFile(projectJsonPath, 'utf-8');
-      const project = JSON.parse(data) as FilmProject;
+      const raw = JSON.parse(data);
+      const project = ProjectMigrationService.migrateProjectV2toV3(raw) as FilmProject;
       project.subjectAnchors = project.subjectAnchors || [];
       // Register in central index as recently opened
       await ProjectRegistry.registerProject(projectRoot, project, {
@@ -484,11 +603,12 @@ export class ProjectService {
    */
   static async saveProject(project: FilmProject): Promise<void> {
     const projectJsonPath = path.join(project.projectRoot, '.studio', 'project.json');
-    await fs.writeFile(projectJsonPath, JSON.stringify(project, null, 2), 'utf-8');
+    const projectV3 = ProjectMigrationService.migrateProjectV2toV3(project) as FilmProject;
+    await fs.writeFile(projectJsonPath, JSON.stringify(projectV3, null, 2), 'utf-8');
     if (project.styleMarkdown) {
       await fs.writeFile(path.join(project.projectRoot, 'STYLE.md'), project.styleMarkdown, 'utf-8');
     }
-    await ProjectRegistry.registerProject(project.projectRoot, project, {
+    await ProjectRegistry.registerProject(project.projectRoot, projectV3, {
       basePresetId: project.basePresetId,
       styleOverrides: project.styleOverrides,
       additionalConstraints: project.additionalConstraints,
