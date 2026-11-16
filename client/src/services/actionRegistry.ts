@@ -72,10 +72,10 @@ export const studioActionRegistry = new ActionRegistry();
 studioActionRegistry.register({
   id: 'project.settings',
   title: 'Project Settings',
-  description: 'Edit aspect ratio, duration, typography, and visual theme',
+  description: 'Edit aspect ratio, duration, typography, and taste profile',
   category: 'project',
   shortcut: 'Cmd+,',
-  keywords: ['theme', 'aspect', 'duration', 'font', 'settings', 'fps'],
+  keywords: ['aspect', 'duration', 'font', 'settings', 'fps'],
   execute: (ctx) => {
     if (ctx.onOpenProjectSettings) {
       ctx.onOpenProjectSettings();

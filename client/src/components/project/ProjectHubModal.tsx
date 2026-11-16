@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { ProjectRegistryEntry, FilmProject } from '../../types';
 import { StudioTheme } from '../ui-ux/ThemeCustomizer';
-import { ThemeDropdownMenu } from '../ui-ux/ThemeDropdownMenu';
+import { ThemeToggle } from '../ui-ux/ThemeToggle';
 
 const NewProjectWizard = React.lazy(() =>
   import('./NewProjectWizard').then((m) => ({ default: m.NewProjectWizard }))
@@ -271,7 +271,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
   currentProjectId,
   onSelectProject,
   isStandalonePage = false,
-  currentTheme = 'studio-dark',
+  currentTheme = 'film-lab-mono',
   onThemeChange,
 }) => {
   const [projects, setProjects] = useState<ProjectRegistryEntry[]>([]);
@@ -487,10 +487,10 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
           </div>
         </div>
 
-        {/* Actions & Theme Dropdown Menu */}
+        {/* Actions & Theme Icon Toggle */}
         <div className="flex items-center gap-2">
           {onThemeChange && currentTheme && (
-            <ThemeDropdownMenu currentTheme={currentTheme} onThemeChange={onThemeChange} />
+            <ThemeToggle currentTheme={currentTheme} onThemeChange={onThemeChange} className="w-8 h-8" />
           )}
 
           <button

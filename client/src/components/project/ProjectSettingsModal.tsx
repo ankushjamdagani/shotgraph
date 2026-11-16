@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FilmProject } from '../../types.js';
-import { StudioTheme, THEME_METADATA } from '../ui-ux/ThemeCustomizer.js';
-import { X, Sliders, Type, Palette, Check, Save, Sparkles, ShieldAlert, Plus, Trash2 } from 'lucide-react';
+import { StudioTheme } from '../ui-ux/ThemeCustomizer.js';
+import { X, Sliders, Type, Save, Sparkles, ShieldAlert, Plus, Trash2 } from 'lucide-react';
 import { toast } from '../../services/toastService.js';
 
 interface ProjectSettingsModalProps {
@@ -9,19 +9,17 @@ interface ProjectSettingsModalProps {
   onClose: () => void;
   project: FilmProject;
   onUpdateProject: (updated: FilmProject) => void;
-  currentTheme: StudioTheme;
-  onThemeChange: (theme: StudioTheme) => void;
+  currentTheme?: StudioTheme;
+  onThemeChange?: (theme: StudioTheme) => void;
 }
 
-type SettingsTab = 'general' | 'typography' | 'theme' | 'taste';
+type SettingsTab = 'general' | 'typography' | 'taste';
 
 export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
   isOpen,
   onClose,
   project,
   onUpdateProject,
-  currentTheme,
-  onThemeChange,
 }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
 
@@ -153,18 +151,6 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
           </button>
 
           <button
-            onClick={() => setActiveTab('theme')}
-            className={`flex items-center gap-2 px-4 py-2 border-b-2 font-bold text-xs font-mono transition ${
-              activeTab === 'theme'
-                ? 'border-accent-primary text-text-primary'
-                : 'border-transparent text-text-muted hover:text-text-primary'
-            }`}
-          >
-            <Palette className="w-3.5 h-3.5" />
-            <span>Visual Theme</span>
-          </button>
-
-          <button
             onClick={() => setActiveTab('taste')}
             className={`flex items-center gap-2 px-4 py-2 border-b-2 font-bold text-xs font-mono transition ${
               activeTab === 'taste'
@@ -282,79 +268,6 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
             </div>
           )}
 
-          {activeTab === 'theme' && (
-            <div className="space-y-5">
-              {/* Dark Themes */}
-              <div>
-                <h3 className="text-xs font-bold uppercase font-mono text-text-muted mb-2.5">Dark Themes</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {(['studio-dark', 'film-lab-mono', 'midnight-navy', 'cinema-tungsten'] as StudioTheme[]).map((thm) => {
-                    const meta = THEME_METADATA[thm];
-                    const isSelected = currentTheme === thm;
-                    return (
-                      <button
-                        key={thm}
-                        type="button"
-                        onClick={() => onThemeChange(thm)}
-                        className={`p-3.5 rounded border text-left transition flex items-start gap-3 relative ${
-                          isSelected
-                            ? 'border-accent-primary bg-card ring-1 ring-accent-primary'
-                            : 'border-subtle bg-card/60 hover:bg-card hover:border-text-muted'
-                        }`}
-                      >
-                        <div
-                          className="w-7 h-7 rounded border border-white/20 shrink-0 mt-0.5 shadow"
-                          style={{ backgroundColor: meta.previewBg }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs font-bold text-text-primary flex items-center justify-between">
-                            <span>{meta.name}</span>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-accent-primary" />}
-                          </div>
-                          <div className="text-[10px] text-text-muted mt-0.5 leading-snug">{meta.description}</div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Light Themes */}
-              <div>
-                <h3 className="text-xs font-bold uppercase font-mono text-text-muted mb-2.5">Light Themes</h3>
-                <div className="grid grid-cols-3 gap-3">
-                  {(['paper-ink', 'studio-daylight', 'nordic-light'] as StudioTheme[]).map((thm) => {
-                    const meta = THEME_METADATA[thm];
-                    const isSelected = currentTheme === thm;
-                    return (
-                      <button
-                        key={thm}
-                        type="button"
-                        onClick={() => onThemeChange(thm)}
-                        className={`p-3.5 rounded border text-left transition flex items-start gap-2.5 relative ${
-                          isSelected
-                            ? 'border-accent-primary bg-card ring-1 ring-accent-primary'
-                            : 'border-subtle bg-card/60 hover:bg-card hover:border-text-muted'
-                        }`}
-                      >
-                        <div
-                          className="w-6 h-6 rounded-lg border border-black/10 shrink-0 mt-0.5 shadow-sm"
-                          style={{ backgroundColor: meta.previewBg }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs font-bold text-text-primary flex items-center justify-between">
-                            <span className="truncate">{meta.name.replace(' (Light)', '')}</span>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-accent-primary shrink-0" />}
-                          </div>
-                          <div className="text-[10px] text-text-muted mt-0.5 leading-snug line-clamp-2">{meta.description}</div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
 
           {activeTab === 'taste' && (
             <div className="space-y-6">

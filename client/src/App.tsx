@@ -5,7 +5,7 @@ import { BottomPlaybackDock } from './components/canvas/BottomPlaybackDock.js';
 import { CommandPalette } from './components/palette/CommandPalette.js';
 import { ProjectHubModal } from './components/project/ProjectHubModal.js';
 import { ProjectNameMenu } from './components/project/ProjectNameMenu.js';
-import { StudioTheme } from './components/ui-ux/ThemeCustomizer.js';
+import { StudioTheme, ThemeToggle } from './components/ui-ux/ThemeCustomizer.js';
 import { StudioErrorBoundary } from './components/common/StudioErrorBoundary.js';
 import { ToastContainer } from './components/common/ToastContainer.js';
 
@@ -61,15 +61,15 @@ function App() {
     nodeId: string;
   } | null>(null);
 
-  // Meta UI/UX
+  // Meta UI/UX (Only 'film-lab-mono' dark and 'paper-ink' light)
   const [theme, setTheme] = useState<StudioTheme>(() => {
     try {
       const saved = localStorage.getItem('studio_theme');
-      if (saved === 'film-lab-mono' || saved === 'midnight-navy' || saved === 'studio-dark') {
+      if (saved === 'paper-ink' || saved === 'film-lab-mono') {
         return saved;
       }
     } catch {}
-    return 'studio-dark';
+    return 'film-lab-mono';
   });
 
   // Apply theme to documentElement
@@ -378,6 +378,9 @@ function App() {
 
         {/* Center / Right Control Strip */}
         <div className="flex items-center gap-2">
+          {/* Theme Icon-Toggle: Light (Paper) & Dark (Film Lab) */}
+          <ThemeToggle currentTheme={theme} onThemeChange={setTheme} className="w-7 h-7" />
+
           <button
             onClick={() => setIsProjectSettingsOpen(true)}
             className="flex items-center gap-1.5 px-2.5 h-7 rounded text-xs font-medium bg-card border border-subtle hover:bg-subtle text-text-primary transition active:scale-[0.98]"

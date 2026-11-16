@@ -7,20 +7,7 @@
 /* ======================================================== */
 /* CSS Variable Theme Engine (Monochrome Minimalist Lab)    */
 /* ======================================================== */
-:root, .theme-studio-dark {
-  --bg-app: #09090B;
-  --bg-surface: #121215;
-  --bg-card: #18181B;
-  --bg-hover: #222226;
-  --border-subtle: #27272A;
-  --border-focus: #52525B;
-  --text-primary: #FAFAFA;
-  --text-muted: #A1A1AA;
-  --accent-primary: #FAFAFA;
-  --dot-color: #27272A;
-}
-
-.theme-film-lab-mono {
+:root, .theme-film-lab-mono {
   --bg-app: #000000;
   --bg-surface: #0A0A0A;
   --bg-card: #141414;
