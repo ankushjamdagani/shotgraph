@@ -13,7 +13,8 @@
     },
     "server": {
       "root": "server",
-      "buildCommand": "npm run build"
+      "framework": "fastify",
+      "entrypoint": "src/index.ts"
     }
   },
   "rewrites": [

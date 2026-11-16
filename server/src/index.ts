@@ -1467,11 +1467,15 @@ server.get('/ws/ag-ui', { websocket: true }, (connection, req) => {
   });
 });
 
-// Start listening
-try {
-  await server.listen({ port: PORT, host: HOST });
-  console.log(`[Shotgraph Backend] Running on http://${HOST}:${PORT}`);
-} catch (err) {
-  console.error('[Shotgraph Backend] Start failure:', err);
-  process.exit(1);
+// Start listening (local development and non-serverless runtime)
+if (!process.env.VERCEL) {
+  try {
+    await server.listen({ port: PORT, host: HOST });
+    console.log(`[Shotgraph Backend] Running on http://${HOST}:${PORT}`);
+  } catch (err) {
+    console.error('[Shotgraph Backend] Start failure:', err);
+    process.exit(1);
+  }
 }
+
+export default server;
