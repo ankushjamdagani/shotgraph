@@ -1,32 +1,55 @@
 import { useDialog } from '../common/useDialog';
-import { apiFetch } from '../../services/api';
-import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Folder,
-  FolderOpen,
+  Button,
+  IconButton,
+  Input,
+  Badge,
+  NewItemIndicator,
+  Tooltip,
+  Thumbnail,
+  Table,
+  TableHead,
+  TableCell,
+  TableRow,
+  InlineRename,
+  SegmentedControl,
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+  cn,
+} from '../ui';
+import { toast } from '../../services/toastService';
+import { apiFetch } from '../../services/api';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useLayoutEffect,
+} from 'react';
+import {
+  Copy,
+  Pencil,
   Plus,
   Search,
-  Clock,
   Trash2,
   CheckCircle2,
   X,
-  AlertCircle,
   Loader2,
-  Film,
   LayoutGrid,
   List,
-  Monitor,
-  Smartphone,
-  Square,
   ArrowUpRight,
-  HardDrive,
 } from 'lucide-react';
 import { ProjectRegistryEntry, FilmProject } from '../../types';
 import { StudioTheme } from '../ui-ux/ThemeCustomizer';
 import { ThemeToggle } from '../ui-ux/ThemeToggle';
 
 const NewProjectWizard = React.lazy(() =>
-  import('./NewProjectWizard').then((m) => ({ default: m.NewProjectWizard }))
+  import('./NewProjectWizard').then((m) => ({ default: m.NewProjectWizard })),
 );
 
 interface ProjectHubModalProps {
@@ -45,12 +68,12 @@ type AspectFilter = 'all' | '16:9' | '9:16' | '1:1';
 // Stage color-coding for the DAG visualizer
 const STAGE_COLORS: Record<string, string> = {
   ideation: '#38BDF8', // Sky
-  script: '#34D399',   // Emerald
-  taste: '#F59E0B',    // Amber
-  assets: '#A855F7',   // Purple
-  shot: '#818CF8',     // Indigo
-  footage: '#F43F5E',  // Rose
-  vfx: '#EC4899',      // Pink
+  script: '#34D399', // Emerald
+  taste: '#F59E0B', // Amber
+  assets: '#A855F7', // Purple
+  shot: '#818CF8', // Indigo
+  footage: '#F43F5E', // Rose
+  vfx: '#EC4899', // Pink
   assembly: '#14B8A6', // Teal
 };
 
@@ -79,12 +102,21 @@ const STAGE_COLUMN_INDEX: Record<string, number> = {
 };
 
 // Miniature DAG Preview component representing the workflow graph
-const MiniDagPreview: React.FC<{ nodes?: ProjectRegistryEntry['dagNodes'] }> = ({ nodes }) => {
+const MiniDagPreview: React.FC<{
+  nodes?: ProjectRegistryEntry['dagNodes'];
+}> = ({ nodes }) => {
   const dagLayout = useMemo(() => {
     if (!nodes || nodes.length === 0) return null;
 
     // Group nodes into columns
-    const columns: Record<number, typeof nodes> = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] };
+    const columns: Record<number, typeof nodes> = {
+      0: [],
+      1: [],
+      2: [],
+      3: [],
+      4: [],
+      5: [],
+    };
     nodes.forEach((n) => {
       const colIdx = STAGE_COLUMN_INDEX[n.stage] ?? 1;
       columns[colIdx].push(n);
@@ -106,7 +138,10 @@ const MiniDagPreview: React.FC<{ nodes?: ProjectRegistryEntry['dagNodes'] }> = (
     });
 
     // Map each node ID to (x, y) coordinates
-    const nodeCoords: Record<string, { x: number; y: number; node: (typeof nodes)[0] }> = {};
+    const nodeCoords: Record<
+      string,
+      { x: number; y: number; node: (typeof nodes)[0] }
+    > = {};
     activeCols.forEach((colIdx) => {
       const colNodes = columns[colIdx];
       const x = colXPositions[colIdx];
@@ -128,9 +163,17 @@ const MiniDagPreview: React.FC<{ nodes?: ProjectRegistryEntry['dagNodes'] }> = (
     });
 
     // Generate connector curves between parent and child nodes
-    const edges: Array<{ from: { x: number; y: number }; to: { x: number; y: number }; id: string }> = [];
+    const edges: Array<{
+      from: { x: number; y: number };
+      to: { x: number; y: number };
+      id: string;
+    }> = [];
     nodes.forEach((child) => {
-      if (child.parentId && nodeCoords[child.parentId] && nodeCoords[child.id]) {
+      if (
+        child.parentId &&
+        nodeCoords[child.parentId] &&
+        nodeCoords[child.id]
+      ) {
         edges.push({
           from: nodeCoords[child.parentId],
           to: nodeCoords[child.id],
@@ -150,8 +193,19 @@ const MiniDagPreview: React.FC<{ nodes?: ProjectRegistryEntry['dagNodes'] }> = (
     return (
       <svg className="w-full h-full" viewBox="0 0 320 160" fill="none">
         <defs>
-          <pattern id="dag-empty-dots" width="16" height="16" patternUnits="userSpaceOnUse">
-            <circle cx="8" cy="8" r="0.75" fill="var(--dot-color)" opacity="0.7" />
+          <pattern
+            id="dag-empty-dots"
+            width="16"
+            height="16"
+            patternUnits="userSpaceOnUse"
+          >
+            <circle
+              cx="8"
+              cy="8"
+              r="0.75"
+              fill="var(--dot-color)"
+              opacity="0.7"
+            />
           </pattern>
         </defs>
         <rect width="100%" height="100%" fill="url(#dag-empty-dots)" />
@@ -166,9 +220,22 @@ const MiniDagPreview: React.FC<{ nodes?: ProjectRegistryEntry['dagNodes'] }> = (
 
         {/* Initial Root Capsule */}
         <g transform="translate(50, 69)">
-          <rect width="44" height="22" rx="3" fill="var(--bg-card)" stroke="var(--border-subtle)" />
+          <rect
+            width="44"
+            height="22"
+            rx="3"
+            fill="var(--bg-card)"
+            stroke="var(--border-subtle)"
+          />
           <circle cx="9" cy="11" r="2.5" fill="#38BDF8" />
-          <text x="17" y="14" fontSize="8" fontFamily="monospace" fill="var(--text-muted)" fontWeight="600">
+          <text
+            x="17"
+            y="14"
+            fontSize="8"
+            fontFamily="monospace"
+            fill="var(--text-muted)"
+            fontWeight="600"
+          >
             ROOT
           </text>
         </g>
@@ -183,7 +250,13 @@ const MiniDagPreview: React.FC<{ nodes?: ProjectRegistryEntry['dagNodes'] }> = (
             stroke="var(--border-subtle)"
             strokeDasharray="2 2"
           />
-          <text x="8" y="14" fontSize="8" fontFamily="monospace" fill="var(--text-muted)">
+          <text
+            x="8"
+            y="14"
+            fontSize="8"
+            fontFamily="monospace"
+            fill="var(--text-muted)"
+          >
             + CANVAS
           </text>
         </g>
@@ -207,8 +280,19 @@ const MiniDagPreview: React.FC<{ nodes?: ProjectRegistryEntry['dagNodes'] }> = (
   return (
     <svg className="w-full h-full" viewBox="0 0 320 160" fill="none">
       <defs>
-        <pattern id="dag-grid-dots" width="16" height="16" patternUnits="userSpaceOnUse">
-          <circle cx="8" cy="8" r="0.75" fill="var(--dot-color)" opacity="0.6" />
+        <pattern
+          id="dag-grid-dots"
+          width="16"
+          height="16"
+          patternUnits="userSpaceOnUse"
+        >
+          <circle
+            cx="8"
+            cy="8"
+            r="0.75"
+            fill="var(--dot-color)"
+            opacity="0.6"
+          />
         </pattern>
       </defs>
       <rect width="100%" height="100%" fill="url(#dag-grid-dots)" />
@@ -226,7 +310,6 @@ const MiniDagPreview: React.FC<{ nodes?: ProjectRegistryEntry['dagNodes'] }> = (
             stroke="var(--border-focus)"
             strokeWidth="1.25"
             strokeOpacity="0.45"
-            className="group-hover/thumb:stroke-[var(--accent-primary)] group-hover/thumb:stroke-opacity-80 transition-all duration-300"
           />
         );
       })}
@@ -234,7 +317,8 @@ const MiniDagPreview: React.FC<{ nodes?: ProjectRegistryEntry['dagNodes'] }> = (
       {/* DAG Nodes */}
       {dagLayout.nodeCoords.map(({ x, y, node }) => {
         const stageColor = STAGE_COLORS[node.stage] || '#94A3B8';
-        const label = STAGE_LABELS[node.stage] || node.stage.slice(0, 4).toUpperCase();
+        const label =
+          STAGE_LABELS[node.stage] || node.stage.slice(0, 4).toUpperCase();
         return (
           <g key={node.id} transform={`translate(${x - 22}, ${y - 9})`}>
             {/* Node Capsule Background */}
@@ -244,7 +328,6 @@ const MiniDagPreview: React.FC<{ nodes?: ProjectRegistryEntry['dagNodes'] }> = (
               rx="3"
               fill="var(--bg-card)"
               stroke="var(--border-subtle)"
-              className="group-hover/thumb:stroke-[var(--border-focus)] transition-colors"
             />
             {/* Stage Indicator Dot */}
             <circle cx="7" cy="9" r="2" fill={stageColor} />
@@ -283,9 +366,62 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isOpeningNativeFinder, setIsOpeningNativeFinder] = useState(false);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
-  const [projectToDelete, setProjectToDelete] = useState<ProjectRegistryEntry | null>(null);
+  const [projectToDelete, setProjectToDelete] =
+    useState<ProjectRegistryEntry | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [projectToRename, setProjectToRename] =
+    useState<ProjectRegistryEntry | null>(null);
+  const [newName, setNewName] = useState('');
+  const [renameError, setRenameError] = useState('');
+  const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [copiedProjectId, setCopiedProjectId] = useState<string | null>(null);
+  const copiedCard = useRef<HTMLElement | null>(null);
+  const trashTrigger = useRef<HTMLButtonElement | null>(null);
+  const resultsRef = useRef<HTMLDivElement | null>(null);
+  const previousLayout = useRef<{
+    view: ViewMode;
+    rects: Map<string, DOMRect>;
+  }>({ view: viewMode, rects: new Map() });
+  useLayoutEffect(() => {
+    const elements = [
+      ...(resultsRef.current?.querySelectorAll<HTMLElement>(
+        '[data-project-id]',
+      ) || []),
+    ];
+    const next = new Map(
+      elements.map((el) => [el.dataset.projectId!, el.getBoundingClientRect()]),
+    );
+    const previous = previousLayout.current;
+    previousLayout.current = { view: viewMode, rects: next };
+    if (
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+      previous.view !== viewMode
+    )
+      return;
+    for (const el of elements) {
+      const before = previous.rects.get(el.dataset.projectId!);
+      const after = next.get(el.dataset.projectId!)!;
+      if (!before) continue;
+      const x = viewMode === 'list' ? 0 : before.left - after.left;
+      const y = before.top - after.top;
+      if (Math.abs(x) < 1 && Math.abs(y) < 1) continue;
+      el.getAnimations().forEach((animation) => animation.cancel());
+      el.animate(
+        [
+          { transform: `translate(${x}px, ${y}px)` },
+          { transform: 'translate(0, 0)' },
+        ],
+        { duration: 240, easing: 'cubic-bezier(.16,1,.3,1)' },
+      );
+    }
+  }, [projects, searchQuery, aspectFilter, viewMode, isOpen]);
+  useEffect(() => {
+    if (!copiedProjectId) return;
+    copiedCard.current?.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+    const timer = window.setTimeout(() => setCopiedProjectId(null), 6000);
+    return () => window.clearTimeout(timer);
+  }, [copiedProjectId]);
 
   const loadProjects = async () => {
     setIsLoading(true);
@@ -308,16 +444,97 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     }
   }, [isOpen]);
 
-  const hubDialog = useDialog(isOpen && !isStandalonePage,()=>onClose?.());
-  const deleteDialog = useDialog(!!projectToDelete,()=>{if(!isDeleting)setProjectToDelete(null);});
-  useEffect(()=>{const open=()=>setIsWizardOpen(true);window.addEventListener('studio:new-project',open);return()=>window.removeEventListener('studio:new-project',open);},[]);
+  const hubDialog = useDialog(isOpen && !isStandalonePage, () => onClose?.());
+  useEffect(() => {
+    const open = () => setIsWizardOpen(true);
+    window.addEventListener('studio:new-project', open);
+    return () => window.removeEventListener('studio:new-project', open);
+  }, []);
   if (!isOpen) return null;
+
+  const handleCopyProject = async (p: ProjectRegistryEntry) => {
+    setBusyAction(p.id);
+    setErrorMsg('');
+    try {
+      const { project: copy }: { project: FilmProject } = await (
+        await apiFetch(`/api/projects/${encodeURIComponent(p.id)}/duplicate`, {
+          method: 'POST',
+        })
+      ).json();
+      const entries: ProjectRegistryEntry[] = await (
+        await apiFetch('/api/projects')
+      ).json();
+      const copiedEntry = entries.find((entry) => entry.id === copy.id);
+      if (!copiedEntry)
+        throw new Error(
+          'Copy was created. Refresh the project list to see it.',
+        );
+      const ordered = entries.filter((entry) => entry.id !== copy.id);
+      const sourceIndex = ordered.findIndex((entry) => entry.id === p.id);
+      ordered.splice(sourceIndex + 1, 0, copiedEntry);
+      setSearchQuery('');
+      setAspectFilter('all');
+      setProjects(ordered);
+      toast.success(copy.name, 'Project copied', 6500, {
+        label: 'Show',
+        onClick: () => {
+          const card = document.getElementById(`project-card-${copy.id}`);
+          card?.scrollIntoView({ block: 'center' });
+          card?.querySelector<HTMLButtonElement>('button')?.focus();
+        },
+      });
+      setCopiedProjectId(copy.id);
+    } catch (error) {
+      setErrorMsg((error as Error).message);
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleRenameProject = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!projectToRename || !newName.trim()) {
+      setRenameError('Enter a project name.');
+      return;
+    }
+    setBusyAction(projectToRename.id);
+    setRenameError('');
+    try {
+      const id = encodeURIComponent(projectToRename.id);
+      const project: FilmProject = await (
+        await apiFetch(`/api/projects/${id}`)
+      ).json();
+      await apiFetch(`/api/projects/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newName.trim(),
+          revision: project.revision || 0,
+        }),
+      });
+      setProjects((previous) =>
+        previous.map((entry) =>
+          entry.id === projectToRename.id
+            ? { ...entry, name: newName.trim() }
+            : entry,
+        ),
+      );
+      setProjectToRename(null);
+      toast.success(newName.trim(), 'Project renamed', 6500);
+    } catch (error) {
+      setRenameError((error as Error).message);
+    } finally {
+      setBusyAction(null);
+    }
+  };
 
   const handleOpenProject = async (idOrPath: string) => {
     setIsLoading(true);
     setErrorMsg('');
     try {
-      const res = await apiFetch(`http://localhost:3030/api/projects/${encodeURIComponent(idOrPath)}`);
+      const res = await apiFetch(
+        `http://localhost:3030/api/projects/${encodeURIComponent(idOrPath)}`,
+      );
       const project = await res.json();
       if (!res.ok || !project.id) {
         throw new Error(project.error || 'Failed to load project');
@@ -335,16 +552,22 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     setIsOpeningNativeFinder(true);
     setErrorMsg('');
     try {
-      const res = await apiFetch('http://localhost:3030/api/projects/pick-directory', {
-        method: 'POST',
-      });
+      const res = await apiFetch(
+        'http://localhost:3030/api/projects/pick-directory',
+        {
+          method: 'POST',
+        },
+      );
       const data = await res.json();
       if (data.path) {
-        const openRes = await apiFetch('http://localhost:3030/api/projects/open', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ path: data.path }),
-        });
+        const openRes = await apiFetch(
+          'http://localhost:3030/api/projects/open',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: data.path }),
+          },
+        );
         const openData = await openRes.json();
         if (openData.project) {
           onSelectProject(openData.project);
@@ -358,28 +581,75 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     }
   };
 
-  const handleInitiateDelete = (e: React.MouseEvent, project: ProjectRegistryEntry) => {
+  const handleInitiateDelete = (
+    e: React.MouseEvent<HTMLButtonElement>,
+    project: ProjectRegistryEntry,
+  ) => {
     e.stopPropagation();
+    trashTrigger.current = e.currentTarget;
+    setErrorMsg('');
     setProjectToDelete(project);
   };
 
-  const handleConfirmDelete = async (moveToTrash: boolean) => {
-    if (!projectToDelete) return;
+  const handleConfirmDelete = async (
+    moveToTrash: boolean,
+    target = projectToDelete,
+  ) => {
+    if (!target) return;
     setIsDeleting(true);
     setErrorMsg('');
 
     try {
-      const res = await apiFetch(`http://localhost:3030/api/projects/${projectToDelete.id}/remove`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ moveToTrash }),
-      });
+      const res = await apiFetch(
+        `http://localhost:3030/api/projects/${target.id}/remove`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ moveToTrash }),
+        },
+      );
       const data = await res.json();
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Failed to remove project');
       }
-      setProjects((prev) => prev.filter((p) => p.id !== projectToDelete.id));
+      const removed = target;
       setProjectToDelete(null);
+      const card = document.getElementById(`project-card-${removed.id}`);
+      if (
+        card &&
+        !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ) {
+        await card
+          .animate([{ opacity: 1 }, { opacity: 0 }], {
+            duration: 200,
+            easing: 'ease-in',
+            fill: 'forwards',
+          })
+          .finished.catch(() => {});
+      }
+      setProjects((prev) => prev.filter((p) => p.id !== removed.id));
+      toast.success(
+        removed.name,
+        moveToTrash ? 'Moved to Trash' : 'Project removed',
+        6500,
+        moveToTrash
+          ? undefined
+          : {
+              label: 'Undo',
+              onClick: async () => {
+                await apiFetch('/api/projects/open', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ path: removed.path }),
+                });
+                const entries: ProjectRegistryEntry[] = await (
+                  await apiFetch('/api/projects')
+                ).json();
+                setProjects(entries);
+                toast.success(removed.name, 'Project restored');
+              },
+            },
+      );
     } catch (err: any) {
       setErrorMsg(err.message || 'Deletion failed');
     } finally {
@@ -393,7 +663,8 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
       !q ||
       p.name.toLowerCase().includes(q) ||
       p.path.toLowerCase().includes(q);
-    const matchesAspect = aspectFilter === 'all' || p.aspectRatio === aspectFilter;
+    const matchesAspect =
+      aspectFilter === 'all' || p.aspectRatio === aspectFilter;
     return matchesSearch && matchesAspect;
   });
 
@@ -419,527 +690,490 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     return `${mm}:${ss}`;
   };
 
-  const containerClasses = isStandalonePage
-    ? 'flex flex-col h-screen w-screen bg-app text-text-primary overflow-hidden'
-    : 'relative w-full max-w-6xl bg-surface border border-subtle rounded-lg shadow-2xl overflow-hidden flex flex-col h-[88vh] text-text-primary';
-
-  const modalWrapperClasses = isStandalonePage
-    ? ''
-    : 'fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150';
-
-  // Render project card visual thumbnail (Project Video or DAG Preview)
-  // Clean single edge-to-edge canvas with zero nested concentric borders or stamped settings
-  const renderCardThumbnail = (p: ProjectRegistryEntry, isCurrent: boolean) => {
-    const videoUrl = p.previewVideoUrl || p.previewThumbnailUrl;
-    const isVideoFile =
-      videoUrl &&
-      (videoUrl.endsWith('.mp4') || videoUrl.endsWith('.webm') || videoUrl.endsWith('.mov'));
-
+  const openRename = (p: ProjectRegistryEntry) => {
+    setProjectToRename(p);
+    setNewName(p.name);
+    setRenameError('');
+  };
+  const actionsDisabled = !!busyAction || isDeleting;
+  const thumb = (p: ProjectRegistryEntry, compact = false) => {
+    const url = p.previewVideoUrl || p.previewThumbnailUrl;
+    const video = !!url && /\.(mp4|webm|mov)(\?|$)/i.test(url);
     return (
-      <div className="relative w-full h-40 bg-app border-b border-faint overflow-hidden flex items-center justify-center select-none group/thumb">
-        {videoUrl ? (
-          isVideoFile ? (
+      <Thumbnail compact={compact}>
+        {url ? (
+          video ? (
             <video
-              src={videoUrl}
+              src={url}
               muted
               loop
               autoPlay
               playsInline
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+              className="size-full object-cover"
             />
           ) : (
-            <img
-              src={videoUrl}
-              alt={p.name}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-            />
+            <img src={url} alt={p.name} className="size-full object-cover" />
           )
         ) : (
-          /* Render DAG Preview */
           <MiniDagPreview nodes={p.dagNodes} />
         )}
-
-        {/* Active Project badge in top-right */}
-        {isCurrent && (
-          <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-surface/90 text-accent-primary border border-subtle shadow-xs z-20 backdrop-blur-xs">
-            <CheckCircle2 className="w-2.5 h-2.5 text-accent-primary" />
-            <span>ACTIVE</span>
-          </div>
+        {p.id === copiedProjectId && (
+          <NewItemIndicator side={compact ? 'left' : 'right'} small={compact} />
         )}
-
-        {/* Delete action button in top-left */}
-        <button
-          title="Delete project"
-          onClick={(e) => handleInitiateDelete(e, p)}
-          className="absolute top-2.5 left-2.5 opacity-0 group-hover:opacity-100 p-1.5 rounded bg-surface/90 text-text-muted hover:text-red-400 border border-subtle hover:border-red-500/40 transition-all z-20 shadow-xs backdrop-blur-xs"
-        >
-          <Trash2 className="w-3 h-3" />
-        </button>
-      </div>
+        {!compact && p.id === currentProjectId && (
+          <Badge className="absolute bottom-2.5 left-2.5">
+            <CheckCircle2 className="size-3" />
+            Active
+          </Badge>
+        )}
+      </Thumbnail>
     );
   };
-
+  const name = (p: ProjectRegistryEntry) => (
+    <div className="relative flex h-6 min-w-0 items-center">
+      {projectToRename?.id === p.id ? (
+        <InlineRename
+          value={newName}
+          onChange={(value) => {
+            setNewName(value);
+            setRenameError('');
+          }}
+          onSave={() => {
+            void handleRenameProject();
+          }}
+          onCancel={() => {
+            setProjectToRename(null);
+            setRenameError('');
+          }}
+          busy={!!busyAction}
+          error={renameError}
+        />
+      ) : (
+        <Button
+          variant="ghost"
+          className="h-6 min-w-0 max-w-full justify-start px-0 text-sm font-semibold hover:bg-transparent"
+          onClick={(e) => {
+            e.stopPropagation();
+            void handleOpenProject(p.id);
+          }}
+        >
+          <span className="truncate" title={p.name}>
+            {p.name}
+          </span>
+        </Button>
+      )}
+    </div>
+  );
+  const actions = (p: ProjectRegistryEntry, list = false) => (
+    <div
+      role="group"
+      aria-label={`Actions for ${p.name}`}
+      onClick={(e) => e.stopPropagation()}
+      className={cn(
+        'flex items-center gap-1 transition-opacity duration-fast motion-reduce:transition-none opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto [@media(hover:none)]:opacity-100 [@media(hover:none)]:pointer-events-auto',
+        list
+          ? 'justify-end'
+          : 'absolute right-3 top-3 rounded-lg bg-surface p-1 shadow-dialog',
+        !list && p.id === copiedProjectId && 'right-8',
+      )}
+    >
+      <Tooltip label="Copy project">
+        <IconButton
+          label={`Copy ${p.name}`}
+          size="icon-sm"
+          loading={busyAction === p.id}
+          disabled={actionsDisabled}
+          onClick={() => {
+            void handleCopyProject(p);
+          }}
+        >
+          <Copy />
+        </IconButton>
+      </Tooltip>
+      <Tooltip label="Rename project">
+        <IconButton
+          label={`Rename ${p.name}`}
+          size="icon-sm"
+          disabled={actionsDisabled}
+          onClick={() => openRename(p)}
+        >
+          <Pencil />
+        </IconButton>
+      </Tooltip>
+      <Tooltip label="Move to Trash">
+        <IconButton
+          label={`Delete ${p.name}`}
+          size="icon-sm"
+          className="text-danger"
+          disabled={actionsDisabled}
+          onClick={(e) => handleInitiateDelete(e, p)}
+        >
+          <Trash2 />
+        </IconButton>
+      </Tooltip>
+      {list && (
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={`Open ${p.name}`}
+          onClick={() => {
+            void handleOpenProject(p.id);
+          }}
+        >
+          Open
+          <ArrowUpRight />
+        </Button>
+      )}
+    </div>
+  );
   const content = (
-    <div ref={hubDialog} aria-label="Projects" className={containerClasses}>
-      {/* Studio Header */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-subtle bg-surface shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded bg-card text-accent-primary border border-subtle flex items-center justify-center">
-            <Film className="w-4 h-4" />
-          </div>
-          <div>
-            <h1 className="font-bold text-sm tracking-tight text-text-primary">Projects</h1>
-          </div>
-        </div>
-
-        {/* Actions & Theme Icon Toggle */}
+    <div
+      ref={hubDialog}
+      aria-label="Projects"
+      className={cn(
+        'flex flex-col overflow-hidden bg-app text-text-primary',
+        isStandalonePage
+          ? 'h-screen w-screen'
+          : 'relative h-[88vh] w-full max-w-6xl rounded-dialog border border-subtle shadow-dialog',
+      )}
+    >
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-4 bg-card px-5 pb-6 pt-7 sm:px-8 sm:pb-8 sm:pt-9">
+        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+          Projects
+        </h1>
         <div className="flex items-center gap-2">
-          {onThemeChange && currentTheme && (
-            <ThemeToggle currentTheme={currentTheme} onThemeChange={onThemeChange} className="w-8 h-8" />
+          {onThemeChange && (
+            <ThemeToggle
+              currentTheme={currentTheme}
+              onThemeChange={onThemeChange}
+            />
           )}
-
-          <button
+          <Button onClick={() => setIsWizardOpen(true)}>
+            <Plus />
+            New Project
+          </Button>
+          <Button
+            variant="ghost"
+            loading={isOpeningNativeFinder}
             onClick={handleOpenFolderFromFinder}
-            disabled={isOpeningNativeFinder}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-card hover:bg-subtle active:scale-[0.98] text-text-primary rounded text-xs font-semibold border border-subtle transition shadow-xs disabled:opacity-50"
-            title="Open folder from Finder"
           >
-            {isOpeningNativeFinder ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <FolderOpen className="w-3.5 h-3.5 text-accent-primary" />
-            )}
-            <span>Open Folder</span>
-          </button>
-
-          <button
-            onClick={() => setIsWizardOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-accent-primary hover:opacity-90 active:scale-[0.98] text-app font-bold text-xs rounded shadow-xs transition"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>New Project</span>
-          </button>
-
+            {isOpeningNativeFinder ? 'Opening…' : 'Open Folder'}
+            <ArrowUpRight />
+          </Button>
           {!isStandalonePage && onClose && (
-            <button
-              onClick={onClose}
-              className="p-1.5 ml-1 rounded text-text-muted hover:text-text-primary hover:bg-card transition"
-              title="Close"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <IconButton label="Close projects" onClick={onClose}>
+              <X />
+            </IconButton>
           )}
         </div>
-      </div>
-
-      {/* Subheader Toolbar: Search, Aspect Filter Chips, and View Modes */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-2.5 border-b border-subtle bg-surface/60 shrink-0">
-        {/* Left: Search & Filter */}
-        <div className="flex items-center gap-3">
-          <div className="relative w-64 md:w-72">
-            <Search className="w-3.5 h-3.5 text-text-muted absolute left-3 top-2.5 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search projects..."
+      </header>
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-subtle bg-card px-5 pb-5 sm:px-8">
+        <div className="flex w-full flex-wrap items-center gap-4 sm:w-auto sm:gap-7">
+          <div className="relative w-full sm:w-[340px]">
+            <Search className="pointer-events-none absolute left-3 top-3 size-4 text-text-muted" />
+            <Input
+              type="search"
+              aria-label="Search projects"
+              placeholder="Search projects…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-7 py-1.5 bg-card border border-subtle rounded text-xs font-sans text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-accent-primary transition"
+              className="h-control-lg border-transparent pl-9 pr-9"
             />
             {searchQuery && (
-              <button
+              <IconButton
+                label="Clear search"
+                size="icon-sm"
+                className="absolute right-1 top-1.5"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-2 p-0.5 text-text-muted hover:text-text-primary rounded"
               >
-                <X className="w-3 h-3" />
-              </button>
+                <X />
+              </IconButton>
             )}
           </div>
-
-          {/* Aspect Filter Chips */}
-          <div className="hidden sm:flex items-center gap-1 bg-card p-0.5 rounded border border-subtle text-[11px] font-mono">
-            {(['all', '16:9', '9:16'] as const).map((filter) => {
-              const count =
-                filter === 'all'
-                  ? projects.length
-                  : projects.filter((p) => p.aspectRatio === filter).length;
-              const label = filter === 'all' ? 'All' : filter;
-              const isActive = aspectFilter === filter;
-              return (
-                <button
-                  key={filter}
-                  onClick={() => setAspectFilter(filter)}
-                  className={`px-2 py-0.5 rounded transition-colors ${
-                    isActive
-                      ? 'bg-surface text-accent-primary font-bold shadow-xs'
-                      : 'text-text-muted hover:text-text-primary'
-                  }`}
-                >
-                  {label}
-                  <span className="ml-1 opacity-60 text-[10px]">({count})</span>
-                </button>
-              );
-            })}
-          </div>
+          <SegmentedControl
+            label="Aspect ratio"
+            value={aspectFilter}
+            onValueChange={(value) => setAspectFilter(value as AspectFilter)}
+            options={(['all', '16:9', '9:16'] as const).map((value) => ({
+              value,
+              label: value === 'all' ? 'All' : value,
+              content: (
+                <>
+                  {value === 'all' ? 'All' : value}
+                  <span className="text-[10px] text-text-muted">
+                    (
+                    {value === 'all'
+                      ? projects.length
+                      : projects.filter((p) => p.aspectRatio === value).length}
+                    )
+                  </span>
+                </>
+              ),
+            }))}
+            className="[&_[data-state=on]]:bg-surface"
+          />
         </div>
-
-        {/* Right: Count & View Mode Toggle (Grid and List) */}
         <div className="flex items-center gap-3">
-          <span className="text-[11px] text-text-muted font-mono">
-            {filteredProjects.length} {filteredProjects.length === 1 ? 'project' : 'projects'}
+          <span className="text-xs text-text-muted">
+            {filteredProjects.length}{' '}
+            {filteredProjects.length === 1 ? 'project' : 'projects'}
           </span>
-
-          {/* View Mode Toggle: Grid and List */}
-          <div className="flex items-center bg-card p-0.5 rounded border border-subtle">
-            <button
-              onClick={() => setViewMode('grid')}
-              title="Grid view"
-              className={`p-1.5 rounded transition-colors ${
-                viewMode === 'grid'
-                  ? 'bg-surface text-accent-primary shadow-xs border border-subtle/50'
-                  : 'text-text-muted hover:text-text-primary'
-              }`}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              title="List view"
-              className={`p-1.5 rounded transition-colors ${
-                viewMode === 'list'
-                  ? 'bg-surface text-accent-primary shadow-xs border border-subtle/50'
-                  : 'text-text-muted hover:text-text-primary'
-              }`}
-            >
-              <List className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          <SegmentedControl
+            label="Project view"
+            value={viewMode}
+            onValueChange={(value) => setViewMode(value as ViewMode)}
+            options={[
+              { value: 'grid', label: 'Grid view', content: <LayoutGrid /> },
+              { value: 'list', label: 'List view', content: <List /> },
+            ]}
+            className="border border-subtle p-0.5 [&_button]:size-7 [&_button]:px-0 [&_[data-state=on]]:bg-surface"
+          />
         </div>
       </div>
-
-      {/* Error notice */}
-      {errorMsg && (
-        <div className="mx-6 mt-3 p-2.5 bg-red-950/60 border border-red-800 rounded text-xs text-red-200 flex items-center gap-2 shrink-0">
-          <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-          <span>{errorMsg}</span>
-        </div>
-      )}
-
-      {/* Project Display Area */}
-      <div className="flex-1 p-6 overflow-y-auto">
-        {isLoading && projects.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-text-muted gap-2">
-            <Loader2 className="w-5 h-5 animate-spin text-accent-primary" />
-            <span className="text-xs font-mono">Loading projects...</span>
-          </div>
-        ) : filteredProjects.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center p-8 border border-dashed border-subtle rounded-md bg-card/30">
-            <div className="w-10 h-10 rounded bg-card flex items-center justify-center text-text-muted mb-3 border border-subtle">
-              <Folder className="w-5 h-5" />
-            </div>
-            <h3 className="text-sm font-bold text-text-primary mb-1">No projects found</h3>
-            <p className="text-xs text-text-muted max-w-sm mb-4">
-              {searchQuery || aspectFilter !== 'all'
-                ? 'No projects match your filter.'
-                : 'Create a project or open an existing directory.'}
-            </p>
-            <div className="flex items-center gap-2.5">
-              <button
-                onClick={() => setIsWizardOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-accent-primary hover:opacity-90 active:scale-[0.98] text-app font-bold text-xs rounded transition"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Create Project</span>
-              </button>
-              <button
-                onClick={handleOpenFolderFromFinder}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-card hover:bg-subtle active:scale-[0.98] text-text-primary font-semibold text-xs rounded border border-subtle transition"
-              >
-                <FolderOpen className="w-3.5 h-3.5 text-accent-primary" />
-                <span>Open Folder</span>
-              </button>
-            </div>
+      <div
+        ref={resultsRef}
+        className="flex-1 overflow-y-auto p-5 [scrollbar-gutter:stable] sm:p-8 sm:pt-6"
+      >
+        {errorMsg && !projectToDelete && (
+          <p
+            role="alert"
+            className="mb-5 rounded-md border border-danger bg-surface p-3 text-sm text-danger"
+          >
+            {errorMsg}
+          </p>
+        )}
+        {isLoading && !projects.length ? (
+          <div
+            role="status"
+            className="flex h-40 items-center justify-center gap-2 text-sm text-text-muted"
+          >
+            <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
+            Loading projects…
           </div>
         ) : viewMode === 'grid' ? (
-          /* ========================================================
-             GRID VIEW: Redesigned Minimalist Cards (Zero concentric borders)
-             ======================================================== */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredProjects.map((p) => {
-              const isCurrent = p.id === currentProjectId;
-
-              return (
-                <div
-                  key={p.id}
-                  onClick={() => handleOpenProject(p.id)}
-                  className={`group relative rounded-md border text-left cursor-pointer transition-all duration-150 overflow-hidden flex flex-col justify-between ${
-                    isCurrent
-                      ? 'bg-card border-accent-primary ring-1 ring-accent-primary/30 shadow-md'
-                      : 'bg-card border-subtle hover:border-text-muted/50 hover:-translate-y-0.5 hover:shadow-lg'
-                  }`}
+          <div key="grid" className="animate-enter motion-reduce:animate-none">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <article className="group min-w-0">
+                <button
+                  className="block w-full rounded-thumbnail text-left"
+                  onClick={() => setIsWizardOpen(true)}
                 >
-                  {/* Visual Thumbnail: Edge-to-edge Project Video or DAG Preview */}
-                  {renderCardThumbnail(p, isCurrent)}
-
-                  {/* Card Content & Metadata below Thumbnail */}
-                  <div className="p-3 flex flex-col justify-between flex-1 space-y-2.5">
-                    <div>
-                      <h4 className="text-xs font-bold text-text-primary group-hover:text-accent-primary transition truncate">
-                        {p.name}
-                      </h4>
-                      <p className="text-[10px] text-text-muted truncate font-mono mt-1 flex items-center gap-1">
-                        <HardDrive className="w-2.5 h-2.5 text-text-muted/60 shrink-0" />
-                        <span className="truncate">{p.path}</span>
-                      </p>
-                    </div>
-
-                    {/* Metadata Badges - Uniform badge styling, no separators */}
-                    <div className="flex items-center justify-between gap-1.5 text-text-muted font-mono">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-medium bg-surface border border-subtle text-text-muted">
-                          {p.aspectRatio}
-                        </span>
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-medium bg-surface border border-subtle text-text-muted">
-                          {formatCutDuration(p.targetDurationSec)}
-                        </span>
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-medium bg-surface border border-subtle text-text-muted">
-                          {p.fps || 30} FPS
-                        </span>
-                        {p.dagNodes && p.dagNodes.length > 0 && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-medium bg-surface border border-subtle text-text-muted">
-                            {p.dagNodes.length} nodes
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0 text-[10px] text-text-muted/70">
-                        <Clock className="w-2.5 h-2.5 text-text-muted/50" />
-                        <span>{formatRelativeTime(p.lastOpenedAt)}</span>
-                      </div>
+                  <Thumbnail>
+                    <Plus className="size-7 stroke-[1.5] text-text-muted" />
+                  </Thumbnail>
+                  <span className="mt-4 flex h-6 items-center text-sm font-semibold">
+                    New Project
+                  </span>
+                </button>
+                <p className="mt-2 text-xs text-text-muted">
+                  Start with a brief
+                </p>
+              </article>
+              {filteredProjects.map((p) => (
+                <article
+                  key={p.id}
+                  data-project-id={p.id}
+                  id={`project-card-${p.id}`}
+                  ref={p.id === copiedProjectId ? copiedCard : undefined}
+                  aria-busy={busyAction === p.id}
+                  className={cn(
+                    'group relative min-w-0',
+                    p.id === copiedProjectId &&
+                      'animate-copy-arrive motion-reduce:animate-none',
+                  )}
+                >
+                  <button
+                    aria-label={`Open ${p.name}`}
+                    onClick={() => {
+                      void handleOpenProject(p.id);
+                    }}
+                    className="block w-full rounded-thumbnail text-left"
+                  >
+                    {thumb(p)}
+                  </button>
+                  <div className="pt-4">
+                    {name(p)}
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs tabular-nums text-text-muted">
+                      <span>{p.aspectRatio}</span>
+                      <span>{formatCutDuration(p.targetDurationSec)}</span>
+                      <span>{p.fps || 30} FPS</span>
+                      {!!p.dagNodes?.length && (
+                        <span>{p.dagNodes.length} nodes</span>
+                      )}
+                      <span className="ml-auto">
+                        {formatRelativeTime(p.lastOpenedAt)}
+                      </span>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                  {actions(p)}
+                </article>
+              ))}
+            </div>
+            {!filteredProjects.length &&
+              (searchQuery || aspectFilter !== 'all') && (
+                <p className="mt-6 text-sm text-text-muted">
+                  No projects match your search or filter.
+                </p>
+              )}
           </div>
         ) : (
-          /* ========================================================
-             LIST VIEW: Dense Commercial NLE Project Table
-             ======================================================== */
-          <div className="border border-faint rounded-md overflow-hidden bg-card/60 backdrop-blur-sm shadow-xs">
-            <table className="w-full text-left border-collapse">
+          <div
+            key="list"
+            className="animate-enter overflow-x-auto rounded-md border border-subtle motion-reduce:animate-none"
+          >
+            <Table>
               <thead>
-                <tr className="border-b border-faint bg-surface/80 text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider select-none">
-                  <th className="py-2 px-3">Project</th>
-                  <th className="py-2 px-2.5">Ratio</th>
-                  <th className="py-2 px-2.5">Timebase</th>
-                  <th className="py-2 px-2.5">Duration</th>
-                  <th className="py-2 px-2.5">Nodes</th>
-                  <th className="py-2 px-2.5">Location</th>
-                  <th className="py-2 px-2.5">Opened</th>
-                  <th className="py-2 px-3 text-right">Action</th>
+                <tr>
+                  <TableHead>Project</TableHead>
+                  <TableHead>Format</TableHead>
+                  <TableHead>Last opened</TableHead>
+                  <TableHead>
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-faint text-xs">
-                {filteredProjects.map((p) => {
-                  const isCurrent = p.id === currentProjectId;
-
-                  return (
-                    <tr
-                      key={p.id}
-                      onClick={() => handleOpenProject(p.id)}
-                      className={`group cursor-pointer transition-colors ${
-                        isCurrent
-                          ? 'bg-accent-primary/10 hover:bg-accent-primary/15'
-                          : 'hover:bg-surface/70'
-                      }`}
+              <tbody>
+                <TableRow>
+                  <TableCell>
+                    <button
+                      className="flex items-center gap-2 text-left"
+                      onClick={() => setIsWizardOpen(true)}
                     >
-                      {/* Name & Active Indicator */}
-                      <td className="py-2.5 px-3">
-                        <div className="flex items-center gap-2">
-                          <div className="p-1 rounded bg-surface border border-subtle text-accent-primary shrink-0">
-                            {p.aspectRatio === '9:16' ? (
-                              <Smartphone className="w-3 h-3" />
-                            ) : p.aspectRatio === '16:9' ? (
-                              <Monitor className="w-3 h-3" />
-                            ) : (
-                              <Square className="w-3 h-3" />
-                            )}
-                          </div>
-                          <div className="truncate max-w-[220px]">
-                            <div className="font-semibold text-text-primary group-hover:text-accent-primary transition truncate">
-                              {p.name}
-                            </div>
-                            {isCurrent && (
-                              <span className="text-[8px] font-mono font-bold text-accent-primary">
-                                ACTIVE
-                              </span>
-                            )}
-                          </div>
+                      <Thumbnail compact>
+                        <Plus className="size-4 text-text-muted" />
+                      </Thumbnail>
+                      <span className="flex h-6 w-[clamp(200px,33vw,520px)] items-center text-sm font-semibold">
+                        New Project
+                      </span>
+                    </button>
+                  </TableCell>
+                  <TableCell className="text-text-muted">
+                    Start with a brief
+                  </TableCell>
+                  <TableCell className="text-text-muted">—</TableCell>
+                  <TableCell />
+                </TableRow>
+                {!filteredProjects.length && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={4}
+                      className="p-6 text-center text-sm text-text-muted"
+                    >
+                      No projects match your search or filter.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {filteredProjects.map((p) => (
+                  <TableRow
+                    key={p.id}
+                    data-project-id={p.id}
+                    id={`project-card-${p.id}`}
+                    onClick={() => {
+                      void handleOpenProject(p.id);
+                    }}
+                    className={cn(
+                      'cursor-pointer',
+                      p.id === copiedProjectId &&
+                        'animate-row-arrive motion-reduce:animate-none',
+                    )}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {thumb(p, true)}
+                        <div
+                          className="w-[clamp(200px,33vw,520px)] min-w-0"
+                          title={`${p.path}${p.dagNodes ? ` · ${p.dagNodes.length} nodes` : ''}`}
+                        >
+                          {name(p)}
+                          {p.id === currentProjectId && <Badge>Active</Badge>}
                         </div>
-                      </td>
-
-                      {/* Format */}
-                      <td className="py-2.5 px-2.5 whitespace-nowrap">
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-surface border border-subtle text-text-primary">
-                          {p.aspectRatio}
-                        </span>
-                      </td>
-
-                      {/* Timebase */}
-                      <td className="py-2.5 px-2.5 whitespace-nowrap font-mono text-[11px] text-text-muted">
-                        {p.fps || 30} FPS
-                      </td>
-
-                      {/* Duration */}
-                      <td className="py-2.5 px-2.5 whitespace-nowrap font-mono text-[11px] text-accent-primary font-semibold">
-                        {formatCutDuration(p.targetDurationSec)}
-                      </td>
-
-                      {/* Nodes Count */}
-                      <td className="py-2.5 px-2.5 whitespace-nowrap font-mono text-[10px] text-text-muted">
-                        {p.dagNodes ? `${p.dagNodes.length} nodes` : '—'}
-                      </td>
-
-                      {/* Path */}
-                      <td className="py-2.5 px-2.5">
-                        <div className="flex items-center gap-1 font-mono text-[10px] text-text-muted truncate max-w-xs">
-                          <Folder className="w-2.5 h-2.5 text-text-muted/60 shrink-0" />
-                          <span className="truncate">{p.path}</span>
-                        </div>
-                      </td>
-
-                      {/* Last Opened */}
-                      <td className="py-2.5 px-2.5 whitespace-nowrap font-mono text-[10px] text-text-muted">
-                        {formatRelativeTime(p.lastOpenedAt)}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            title="Delete project"
-                            onClick={(e) => handleInitiateDelete(e, p)}
-                            className="p-1 rounded text-text-muted hover:text-red-400 hover:bg-card border border-transparent transition opacity-0 group-hover:opacity-100"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded bg-surface group-hover:bg-accent-primary group-hover:text-app text-accent-primary text-xs font-semibold border border-subtle group-hover:border-transparent transition shadow-xs">
-                            <span>Open</span>
-                            <ArrowUpRight className="w-3 h-3" />
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                      </div>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap tabular-nums text-text-muted">
+                      {p.aspectRatio}
+                      <span className="mx-2">·</span>
+                      {formatCutDuration(p.targetDurationSec)}
+                      <span className="mx-2">·</span>
+                      {p.fps || 30} fps
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-text-muted">
+                      {formatRelativeTime(p.lastOpenedAt)}
+                    </TableCell>
+                    <TableCell>{actions(p, true)}</TableCell>
+                  </TableRow>
+                ))}
               </tbody>
-            </table>
+            </Table>
           </div>
         )}
-      </div>
-
-      {/* Bottom Bar: Engine status and shortcut */}
-      <div className="px-6 py-2.5 border-t border-subtle bg-surface flex items-center justify-between text-xs text-text-muted shrink-0">
-        <div className="flex items-center gap-2 font-mono text-[11px]">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-          <span>Ready</span>
-        </div>
-        <div className="text-[11px] text-text-muted font-mono">
-          <span>
-            Press <kbd className="px-1.5 py-0.5 bg-card rounded border border-subtle text-text-primary text-[10px]">⌘O</kbd> in studio
-          </span>
-        </div>
       </div>
     </div>
   );
-
   return (
     <>
-      {isStandalonePage ? content : <div className={modalWrapperClasses}>{content}</div>}
-
-      {/* New Project Wizard Modal (Lazy Loaded) */}
+      {isStandalonePage ? (
+        content
+      ) : (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          {content}
+        </div>
+      )}
       {isWizardOpen && (
         <React.Suspense fallback={null}>
           <NewProjectWizard
             isOpen={isWizardOpen}
             onClose={() => setIsWizardOpen(false)}
-            onProjectCreated={(newProject) => {
-              onSelectProject(newProject);
+            onProjectCreated={(project) => {
+              onSelectProject(project);
               onClose?.();
             }}
           />
         </React.Suspense>
       )}
-
-      {/* Delete / Remove Project Confirmation Modal */}
-      {projectToDelete && (
-        <div ref={deleteDialog} aria-label="Remove project" className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150">
-          <div className="relative w-full max-w-sm bg-surface border border-subtle rounded-lg shadow-2xl p-5 text-text-primary space-y-3.5">
-            {/* Header */}
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded bg-red-500/10 text-red-400 border border-red-500/20">
-                <Trash2 className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="text-xs font-bold text-text-primary">Delete Project</h3>
-                <p className="text-[11px] text-text-muted truncate max-w-[240px]">
-                  {projectToDelete.name}
-                </p>
-              </div>
+      <AlertDialog
+        open={!!projectToDelete}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) setProjectToDelete(null);
+        }}
+      >
+        <AlertDialogContent
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            if (trashTrigger.current?.isConnected) trashTrigger.current.focus();
+          }}
+        >
+          <div className="p-7">
+            <div className="mb-5 flex size-11 items-center justify-center rounded-thumbnail bg-danger/10 text-danger">
+              <Trash2 className="size-5" />
             </div>
-
-            <p className="text-xs text-text-muted leading-relaxed">
-              Permanently delete project files from disk or only remove from the studio project list?
-            </p>
-
-            {/* Action Choices */}
-            <div className="space-y-2 pt-1">
-              {/* Option 1: Delete from System */}
-              <button
-                onClick={() => handleConfirmDelete(true)}
-                disabled={isDeleting}
-                className="w-full p-2.5 rounded bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-left transition flex items-center justify-between group disabled:opacity-50"
-              >
-                <div>
-                  <div className="text-xs font-bold text-red-400 flex items-center gap-1.5">
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Move to Trash</span>
-                  </div>
-                  <div className="text-[10px] text-text-muted mt-0.5">
-                    Deletes project directory and files from disk.
-                  </div>
-                </div>
-              </button>
-
-              {/* Option 2: Remove from Studio Only */}
-              <button
-                onClick={() => handleConfirmDelete(false)}
-                disabled={isDeleting}
-                className="w-full p-2.5 rounded bg-card hover:bg-subtle border border-subtle text-left transition flex items-center justify-between group disabled:opacity-50"
-              >
-                <div>
-                  <div className="text-xs font-bold text-text-primary">
-                    Remove from List
-                  </div>
-                  <div className="text-[10px] text-text-muted mt-0.5">
-                    Keeps files on disk, removes from studio recents.
-                  </div>
-                </div>
-              </button>
-            </div>
-
-            {/* Footer Cancel */}
-            <div className="flex justify-end pt-2 border-t border-subtle">
-              <button
-                onClick={() => setProjectToDelete(null)}
-                disabled={isDeleting}
-                className="px-3 py-1.5 rounded text-xs font-semibold text-text-muted hover:text-text-primary transition"
-              >
-                Cancel
-              </button>
-            </div>
+            <AlertDialogTitle>
+              Move “{projectToDelete?.name}” to Trash?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              The project folder, footage, and assets will move to Finder Trash.
+              You can restore them until Trash is emptied.
+            </AlertDialogDescription>
+            {errorMsg && (
+              <p role="alert" className="mt-3 text-sm text-danger">
+                {errorMsg}
+              </p>
+            )}
           </div>
-        </div>
-      )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDeleting}
+              onClick={(e) => {
+                e.preventDefault();
+                void handleConfirmDelete(true);
+              }}
+            >
+              {isDeleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
+              {isDeleting ? 'Moving to Trash…' : 'Move to Trash'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
