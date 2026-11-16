@@ -10,8 +10,8 @@ async function run() {
     fs.mkdirSync(screenshotsDir, { recursive: true });
   }
 
-  const artifactDir = '/Users/ankushjamdagani/.gemini/antigravity/brain/1e877bfe-554c-487b-bae1-ef18bc0b2cfb/screenshots';
-  if (!fs.existsSync(artifactDir)) {
+  const artifactDir = process.env.ARTIFACT_DIR || null;
+  if (artifactDir && !fs.existsSync(artifactDir)) {
     fs.mkdirSync(artifactDir, { recursive: true });
   }
 
@@ -31,9 +31,10 @@ async function run() {
 
   const saveShot = async (filename: string) => {
     const p1 = path.join(screenshotsDir, filename);
-    const p2 = path.join(artifactDir, filename);
     await page.screenshot({ path: p1 });
-    fs.copyFileSync(p1, p2);
+    if (artifactDir && artifactDir !== screenshotsDir) {
+      fs.copyFileSync(p1, path.join(artifactDir, filename));
+    }
     console.log(`   📸 Saved screenshot: ${filename}`);
   };
 

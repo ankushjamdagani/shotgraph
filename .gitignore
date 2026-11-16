@@ -40,3 +40,11 @@ client/storybook-static/
 
 # Design prototypes
 prototype/
+
+# Export artifacts & test screenshots
+exports/screenshots/
+exports/drafts/
+
+# Local studio working tree project metadata
+.studio/
+server/.studio/
