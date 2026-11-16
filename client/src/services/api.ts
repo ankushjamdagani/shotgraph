@@ -10,7 +10,7 @@ export function sessionToken(): Promise<string> {
 }
 /** Same-origin transport with a per-server session token for mutations. */
 export async function apiFetch(input: string, init: RequestInit = {}): Promise<Response> {
-    const url = input.replace('http://localhost:3030', '');
+    const url = input.replace(/^https?:\/\/(localhost|127\.0\.0\.1):3030/, '');
     const headers = new Headers(init.headers);
     if (init.method && !['GET', 'HEAD'].includes(init.method.toUpperCase()))
         headers.set('x-studio-token', await sessionToken());

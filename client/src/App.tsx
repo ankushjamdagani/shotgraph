@@ -102,7 +102,7 @@ function App() {
     const sequence = ++loadSequence.current;
     setIsLoadingProject(true);
     try {
-      const res = await apiFetch(`http://localhost:3030/api/projects/${projectId}`);
+      const res = await apiFetch(`/api/projects/${projectId}`);
       const data: FilmProject = await res.json();
       if (sequence !== loadSequence.current) return;
       if (data && data.id) {
@@ -256,7 +256,7 @@ function App() {
     const versionLabel = `v${Object.keys(project.nodes).length + 1}.0 Alternate`;
 
     try {
-      const res = await apiFetch('http://localhost:3030/api/tree/branch', {
+      const res = await apiFetch('/api/tree/branch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -280,7 +280,7 @@ function App() {
   const handleSetActiveCut = async (sceneId: string, nodeId: string) => {
     if (!project) return;
     try {
-      const res = await apiFetch('http://localhost:3030/api/tree/active-cut', {
+      const res = await apiFetch('/api/tree/active-cut', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sceneId, nodeId, projectId: project.id }),
@@ -316,7 +316,7 @@ function App() {
     if (!project) return;
     setIsDeletingActiveProject(true);
     try {
-      const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/remove`, {
+      const res = await apiFetch(`/api/projects/${project.id}/remove`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ moveToTrash }),

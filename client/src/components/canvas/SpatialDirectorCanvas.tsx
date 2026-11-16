@@ -197,7 +197,7 @@ function SpatialDirectorCanvasInner({
       setIsDeletingNode(true);
       try {
         const res = await apiFetch(
-          `http://localhost:3030/api/projects/${project.id}/nodes/${nodeToDelete.id}?deleteFiles=${deleteFilesFromSystem}`,
+          `/api/projects/${project.id}/nodes/${nodeToDelete.id}?deleteFiles=${deleteFilesFromSystem}`,
           {
             method: 'DELETE',
           }
@@ -230,7 +230,7 @@ function SpatialDirectorCanvasInner({
   const handleRenameNode = useCallback(
     async (nodeId: string, newTitle: string) => {
       try {
-        const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/nodes/${nodeId}`, {
+        const res = await apiFetch(`/api/projects/${project.id}/nodes/${nodeId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title: newTitle }),
@@ -257,7 +257,7 @@ function SpatialDirectorCanvasInner({
   const handleColorTagNode = useCallback(
     async (nodeId: string, colorTag: VersionNode['colorTag']) => {
       try {
-        const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/nodes/${nodeId}`, {
+        const res = await apiFetch(`/api/projects/${project.id}/nodes/${nodeId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ colorTag }),
@@ -288,7 +288,7 @@ function SpatialDirectorCanvasInner({
       toast.info('Re-syncing contextual prompt from upstream...');
       try {
         const res = await apiFetch(
-          `http://localhost:3030/api/projects/${project.id}/nodes/${nodeId}/synthesize-prompt`,
+          `/api/projects/${project.id}/nodes/${nodeId}/synthesize-prompt`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -328,7 +328,7 @@ function SpatialDirectorCanvasInner({
         );
         onUpdateProject({ ...project, stickyNotes: updatedNotes });
         try {
-          await apiFetch(`http://localhost:3030/api/projects/${project.id}`, {
+          await apiFetch(`/api/projects/${project.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ stickyNotes: updatedNotes }),
@@ -354,7 +354,7 @@ function SpatialDirectorCanvasInner({
       });
 
       try {
-        await apiFetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}`, {
+        await apiFetch(`/api/projects/${project.id}/nodes/${node.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ position: node.position }),
@@ -416,7 +416,7 @@ function SpatialDirectorCanvasInner({
       toast.success(`Created ${title}`);
 
       try {
-        await apiFetch(`http://localhost:3030/api/projects/${project.id}/nodes`, {
+        await apiFetch(`/api/projects/${project.id}/nodes`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newNode),
@@ -439,7 +439,7 @@ function SpatialDirectorCanvasInner({
         },
       });
       try {
-        await apiFetch(`http://localhost:3030/api/projects/${project.id}/nodes/${nodeId}`, {
+        await apiFetch(`/api/projects/${project.id}/nodes/${nodeId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ width }),
@@ -479,7 +479,7 @@ function SpatialDirectorCanvasInner({
     onUpdateProject({ ...project, stickyNotes: updatedNotes });
     toast.success('Dropped sticky note on canvas');
 
-    apiFetch(`http://localhost:3030/api/projects/${project.id}`, {
+    apiFetch(`/api/projects/${project.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ stickyNotes: updatedNotes }),
@@ -493,7 +493,7 @@ function SpatialDirectorCanvasInner({
       );
       onUpdateProject({ ...project, stickyNotes: updatedNotes });
 
-      apiFetch(`http://localhost:3030/api/projects/${project.id}`, {
+      apiFetch(`/api/projects/${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stickyNotes: updatedNotes }),
@@ -508,7 +508,7 @@ function SpatialDirectorCanvasInner({
       onUpdateProject({ ...project, stickyNotes: updatedNotes });
       toast.info('Sticky note deleted');
 
-      apiFetch(`http://localhost:3030/api/projects/${project.id}`, {
+      apiFetch(`/api/projects/${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stickyNotes: updatedNotes }),
@@ -621,7 +621,7 @@ function SpatialDirectorCanvasInner({
       onUpdateProject(updatedProject);
       toast.success('Connected nodes');
 
-      apiFetch(`http://localhost:3030/api/projects/${project.id}`, {
+      apiFetch(`/api/projects/${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nodes: updatedNodes, edges: updatedEdges }),

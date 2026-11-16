@@ -68,7 +68,7 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      apiFetch('http://localhost:3030/api/styles/presets')
+      apiFetch('/api/styles/presets')
         .then((res) => res.json())
         .then((presets) => {
           if (Array.isArray(presets)) {
@@ -107,7 +107,7 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
         additionalConstraints,
       };
 
-      const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/style/resolve`, {
+      const res = await apiFetch(`/api/projects/${project.id}/style/resolve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -161,7 +161,7 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
         updatedAt: Date.now(),
       };
 
-      const res = await apiFetch('http://localhost:3030/api/styles/presets', {
+      const res = await apiFetch('/api/styles/presets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newPreset),

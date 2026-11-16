@@ -56,7 +56,7 @@ export const TasteFloatingHud: React.FC<TasteFloatingHudProps> = ({
 
   const handleSaveTaste = async () => {
     try {
-      const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/style/resolve`, {
+      const res = await apiFetch(`/api/projects/${project.id}/style/resolve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -83,7 +83,7 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
   const handleExportBlender = useCallback(async () => {
     setIsExportingBlender(true);
     try {
-      const res = await apiFetch('http://localhost:3030/api/export/blender', {
+      const res = await apiFetch('/api/export/blender', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId: project.id }),
@@ -259,7 +259,7 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
     }
 
     try {
-      await apiFetch(`http://localhost:3030/api/projects/${project.id}`, {
+      await apiFetch(`/api/projects/${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenes: updatedScenes }),
@@ -287,7 +287,7 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
     if (onUpdateProject) onUpdateProject(updatedProject);
 
     try {
-      await apiFetch(`http://localhost:3030/api/projects/${project.id}`, {
+      await apiFetch(`/api/projects/${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenes: updatedScenes }),
@@ -310,7 +310,7 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
     if (onUpdateProject) onUpdateProject(updatedProject);
 
     try {
-      await apiFetch(`http://localhost:3030/api/projects/${project.id}`, {
+      await apiFetch(`/api/projects/${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenes: updatedScenes }),
@@ -339,7 +339,7 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
     if (onUpdateProject) onUpdateProject(updatedProject);
 
     try {
-      await apiFetch(`http://localhost:3030/api/projects/${project.id}`, {
+      await apiFetch(`/api/projects/${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenes: newScenes }),

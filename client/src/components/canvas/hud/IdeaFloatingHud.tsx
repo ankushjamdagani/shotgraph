@@ -27,7 +27,7 @@ export const IdeaFloatingHud: React.FC<IdeaFloatingHudProps> = ({
 
   const handleSaveIdea = async () => {
     try {
-      const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}`, {
+      const res = await apiFetch(`/api/projects/${project.id}/nodes/${node.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

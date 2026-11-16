@@ -29,7 +29,7 @@ export const TakeFloatingHud: React.FC<TakeFloatingHudProps> = ({
   const handleCopyEnrichedPrompt = async () => {
     let basePrompt = node.prompt || 'Cinematic footage take';
     try {
-      const res = await apiFetch('http://localhost:3030/api/skills/enrich-prompt', {
+      const res = await apiFetch('/api/skills/enrich-prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -53,7 +53,7 @@ export const TakeFloatingHud: React.FC<TakeFloatingHudProps> = ({
   const handleMakeActiveCut = async () => {
     if (!node.sceneId) return;
     try {
-      const res = await apiFetch('http://localhost:3030/api/tree/active-cut', {
+      const res = await apiFetch('/api/tree/active-cut', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

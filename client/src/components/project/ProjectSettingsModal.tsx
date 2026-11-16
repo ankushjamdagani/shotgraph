@@ -66,7 +66,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
         additionalConstraints: constraints,
       };
 
-      const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}`, {
+      const res = await apiFetch(`/api/projects/${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

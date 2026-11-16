@@ -33,7 +33,7 @@ export const ShotFloatingHud: React.FC<ShotFloatingHudProps> = ({
       [field]: val,
     };
     try {
-      const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}`, {
+      const res = await apiFetch(`/api/projects/${project.id}/nodes/${node.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -61,7 +61,7 @@ export const ShotFloatingHud: React.FC<ShotFloatingHudProps> = ({
   const handleCopyPrompt = async () => {
     let textToCopy = richSynthesizedPrompt;
     try {
-      const res = await apiFetch('http://localhost:3030/api/skills/enrich-prompt', {
+      const res = await apiFetch('/api/skills/enrich-prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

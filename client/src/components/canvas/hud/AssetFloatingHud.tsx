@@ -33,7 +33,7 @@ export const AssetFloatingHud: React.FC<AssetFloatingHudProps> = ({
     const newMasterUrl = newAnchorStatus ? mediaUrl : undefined;
 
     try {
-      const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/assets/master-style-anchor`, {
+      const res = await apiFetch(`/api/projects/${project.id}/assets/master-style-anchor`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ assetUrl: newMasterUrl }),
@@ -66,7 +66,7 @@ export const AssetFloatingHud: React.FC<AssetFloatingHudProps> = ({
 
   const handleSelectAngle = async (angle: 'portrait' | 'three_quarter' | 'full_body' | 'macro_detail') => {
     try {
-      const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}`, {
+      const res = await apiFetch(`/api/projects/${project.id}/nodes/${node.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -29,6 +29,7 @@ import { AgentManager } from './swarm/agentManager.js';
 import { AGUIServerMessage, AGUIClientMessageSchema } from './protocol/aguiEvents.js';
 
 const PORT = Number(process.env.PORT || 3030);
+const HOST = process.env.HOST || '0.0.0.0';
 const DEFAULT_WORKSPACE_ROOT = process.cwd();
 
 // Initialize all atomic skills & central project registry
@@ -39,10 +40,25 @@ const server = Fastify({ logger: false });
 
 const sessionToken = randomBytes(32).toString('hex');
 const allowedOrigins = new Set((process.env.STUDIO_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:3030,http://127.0.0.1:3030').split(','));
-await server.register(cors, { origin: (origin, callback) => callback(null, !origin || allowedOrigins.has(origin)) });
+if (process.env.VERCEL_URL) {
+  allowedOrigins.add(`https://${process.env.VERCEL_URL}`);
+  allowedOrigins.add(`http://${process.env.VERCEL_URL}`);
+}
+if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+  allowedOrigins.add(`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`);
+}
+
+function isOriginAllowed(origin?: string): boolean {
+  if (!origin) return true;
+  if (allowedOrigins.has(origin)) return true;
+  if (origin.endsWith('.vercel.app')) return true;
+  return false;
+}
+
+await server.register(cors, { origin: (origin, callback) => callback(null, isOriginAllowed(origin)) });
 server.addHook('onRequest', async (req, reply) => {
   const origin = req.headers.origin;
-  if (origin && !allowedOrigins.has(origin)) return reply.code(403).send({ success: false, error: 'Origin is not allowed' });
+  if (origin && !isOriginAllowed(origin)) return reply.code(403).send({ success: false, error: 'Origin is not allowed' });
   if (['POST', 'PATCH', 'PUT', 'DELETE'].includes(req.method) && req.headers['x-studio-token'] !== sessionToken) {
     return reply.code(401).send({ success: false, error: 'Studio session expired. Reload and try again.' });
   }
@@ -1453,9 +1469,9 @@ server.get('/ws/ag-ui', { websocket: true }, (connection, req) => {
 
 // Start listening
 try {
-  await server.listen({ port: PORT, host: '127.0.0.1' });
-  console.log(`[Video Studio Backend] Running on http://127.0.0.1:${PORT}`);
+  await server.listen({ port: PORT, host: HOST });
+  console.log(`[Shotgraph Backend] Running on http://${HOST}:${PORT}`);
 } catch (err) {
-  console.error('[Video Studio Backend] Start failure:', err);
+  console.error('[Shotgraph Backend] Start failure:', err);
   process.exit(1);
 }

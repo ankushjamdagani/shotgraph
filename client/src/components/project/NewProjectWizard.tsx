@@ -208,7 +208,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
     setAiMoodError(null);
 
     try {
-      const res = await apiFetch('http://localhost:3030/api/ai/suggest-moods', {
+      const res = await apiFetch('/api/ai/suggest-moods', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -318,7 +318,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
     setIsPickingDir(true);
     setErrorMsg('');
     try {
-      const res = await apiFetch('http://localhost:3030/api/projects/pick-directory', {
+      const res = await apiFetch('/api/projects/pick-directory', {
         method: 'POST',
       });
       const data = await res.json();
@@ -375,7 +375,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
     const allUrls = Object.values(stepUrls).flat();
 
     try {
-      const res = await apiFetch('http://localhost:3030/api/projects/create', {
+      const res = await apiFetch('/api/projects/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

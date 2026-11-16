@@ -426,7 +426,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
   const loadProjects = async () => {
     setIsLoading(true);
     try {
-      const res = await apiFetch('http://localhost:3030/api/projects');
+      const res = await apiFetch('/api/projects');
       const data = await res.json();
       if (Array.isArray(data)) {
         setProjects(data);
@@ -533,7 +533,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     setErrorMsg('');
     try {
       const res = await apiFetch(
-        `http://localhost:3030/api/projects/${encodeURIComponent(idOrPath)}`,
+        `/api/projects/${encodeURIComponent(idOrPath)}`,
       );
       const project = await res.json();
       if (!res.ok || !project.id) {
@@ -553,7 +553,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     setErrorMsg('');
     try {
       const res = await apiFetch(
-        'http://localhost:3030/api/projects/pick-directory',
+        '/api/projects/pick-directory',
         {
           method: 'POST',
         },
@@ -561,7 +561,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
       const data = await res.json();
       if (data.path) {
         const openRes = await apiFetch(
-          'http://localhost:3030/api/projects/open',
+          '/api/projects/open',
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -601,7 +601,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
 
     try {
       const res = await apiFetch(
-        `http://localhost:3030/api/projects/${target.id}/remove`,
+        `/api/projects/${target.id}/remove`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

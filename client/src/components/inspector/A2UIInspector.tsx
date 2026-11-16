@@ -87,7 +87,7 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
     setIsSynthesizing(true);
     try {
       if (node.stage === 'assets') {
-        const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/assets/synthesize-turnaround`, {
+        const res = await apiFetch(`/api/projects/${project.id}/assets/synthesize-turnaround`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -107,7 +107,7 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
           });
         }
       } else {
-        const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}/synthesize-prompt`, {
+        const res = await apiFetch(`/api/projects/${project.id}/nodes/${node.id}/synthesize-prompt`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ targetPlatform: platform }),
@@ -158,7 +158,7 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
     };
 
     try {
-      const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}/shot-overrides`, {
+      const res = await apiFetch(`/api/projects/${project.id}/nodes/${node.id}/shot-overrides`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ overrides: newOverrides }),
@@ -186,7 +186,7 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
     const newAssetUrl = isCurrentlyAnchor ? undefined : (node.artifacts.mediaUrl || `assets/subjects/${node.id}.png`);
 
     try {
-      const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/assets/master-style-anchor`, {
+      const res = await apiFetch(`/api/projects/${project.id}/assets/master-style-anchor`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ assetUrl: newAssetUrl, nodeId: isCurrentlyAnchor ? null : node.id }),
@@ -209,7 +209,7 @@ export const A2UIInspector: React.FC<A2UIInspectorProps> = ({
       : [...currentBound, subjectId];
 
     try {
-      const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}/subject-bindings`, {
+      const res = await apiFetch(`/api/projects/${project.id}/nodes/${node.id}/subject-bindings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subjectAnchorIds: newBound }),

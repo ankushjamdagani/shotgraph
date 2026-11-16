@@ -43,7 +43,7 @@ export const ScriptFloatingHud: React.FC<ScriptFloatingHudProps> = ({
 
   const handleSaveBeat = async () => {
     try {
-      const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}`, {
+      const res = await apiFetch(`/api/projects/${project.id}/nodes/${node.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -84,7 +84,7 @@ export const ScriptFloatingHud: React.FC<ScriptFloatingHudProps> = ({
     setIsSynthesizingVoice(true);
     try {
       const res = await apiFetch(
-        `http://localhost:3030/api/projects/${project.id}/nodes/${node.id}/synthesize-voice`,
+        `/api/projects/${project.id}/nodes/${node.id}/synthesize-voice`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -119,7 +119,7 @@ export const ScriptFloatingHud: React.FC<ScriptFloatingHudProps> = ({
     const sceneDesc = actionText.trim() || dialogueText.trim() || 'Anya in architectural studio space';
     setIsGeneratingFoley(true);
     try {
-      const res = await apiFetch('http://localhost:3030/api/skills/earshot/audio-cues', {
+      const res = await apiFetch('/api/skills/earshot/audio-cues', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -142,7 +142,7 @@ export const ScriptFloatingHud: React.FC<ScriptFloatingHudProps> = ({
             foleyPlan: data.audioPlan,
           },
         };
-        apiFetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}`, {
+        apiFetch(`/api/projects/${project.id}/nodes/${node.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ artifacts: updatedArtifacts }),

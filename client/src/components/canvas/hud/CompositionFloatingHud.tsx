@@ -37,7 +37,7 @@ export const CompositionFloatingHud: React.FC<CompositionFloatingHudProps> = ({
         focalLength: '35mm',
       }));
 
-      const res = await apiFetch('http://localhost:3030/api/skills/cook/montage-recipe', {
+      const res = await apiFetch('/api/skills/cook/montage-recipe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -171,7 +171,7 @@ studioActionRegistry.register({
     }
 
     toast.info('Synthesizing speech via offline audio stack...');
-    const res = await apiFetch(`http://localhost:3030/api/projects/${ctx.project.id}/nodes/${targetNodeId}/synthesize-voice`, {
+    const res = await apiFetch(`/api/projects/${ctx.project.id}/nodes/${targetNodeId}/synthesize-voice`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
