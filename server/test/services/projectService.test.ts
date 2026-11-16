@@ -15,6 +15,33 @@ describe('ProjectService DAG and Folder Management', () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'video_studio_test_'));
   });
 
+  it('duplicates project state and media independently without copying repository content', async () => {
+    const sourceRoot = path.join(tempDir, 'source');
+    const source = await ProjectService.initProject(sourceRoot, 'Original', { initGit: false });
+    await fs.writeFile(path.join(sourceRoot, 'assets', 'clip.mp4'), 'original footage');
+    await fs.writeFile(path.join(sourceRoot, 'unrelated.txt'), 'not project content');
+    const copy = await ProjectService.duplicateProject(sourceRoot);
+    expect(copy.id).not.toBe(source.id);
+    expect(copy.name).toBe('Original copy');
+    expect(copy.projectRoot).not.toBe(sourceRoot);
+    expect(copy.nodes).toEqual(source.nodes);
+    expect((await ProjectService.loadProject(copy.projectRoot)).id).toBe(copy.id);
+    await fs.writeFile(path.join(copy.projectRoot, 'assets', 'clip.mp4'), 'changed copy');
+    expect(await fs.readFile(path.join(sourceRoot, 'assets', 'clip.mp4'), 'utf8')).toBe('original footage');
+    await expect(fs.access(path.join(copy.projectRoot, 'unrelated.txt'))).rejects.toThrow();
+    expect((await ProjectService.loadProject(sourceRoot)).name).toBe('Original');
+  });
+
+  it('rejects linked content and cleans up an incomplete copy', async () => {
+    const sourceRoot = path.join(tempDir, 'source');
+    await ProjectService.initProject(sourceRoot, 'Original', { initGit: false });
+    await fs.writeFile(path.join(tempDir, 'outside.txt'), 'private');
+    await fs.symlink(path.join(tempDir, 'outside.txt'), path.join(sourceRoot, 'assets', 'linked.txt'));
+    await expect(ProjectService.duplicateProject(sourceRoot)).rejects.toThrow('symbolic link');
+    expect((await fs.readdir(tempDir)).filter(name => name.startsWith('source-copy-'))).toEqual([]);
+    expect(await fs.readFile(path.join(tempDir, 'outside.txt'), 'utf8')).toBe('private');
+  });
+
   it('initializes a self-contained Git-native project folder structure', async () => {
     const project = await ProjectService.initProject(tempDir, 'Test Video Project');
 

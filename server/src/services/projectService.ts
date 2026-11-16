@@ -637,6 +637,45 @@ export class ProjectService {
     });
   }
 
+  /** Copy managed project content into a new sibling folder without sharing media. */
+  static async duplicateProject(sourceRoot: string): Promise<FilmProject> {
+    return serialized(sourceRoot, async () => {
+      const source = await this.loadProject(sourceRoot);
+      const destination = await fs.mkdtemp(path.join(path.dirname(sourceRoot), `${path.basename(sourceRoot)}-copy-`));
+      try {
+        const copy: FilmProject = structuredClone(source);
+        copy.id = `project_${nanoid(12)}`;
+        copy.name = `${source.name.slice(0, 195)} copy`;
+        copy.projectRoot = destination;
+        copy.revision = 0;
+        // Only managed content belongs to a project; never copy a containing app,
+        // repository history, exports, or a symlink to unrelated local files.
+        for (const name of ['raw_footage', 'assets', 'compositions', 'STYLE.md']) {
+          const from = path.join(sourceRoot, name);
+          try { await fs.lstat(from); }
+          catch (error: any) { if (error.code === 'ENOENT') continue; throw error; }
+          await fs.cp(from, path.join(destination, name), {
+            recursive: true,
+            filter: async entry => {
+              if ((await fs.lstat(entry)).isSymbolicLink()) throw new Error('Copy stopped: project content contains a symbolic link. Original files were preserved.');
+              return true;
+            },
+          });
+        }
+        await fs.mkdir(path.join(destination, '.studio'), { recursive: true });
+        await atomicWrite(path.join(destination, '.studio', 'project.json'), JSON.stringify(copy, null, 2));
+        await ProjectRegistry.registerProject(destination, copy, {
+          basePresetId: copy.basePresetId, styleOverrides: copy.styleOverrides,
+          additionalConstraints: copy.additionalConstraints,
+        });
+        return copy;
+      } catch (error) {
+        await fs.rm(destination, { recursive: true, force: true });
+        throw error;
+      }
+    });
+  }
+
   /**
    * Branches an existing node into a new parallel version node.
    */

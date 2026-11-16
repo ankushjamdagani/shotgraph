@@ -348,6 +348,14 @@ server.get('/api/projects/:id', async (req, reply) => {
   return project;
 });
 
+server.post('/api/projects/:id/duplicate', async (req, reply) => {
+  const { id } = req.params as { id: string };
+  const entry = await ProjectRegistry.getProjectEntry(id);
+  if (!entry) return reply.code(404).send({ success: false, error: 'Project not found' });
+  const project = await ProjectService.duplicateProject(entry.path);
+  return { success: true, project };
+});
+
 // Dynamic project media asset serving
 server.get('/api/projects/:id/media/*', async (req, reply) => {
   const { id } = req.params as { id: string };

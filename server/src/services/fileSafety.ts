@@ -38,6 +38,14 @@ export async function moveToTrash(file: string) {
     // A failed recoverable delete must leave the file intact on every platform.
     if (process.platform !== 'darwin')
         throw new Error('System Trash is unavailable. Files were kept.');
-    const script = 'on run argv\ntell application "Finder" to delete POSIX file (item 1 of argv)\nend run';
-    await promisify(execFile)('osascript', ['-e', script, file]);
+    const target = path.resolve(file);
+    await fs.access(target);
+    // Resolve the POSIX path before entering Finder's terminology scope.
+    // Passing an unresolved POSIX-file specifier to Finder fails with -1728.
+    const script = 'on run argv\nset targetItem to (POSIX file (item 1 of argv)) as alias\ntell application "Finder" to delete targetItem\nend run';
+    try {
+        await promisify(execFile)('osascript', ['-e', script, target]);
+    } catch (cause) {
+        throw new Error('Could not move the project to Trash. Its files were kept. Check that Finder can access the folder, then try again.', { cause });
+    }
 }
