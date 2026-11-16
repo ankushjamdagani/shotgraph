@@ -6,7 +6,7 @@ import { initializeSkills, SkillRegistry } from '../server/src/skills/index.js';
 
 async function main() {
   console.log('========================================================');
-  console.log('  Visual AI Video Studio — End-to-End System Verification');
+  console.log('  Shotgraph — End-to-End System Verification');
   console.log('========================================================\n');
 
   initializeSkills();

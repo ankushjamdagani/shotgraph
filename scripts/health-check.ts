@@ -46,7 +46,7 @@ async function checkCommand(
 
 async function runHealthCheck() {
   console.log('====================================================');
-  console.log('  Visual AI Video Studio — Environment Health Check ');
+  console.log('  Shotgraph — Environment Health Check ');
   console.log('====================================================\n');
 
   const tools: ToolReport[] = [];

@@ -428,10 +428,10 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
       <header className="h-14 px-6 md:px-12 flex items-center justify-between z-40 shrink-0 border-b border-[#222226]/40 bg-[#08080A]/80 backdrop-blur-md sticky top-0 select-none">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded bg-white text-black font-black text-xs flex items-center justify-center font-mono">
-            VS
+            SG
           </div>
           <span className="text-xs font-mono font-bold tracking-wider text-neutral-400 uppercase">
-            Project Genesis
+            Shotgraph · Project Genesis
           </span>
         </div>
 
@@ -581,7 +581,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
                 <div className="flex items-center gap-2 truncate max-w-md">
                   <span className="text-neutral-500">Location:</span>
                   <span className="truncate text-neutral-300">
-                    {folderPath || '~/Movies/VS_Projects/ (Default)'}
+                    {folderPath || '~/Movies/Shotgraph_Projects/ (Default)'}
                   </span>
                 </div>
                 <button

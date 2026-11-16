@@ -14,7 +14,7 @@ export const Tokens: Story = {
     <div className="max-w-3xl space-y-8">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">
-          Studio design system
+          Shotgraph design system
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-text-muted">
           An evolving baseline from the approved Projects screen. Radix

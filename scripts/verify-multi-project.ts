@@ -6,7 +6,7 @@ import { SkillRegistry, initializeSkills } from '../server/src/skills/index.js';
 
 async function verifyMultiProjectSystem() {
   console.log('========================================================');
-  console.log('  Visual AI Video Studio — Multi-Project System Verify  ');
+  console.log('  Shotgraph — Multi-Project System Verify  ');
   console.log('========================================================\n');
 
   const testRoot = path.join(process.cwd(), '.tmp-multi-project-verify');

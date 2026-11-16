@@ -361,13 +361,13 @@ function App() {
           <button
             onClick={handleExitToProjects}
             className="flex items-center gap-2 px-2 py-1 -ml-1 rounded hover:bg-card/70 transition group active:scale-[0.98]"
-            title="Return to Projects (⌘O)"
+            title="Shotgraph — Return to Projects (⌘O)"
           >
             <div className="w-5 h-5 rounded bg-text-primary text-app font-black text-[10px] flex items-center justify-center font-mono tracking-tight shadow-xs">
-              VS
+              SG
             </div>
             <span className="font-extrabold text-xs tracking-wider text-text-primary group-hover:text-text-primary/90 transition">
-              STUDIO
+              SHOTGRAPH
             </span>
           </button>
 

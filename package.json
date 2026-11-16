@@ -1,8 +1,8 @@
 {
-  "name": "workflow-video-v1",
+  "name": "shotgraph",
   "version": "0.1.0",
   "private": true,
-  "description": "Desktop-class Visual AI Video Studio (PWA) with Version Tree DAG, AG-UI protocol, and DaVinci Resolve export",
+  "description": "Desktop-class node-graph AI video studio with Version Tree DAG, AG-UI protocol, and DaVinci Resolve export",
   "type": "module",
   "workspaces": [
     "server",

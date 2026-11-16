@@ -1,6 +1,6 @@
-# Visual AI Video Studio
+# Shotgraph
 
-A local React/Fastify studio for developing briefs, branching production ideas, importing takes, reviewing an active cut, and preparing a DaVinci handoff.
+A local node-graph studio for developing briefs, branching production ideas, importing takes, reviewing an active cut, and preparing a DaVinci handoff.
 
 ## Run locally
 

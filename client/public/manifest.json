@@ -1,7 +1,7 @@
 {
-  "name": "Visual AI Video Studio",
-  "short_name": "AI Studio",
-  "description": "Desktop-class AI video studio with Version Tree DAG, multi-agent swarm, and DaVinci Resolve handoff",
+  "name": "Shotgraph",
+  "short_name": "Shotgraph",
+  "description": "Desktop-class node-graph AI video studio with Version Tree DAG, multi-agent swarm, and DaVinci Resolve handoff",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0A0D14",

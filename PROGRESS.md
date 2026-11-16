@@ -1,6 +1,6 @@
 # Project Implementation & Resumption Progress
 
-This document tracks all iterative development phases, sub-milestones, active status, and recovery checkpoints for the **Visual AI Video Studio (PWA)**.
+This document tracks all iterative development phases, sub-milestones, active status, and recovery checkpoints for **Shotgraph**.
 
 ---
 

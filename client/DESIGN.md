@@ -1,4 +1,4 @@
-# Studio UI system — incremental baseline
+# Shotgraph UI system — incremental baseline
 
 The approved Projects screen is the starting point. This is a small working system, not a complete specification. Expand it during screen reviews.
 
