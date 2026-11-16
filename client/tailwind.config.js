@@ -4,6 +4,45 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      spacing: {
+        'control-sm': 'var(--control-sm)',
+        control: 'var(--control)',
+        'control-lg': 'var(--control-lg)',
+        thumbnail: 'var(--thumbnail-height)',
+      },
+      transitionDuration: {
+        fast: 'var(--duration-fast)',
+        normal: 'var(--duration-normal)',
+      },
+      transitionTimingFunction: { studio: 'var(--ease-out)' },
+      boxShadow: { dialog: 'var(--shadow-dialog)' },
+      keyframes: {
+        enter: { from: { opacity: '.3' }, to: { opacity: '1' } },
+        'copy-arrive': {
+          from: { opacity: '0', transform: 'scale(.82)' },
+          to: { opacity: '1', transform: 'scale(1)' },
+        },
+        'row-arrive': {
+          from: { opacity: '0', transform: 'scale(.96)' },
+          to: { opacity: '1', transform: 'scale(1)' },
+        },
+        'indicator-life': {
+          '0%': { opacity: '0', transform: 'scale(.5)' },
+          '8%,80%': { opacity: '1', transform: 'scale(1)' },
+          '100%': { opacity: '0' },
+        },
+        'indicator-ring': {
+          from: { opacity: '.6', transform: 'scale(.5)' },
+          to: { opacity: '0', transform: 'scale(1.8)' },
+        },
+      },
+      animation: {
+        enter: 'enter 160ms ease-out',
+        'copy-arrive': 'copy-arrive 520ms var(--ease-out)',
+        'row-arrive': 'row-arrive 340ms var(--ease-out)',
+        'indicator-life': 'indicator-life 6s ease-out both',
+        'indicator-ring': 'indicator-ring 1.2s ease-out 3',
+      },
       fontFamily: {
         sans: [
           '"Plus Jakarta Sans"',
@@ -32,7 +71,9 @@ export default {
         none: '0px',
         sm: '2px',
         DEFAULT: '4px',
-        md: '6px',
+        md: 'var(--radius-control)',
+        thumbnail: 'var(--radius-thumbnail)',
+        dialog: 'var(--radius-dialog)',
         lg: '8px',
         xl: '8px',
         '2xl': '10px',
@@ -40,6 +81,12 @@ export default {
         full: '9999px',
       },
       colors: {
+        danger: 'rgb(var(--danger-rgb) / <alpha-value>)',
+        'danger-hover': 'var(--danger-hover)',
+        'danger-solid': 'var(--danger-solid)',
+        notification: 'var(--notification)',
+        'row-hover': 'var(--row-hover)',
+        'text-secondary': 'var(--text-secondary)',
         app: 'var(--bg-app)',
         surface: 'var(--bg-surface)',
         card: 'var(--bg-card)',

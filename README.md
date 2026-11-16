@@ -35,3 +35,14 @@ The frontend proxies `/api` and `/ws` to the backend. Mutations require the per-
 Project reads never create projects. Explicit creation refuses an existing project folder. Saves retain `.studio/project.json.bak`, use atomic replacement, and reject stale revisions. Keep normal backups of your project folders; the single previous revision is for immediate recovery, not long-term version history.
 
 See [the audit](audits/2026-11-16/AUDIT.md) and [implementation evidence](audits/2026-11-16/IMPLEMENTATION.md).
+
+## UI design system
+
+The evolving Radix UI + Tailwind component library lives in `client/src/components/ui`. Read [the UI conventions](client/AGENTS.md) and [design system](client/DESIGN.md) before frontend changes.
+
+```sh
+npm run storybook          # http://127.0.0.1:6006
+npm run build-storybook    # static catalogue in client/storybook-static
+```
+
+Storybook includes a theme toolbar, component states, accessibility checks and interaction examples. Projects is the first migrated screen; other screens move onto the system as they are reviewed.

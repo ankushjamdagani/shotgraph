@@ -34,3 +34,6 @@ skills-lock.json
 # Uncomment below if not using Git LFS for exports
 # exports/drafts/*.mp4
 # exports/davinci_bundle/**/*.mov
+
+# Component documentation build
+client/storybook-static/

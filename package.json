@@ -20,7 +20,9 @@
     "ast-grep": "ast-grep",
     "repomix": "repomix",
     "rtk": "rtk",
-    "graphify": "graphify"
+    "graphify": "graphify",
+    "storybook": "npm --workspace=client run storybook",
+    "build-storybook": "npm --workspace=client run build-storybook"
   },
   "devDependencies": {
     "@ast-grep/cli": "^0.51.2",
