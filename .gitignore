@@ -37,3 +37,6 @@ skills-lock.json
 
 # Component documentation build
 client/storybook-static/
+
+# Design prototypes
+prototype/
