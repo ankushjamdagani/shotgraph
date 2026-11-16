@@ -1,8 +1,11 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Genesis Wizard Project Creation Flow', () => {
-  test('creates a project with multi-branch variation matrix and navigates to canvas', async ({ page }) => {
+  test('creates a project with multi-branch variation matrix and navigates to canvas', async ({ page, project }) => {
     // 1. Visit root Projects Hub
+    await page.route('**/api/ai/suggest-moods',route=>route.fulfill({json:{success:true,moods:[{key:'calm',title:'Calm',desc:'Calm pacing',isRecommended:true}]}}));
+    await page.route('**/api/ai/story-directions',route=>route.fulfill({json:{success:true,directions:[{title:'Neon chase',beats:[{label:'Hook',text:'A runner in neon rain'}]}]}}));
+    await page.route('**/api/projects/create',async route=>{const data=route.request().postDataJSON();await route.continue({postData:JSON.stringify({...data,path:project.projectRoot+'/created'})});});
     await page.goto('/');
 
     // 2. Click "New Project" to open Genesis Room Wizard

@@ -1,7 +1,7 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Theme Toggle (Light: Paper & Dark: Film Lab)', () => {
-  test('Projects hub has icon-toggle and toggles between film lab mono and paper light', async ({ page }) => {
+  test('Projects hub has icon-toggle and toggles between film lab mono and paper light', async ({ page, project }) => {
     await page.goto('/');
 
     // 1. Verify that the old Theme switcher dropdown is removed
@@ -45,24 +45,11 @@ test.describe('Theme Toggle (Light: Paper & Dark: Film Lab)', () => {
     expect(storedThemeDark).toBe('film-lab-mono');
   });
 
-  test('Project Settings modal no longer has theme switcher tab', async ({ page }) => {
+  test('Project Settings modal no longer has theme switcher tab', async ({ page, project }) => {
     await page.goto('/');
 
-    // Check if there is an existing project to click or create one
-    const projectCard = page.locator('[data-testid^="project-card-"], .group\\/thumb').first();
-    if (await projectCard.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await projectCard.click();
-    } else {
-      // Click New Project button to open wizard or open first item
-      const firstProj = page.locator('button').filter({ hasText: /Open|Active/i }).first();
-      if (await firstProj.isVisible({ timeout: 1000 }).catch(() => false)) {
-        await firstProj.click();
-      }
-    }
-
-    // If on studio canvas, check studio navbar theme toggle and settings modal
-    const settingsBtn = page.getByRole('button', { name: /Settings/i }).first();
-    if (await settingsBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    await page.goto(`/?projectId=${project.id}`);
+    const settingsBtn = page.getByRole('button', {name:/Settings/i}).first();
       // In studio navbar, verify theme toggle is present
       const studioToggle = page.getByTestId('theme-toggle').first();
       await expect(studioToggle).toBeVisible();
@@ -79,6 +66,5 @@ test.describe('Theme Toggle (Light: Paper & Dark: Film Lab)', () => {
       await expect(page.locator('button:has-text("General Specs")')).toBeVisible();
       await expect(page.locator('button:has-text("Typography")')).toBeVisible();
       await expect(page.locator('button:has-text("Taste & Style DNA")')).toBeVisible();
-    }
   });
 });

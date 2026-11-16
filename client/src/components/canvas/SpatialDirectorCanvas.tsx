@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import { apiFetch } from '../../services/api';
+import React, { useMemo, useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import {
   ReactFlow,
   Controls,
@@ -17,7 +18,8 @@ import {
 import { CustomVersionNode } from '../tree/CustomVersionNode.js';
 import { StickyNoteNode, StickyColor } from '../tree/StickyNoteNode.js';
 import { AssetGroupFrame } from './frames/AssetGroupFrame.js';
-import { PrevisThreeJsNode } from './nodes/PrevisThreeJsNode.js';
+const LazyPrevis = lazy(()=>import('./nodes/PrevisThreeJsNode.js').then(module=>({default:module.PrevisThreeJsNode})));
+const PrevisThreeJsNode = (props:any)=><Suspense fallback={<div className="p-8 bg-card text-text-muted">Loading 3D editor…</div>}><LazyPrevis {...props}/></Suspense>;
 import { FloatingCanvasToolbar, CanvasToolMode } from './FloatingCanvasToolbar.js';
 import { AgentCursorOverlay } from '../tree/AgentCursorOverlay.js';
 import { FilmProject, AgentPresence, VersionNode, GraphEdge } from '../../types.js';
@@ -194,7 +196,7 @@ function SpatialDirectorCanvasInner({
       if (!nodeToDelete) return;
       setIsDeletingNode(true);
       try {
-        const res = await fetch(
+        const res = await apiFetch(
           `http://localhost:3030/api/projects/${project.id}/nodes/${nodeToDelete.id}?deleteFiles=${deleteFilesFromSystem}`,
           {
             method: 'DELETE',
@@ -228,7 +230,7 @@ function SpatialDirectorCanvasInner({
   const handleRenameNode = useCallback(
     async (nodeId: string, newTitle: string) => {
       try {
-        const res = await fetch(`http://localhost:3030/api/projects/${project.id}/nodes/${nodeId}`, {
+        const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/nodes/${nodeId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title: newTitle }),
@@ -255,7 +257,7 @@ function SpatialDirectorCanvasInner({
   const handleColorTagNode = useCallback(
     async (nodeId: string, colorTag: VersionNode['colorTag']) => {
       try {
-        const res = await fetch(`http://localhost:3030/api/projects/${project.id}/nodes/${nodeId}`, {
+        const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/nodes/${nodeId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ colorTag }),
@@ -285,7 +287,7 @@ function SpatialDirectorCanvasInner({
       if (!target) return;
       toast.info('Re-syncing contextual prompt from upstream...');
       try {
-        const res = await fetch(
+        const res = await apiFetch(
           `http://localhost:3030/api/projects/${project.id}/nodes/${nodeId}/synthesize-prompt`,
           {
             method: 'POST',
@@ -326,7 +328,7 @@ function SpatialDirectorCanvasInner({
         );
         onUpdateProject({ ...project, stickyNotes: updatedNotes });
         try {
-          await fetch(`http://localhost:3030/api/projects/${project.id}`, {
+          await apiFetch(`http://localhost:3030/api/projects/${project.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ stickyNotes: updatedNotes }),
@@ -352,7 +354,7 @@ function SpatialDirectorCanvasInner({
       });
 
       try {
-        await fetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}`, {
+        await apiFetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ position: node.position }),
@@ -414,7 +416,7 @@ function SpatialDirectorCanvasInner({
       toast.success(`Created ${title}`);
 
       try {
-        await fetch(`http://localhost:3030/api/projects/${project.id}/nodes`, {
+        await apiFetch(`http://localhost:3030/api/projects/${project.id}/nodes`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newNode),
@@ -437,7 +439,7 @@ function SpatialDirectorCanvasInner({
         },
       });
       try {
-        await fetch(`http://localhost:3030/api/projects/${project.id}/nodes/${nodeId}`, {
+        await apiFetch(`http://localhost:3030/api/projects/${project.id}/nodes/${nodeId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ width }),
@@ -477,7 +479,7 @@ function SpatialDirectorCanvasInner({
     onUpdateProject({ ...project, stickyNotes: updatedNotes });
     toast.success('Dropped sticky note on canvas');
 
-    fetch(`http://localhost:3030/api/projects/${project.id}`, {
+    apiFetch(`http://localhost:3030/api/projects/${project.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ stickyNotes: updatedNotes }),
@@ -491,7 +493,7 @@ function SpatialDirectorCanvasInner({
       );
       onUpdateProject({ ...project, stickyNotes: updatedNotes });
 
-      fetch(`http://localhost:3030/api/projects/${project.id}`, {
+      apiFetch(`http://localhost:3030/api/projects/${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stickyNotes: updatedNotes }),
@@ -506,7 +508,7 @@ function SpatialDirectorCanvasInner({
       onUpdateProject({ ...project, stickyNotes: updatedNotes });
       toast.info('Sticky note deleted');
 
-      fetch(`http://localhost:3030/api/projects/${project.id}`, {
+      apiFetch(`http://localhost:3030/api/projects/${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stickyNotes: updatedNotes }),
@@ -619,7 +621,7 @@ function SpatialDirectorCanvasInner({
       onUpdateProject(updatedProject);
       toast.success('Connected nodes');
 
-      fetch(`http://localhost:3030/api/projects/${project.id}`, {
+      apiFetch(`http://localhost:3030/api/projects/${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nodes: updatedNodes, edges: updatedEdges }),
@@ -714,6 +716,7 @@ function SpatialDirectorCanvasInner({
             }
           : {
               node,
+              projectId: project.id,
               isActiveCut,
               isSelected: selectedNodeId === node.id,
               isHudOpen: activeHudId === node.id || pinnedHudIds.has(node.id),
@@ -920,6 +923,12 @@ function SpatialDirectorCanvasInner({
     }
   }, [activeHudId, project.nodes, flowToScreenPosition]);
 
+  useEffect(()=>{
+    if(!selectedNodeId)return;
+    const node=project.nodes[selectedNodeId];if(!node)return;
+    setActiveHudId(selectedNodeId);
+  },[selectedNodeId]);
+
   // Render HUD for a given node
   const renderFloatingHudForNode = (nodeId: string) => {
     const node = project.nodes[nodeId];
@@ -930,6 +939,7 @@ function SpatialDirectorCanvasInner({
       node,
       project,
       onUpdateProject,
+      onMediaDrop,
       onClose: () => {
         if (activeHudId === nodeId) setActiveHudId(null);
         if (pinnedHudIds.has(nodeId)) handleTogglePin(nodeId);
@@ -971,7 +981,7 @@ function SpatialDirectorCanvasInner({
   return (
     <div className="relative w-full h-full bg-app overflow-hidden select-none flex flex-col">
       {/* Top Floating Mini-Nav Strip */}
-      <div className="absolute top-3 left-4 z-20 flex items-center gap-2 bg-surface/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-subtle shadow-xl text-xs font-mono">
+      <div className="relative mx-4 my-2 shrink-0 self-start z-20 flex items-center gap-2 bg-surface/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-subtle shadow-xl text-xs font-mono">
         <span className="text-text-primary font-bold flex items-center gap-1.5">
           <Compass className="w-3.5 h-3.5 text-accent-primary" />
           <span>Spatial Canvas</span>
@@ -1024,9 +1034,15 @@ function SpatialDirectorCanvasInner({
       />
 
       {/* Canvas Area */}
-      <div className="relative flex-1">
+      <div className="relative flex-1 min-h-0">
         <AgentCursorOverlay agents={agents} />
 
+        <nav aria-label="Production stages" className="absolute top-0 left-16 right-3 z-20 flex gap-2 overflow-x-auto py-2 bg-app/90">
+          {['ideation','taste','script','assets','shot','footage','vfx','assembly'].map((stage,index)=>{
+            const targets=Object.values(project.nodes).filter(node=>node.stage===stage);
+            return <button key={stage} disabled={!targets.length} className="shrink-0 px-3 py-2 border border-subtle rounded text-xs text-text-primary bg-surface disabled:opacity-40" onClick={()=>{const node=targets[0];onSelectNode(node.id);setActiveHudId(node.id);setCenter((node.position?.x||STAGE_DEFAULT_X[stage])+150,(node.position?.y||120)+100,{zoom:0.85,duration:250});}}>{index+1}. {({ideation:'Idea',taste:'Style',script:'Script',assets:'Subjects',shot:'Shots',footage:'Takes',vfx:'Effects',assembly:'Assembly'} as Record<string,string>)[stage]}</button>;
+          })}
+        </nav>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -1064,7 +1080,8 @@ function SpatialDirectorCanvasInner({
               nodeId: node.id,
             });
           }}
-          fitView
+          defaultViewport={{x:60,y:24,zoom:0.8}}
+          style={{position:'absolute',top:48,height:'calc(100% - 48px)'}}
           minZoom={0.15}
           maxZoom={1.5}
           panOnDrag={toolMode === 'pan' || toolMode === 'select'}
@@ -1104,19 +1121,10 @@ function SpatialDirectorCanvasInner({
         {/* VIEWPORT-BOUNDED ACTIVE HUD (Floats adjacent to selected node) */}
         {activeHudId && activeHudPosition && (
           <div
-            style={activeHudPosition}
-            className="fixed z-40 max-h-[85vh] overflow-y-auto pointer-events-auto transition-all duration-75"
+            aria-label="Selected node inspector"
+            className="studio-inspector absolute right-3 top-14 bottom-3 z-40 w-[370px] overflow-y-auto pointer-events-auto bg-surface border border-subtle rounded-lg"
           >
             {renderFloatingHudForNode(activeHudId)}
-          </div>
-        )}
-
-        {/* PINNED HUDS (Docked Top-Right) */}
-        {pinnedHudIds.size > 0 && (
-          <div className="absolute top-4 right-4 z-30 flex flex-col gap-3 max-h-[85vh] overflow-y-auto pointer-events-auto">
-            {Array.from(pinnedHudIds)
-              .filter((id) => id !== activeHudId)
-              .map((id) => renderFloatingHudForNode(id))}
           </div>
         )}
 

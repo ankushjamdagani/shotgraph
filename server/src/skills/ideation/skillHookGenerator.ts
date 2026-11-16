@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { SkillDefinition, SkillExecutionContext } from '../core/types.js';
-import { runAntigravityCLIJson } from '../../runners/antigravityRunner.js';
-import { runClaudeCLIJson } from '../../runners/claudeRunner.js';
+import { runModelJson } from '../../runners/modelRunner.js';
 
 export const HookGeneratorInputSchema = z.object({
   topicOrProduct: z.string(),
@@ -70,20 +69,6 @@ Return JSON in this format:
   "recommendationReason": "Hook 1 creates the sharpest curiosity gap."
 }`;
 
-    if (context.modelEngine === 'claude-cli') {
-      const { data } = await runClaudeCLIJson<HookGeneratorOutput>(prompt, {
-        cwd: context.projectRoot,
-        onStdoutChunk: context.onStdoutChunk,
-        onThinking: context.onThinking,
-      });
-      return data;
-    } else {
-      const { data } = await runAntigravityCLIJson<HookGeneratorOutput>(prompt, {
-        cwd: context.projectRoot,
-        onStdoutChunk: context.onStdoutChunk,
-        onThinking: context.onThinking,
-      });
-      return data;
-    }
+    return runModelJson<HookGeneratorOutput>(prompt,context.modelEngine,{...context,cwd:context.projectRoot,model:context.modelName});
   },
 };

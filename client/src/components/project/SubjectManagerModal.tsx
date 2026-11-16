@@ -1,3 +1,5 @@
+import { useDialog } from '../common/useDialog';
+import { apiFetch } from '../../services/api';
 import React, { useState } from 'react';
 import { FilmProject, SubjectVariant } from '../../types.js';
 import { X, Plus, Trash2, Check, User, Box, MapPin, Sparkles, Image as ImageIcon } from 'lucide-react';
@@ -74,6 +76,7 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
     }
   }, [selectedSubjectId, isCreatingNew, isOpen]);
 
+  const dialogRef = useDialog(isOpen, onClose);
   if (!isOpen) return null;
 
   const handleStartNewSubject = () => {
@@ -142,7 +145,7 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
         activeVariantId,
       };
 
-      const res = await fetch(`/api/projects/${project.id}/subjects`, {
+      const res = await apiFetch(`/api/projects/${project.id}/subjects`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -167,7 +170,7 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
   const handleDeleteSubject = async (subjectId: string) => {
     if (!window.confirm('Delete this subject anchor from the project?')) return;
     try {
-      const res = await fetch(`/api/projects/${project.id}/subjects/${subjectId}`, {
+      const res = await apiFetch(`/api/projects/${project.id}/subjects/${subjectId}`, {
         method: 'DELETE',
       });
       const data = await res.json();
@@ -198,7 +201,7 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150">
+    <div ref={dialogRef} aria-label="Manage subjects" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150">
       <div className="flex flex-col w-full max-w-4xl h-[85vh] bg-surface border border-subtle rounded-lg shadow-2xl overflow-hidden text-text-primary">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-subtle bg-surface">
@@ -219,6 +222,7 @@ export const SubjectManagerModal: React.FC<SubjectManagerModalProps> = ({
             </div>
           </div>
           <button
+            aria-label="Close dialog"
             onClick={onClose}
             className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-card transition"
           >

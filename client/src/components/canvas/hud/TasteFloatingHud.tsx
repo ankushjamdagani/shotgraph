@@ -1,6 +1,7 @@
+import { apiFetch } from '../../../services/api';
 import React, { useState } from 'react';
 import { VersionNode, FilmProject } from '../../../types.js';
-import { Palette, Pin, X, Check, Sliders, Film } from 'lucide-react';
+import { Palette, X, Check, Sliders, Film } from 'lucide-react';
 
 interface TasteFloatingHudProps {
   node: VersionNode;
@@ -16,8 +17,6 @@ export const TasteFloatingHud: React.FC<TasteFloatingHudProps> = ({
   project,
   onUpdateProject,
   onClose,
-  isPinned,
-  onTogglePin,
 }) => {
   const [selectedPreset, setSelectedPreset] = useState(project.basePresetId || 'editorial_grain');
   const [grainIntensity, setGrainIntensity] = useState(
@@ -57,7 +56,7 @@ export const TasteFloatingHud: React.FC<TasteFloatingHudProps> = ({
 
   const handleSaveTaste = async () => {
     try {
-      const res = await fetch(`http://localhost:3030/api/projects/${project.id}/taste`, {
+      const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/style/resolve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -92,15 +91,7 @@ export const TasteFloatingHud: React.FC<TasteFloatingHudProps> = ({
           </span>
         </div>
         <div className="flex items-center gap-1">
-          {onTogglePin && (
-            <button
-              onClick={onTogglePin}
-              className={`p-1 rounded text-xs transition ${isPinned ? 'text-amber-400 bg-card' : 'text-text-muted hover:text-text-primary'}`}
-              title={isPinned ? 'Unpin HUD' : 'Pin HUD Open'}
-            >
-              <Pin className="w-3.5 h-3.5" />
-            </button>
-          )}
+
           <button
             onClick={onClose}
             className="p-1 rounded text-text-muted hover:text-text-primary transition"

@@ -1,3 +1,5 @@
+import { TimelinePreview } from '../timeline/TimelinePreview';
+import { apiFetch } from '../../services/api';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { FilmProject } from '../../types.js';
 import {
@@ -10,7 +12,6 @@ import {
   Film,
   ChevronUp,
   ChevronDown,
-  Volume2,
   Plus,
   Edit2,
   Trash2,
@@ -26,40 +27,23 @@ import { toast } from '../../services/toastService.js';
 
 interface BottomPlaybackDockProps {
   project: FilmProject;
+  safeAreas?: boolean;
+  onMediaDrop?: (nodeId:string,file:File)=>void;
   onUpdateProject?: (updated: FilmProject) => void;
   onFocusScene?: (sceneId: string) => void;
   onSetActiveCut?: (sceneId: string, nodeId: string) => void;
   onOpenDaVinciExport?: () => void;
 }
 
-// Generate deterministic audio waveform bars for a given seed string
-function getWaveformBars(seedStr: string, count = 24): number[] {
-  let hash = 0;
-  for (let i = 0; i < seedStr.length; i++) {
-    hash = (hash << 5) - hash + seedStr.charCodeAt(i);
-    hash |= 0;
-  }
-  const bars: number[] = [];
-  for (let i = 0; i < count; i++) {
-    const t = i / count;
-    // Harmonic envelope simulating dialogue bursts and dynamic audio
-    const baseEnvelope = Math.sin(t * Math.PI) * 0.45 + 0.25;
-    const pseudo = Math.abs(Math.sin((hash + i * 31) * 0.23)) * 0.45;
-    const detail = Math.abs(Math.cos((i * 17 + hash) * 0.37)) * 0.2;
-    const val = Math.min(1, Math.max(0.12, (baseEnvelope + pseudo + detail) * 0.85));
-    bars.push(Number(val.toFixed(3)));
-  }
-  return bars;
-}
-
 // High-precision SMPTE timecode breakdown helper (HH:MM:SS:FF)
 function getSMPTEComponents(sec: number, fps = 30) {
   const safeSec = Math.max(0, sec);
   const totalFrames = Math.floor(safeSec * fps);
-  const ff = String(totalFrames % fps).padStart(2, '0');
-  const ss = String(Math.floor(safeSec) % 60).padStart(2, '0');
-  const mm = String(Math.floor(safeSec / 60) % 60).padStart(2, '0');
-  const hh = String(Math.floor(safeSec / 3600)).padStart(2, '0');
+  const nominal = Math.round(fps);
+  const ff = String(totalFrames % nominal).padStart(2, '0');
+  const ss = String(Math.floor(totalFrames/nominal) % 60).padStart(2, '0');
+  const mm = String(Math.floor(totalFrames/(nominal*60)) % 60).padStart(2, '0');
+  const hh = String(Math.floor(totalFrames/(nominal*3600))).padStart(2, '0');
   return {
     hh,
     mm,
@@ -71,12 +55,13 @@ function getSMPTEComponents(sec: number, fps = 30) {
 }
 
 export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
-  project,
+  project, safeAreas = false, onMediaDrop,
   onUpdateProject,
   onFocusScene,
   onSetActiveCut,
   onOpenDaVinciExport,
 }) => {
+  const [showPreview,setShowPreview] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentSec, setCurrentSec] = useState(0);
   const [isExpanded, setIsExpanded] = useState(true);
@@ -87,8 +72,8 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
 
   // Scrubber drag & hover state
   const [isScrubbing, setIsScrubbing] = useState(false);
-  const [hoverSec, setHoverSec] = useState<number | null>(null);
-  const [hoverPos, setHoverPos] = useState<number | null>(null);
+  const [hoverSec] = useState<number | null>(null);
+  const [hoverPos] = useState<number | null>(null);
 
   const animFrameRef = useRef<number | null>(null);
   const scrubberTrackRef = useRef<HTMLDivElement | null>(null);
@@ -98,7 +83,7 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
   const handleExportBlender = useCallback(async () => {
     setIsExportingBlender(true);
     try {
-      const res = await fetch('http://localhost:3030/api/export/blender', {
+      const res = await apiFetch('http://localhost:3030/api/export/blender', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId: project.id }),
@@ -138,7 +123,7 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
   // Find currently active scene under playhead
   let activeScene = project.scenes[0];
   for (const range of sceneTimeRanges) {
-    if (currentSec >= range.startSec && currentSec <= range.endSec) {
+    if (currentSec >= range.startSec && currentSec < range.endSec) {
       activeScene = range.scene;
       break;
     }
@@ -177,6 +162,7 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
   // Spacebar and transport keyboard shortcuts listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('[aria-modal=true]') || (e.target instanceof HTMLElement && (e.target.isContentEditable || e.target.closest('button,select,[role=slider]')))) return;
       if (
         document.activeElement?.tagName === 'INPUT' ||
         document.activeElement?.tagName === 'TEXTAREA'
@@ -219,7 +205,7 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
         const next = prev + delta;
         if (next >= totalDuration) {
           setIsPlaying(false);
-          return 0;
+          return totalDuration;
         }
         return next;
       });
@@ -242,43 +228,6 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
     },
     [totalDuration]
   );
-
-  const handleScrubberMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    setIsScrubbing(true);
-    const newSec = calculateTimeFromEvent(e.clientX);
-    setCurrentSec(newSec);
-  };
-
-  useEffect(() => {
-    if (!isScrubbing) return;
-    const handleMouseMove = (e: MouseEvent) => {
-      const newSec = calculateTimeFromEvent(e.clientX);
-      setCurrentSec(newSec);
-    };
-    const handleMouseUp = () => {
-      setIsScrubbing(false);
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isScrubbing, calculateTimeFromEvent]);
-
-  const handleScrubberMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!scrubberTrackRef.current) return;
-    const rect = scrubberTrackRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const ratio = Math.max(0, Math.min(1, x / rect.width));
-    setHoverSec(ratio * totalDuration);
-    setHoverPos(x);
-  };
-
-  const handleScrubberMouseLeave = () => {
-    setHoverSec(null);
-    setHoverPos(null);
-  };
 
   // Click a scene to jump to its in-point and pan canvas to that scene
   const handleSceneClick = (scene: (typeof project.scenes)[0], startSec: number) => {
@@ -310,7 +259,7 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
     }
 
     try {
-      await fetch(`http://localhost:3030/api/projects/${project.id}`, {
+      await apiFetch(`http://localhost:3030/api/projects/${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenes: updatedScenes }),
@@ -338,7 +287,7 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
     if (onUpdateProject) onUpdateProject(updatedProject);
 
     try {
-      await fetch(`http://localhost:3030/api/projects/${project.id}`, {
+      await apiFetch(`http://localhost:3030/api/projects/${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenes: updatedScenes }),
@@ -361,7 +310,7 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
     if (onUpdateProject) onUpdateProject(updatedProject);
 
     try {
-      await fetch(`http://localhost:3030/api/projects/${project.id}`, {
+      await apiFetch(`http://localhost:3030/api/projects/${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenes: updatedScenes }),
@@ -390,7 +339,7 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
     if (onUpdateProject) onUpdateProject(updatedProject);
 
     try {
-      await fetch(`http://localhost:3030/api/projects/${project.id}`, {
+      await apiFetch(`http://localhost:3030/api/projects/${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenes: newScenes }),
@@ -408,13 +357,20 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
   const totalTimecode = getSMPTEComponents(totalDuration, fps);
 
   return (
-    <div className="border-t border-subtle bg-surface/95 backdrop-blur-xl shrink-0 select-none shadow-2xl transition-all">
+    <div className="studio-dock border-t border-subtle bg-surface/95 backdrop-blur-xl shrink-0 select-none shadow-2xl transition-all">
+      <div className="studio-transport flex items-center justify-between px-4 py-2 border-b border-subtle text-sm"><button onClick={()=>setShowPreview(prev=>!prev)} aria-expanded={showPreview}>{showPreview?'Hide preview':'Show preview'}</button>{activeCutNodeId&&onMediaDrop&&<label className="cursor-pointer px-3 py-1 rounded border border-subtle">Import active take<input aria-label="Import active take" className="sr-only" type="file" accept="video/*,audio/*" onChange={event=>{const file=event.target.files?.[0];if(file)onMediaDrop(activeCutNodeId,file);event.target.value='';}}/></label>}</div>
+      {showPreview&&<TimelinePreview project={project} node={activeCutNode} time={currentSec-(sceneTimeRanges.find(r=>r.scene.id===activeScene?.id)?.startSec||0)} playing={isPlaying} onPause={()=>setIsPlaying(false)} safeAreas={safeAreas}/>}
       {/* Precision DaVinci / Final Cut Transport Scrubber Track */}
       <div
         ref={scrubberTrackRef}
-        onMouseDown={handleScrubberMouseDown}
-        onMouseMove={handleScrubberMouseMove}
-        onMouseLeave={handleScrubberMouseLeave}
+        role="slider" aria-label="Timeline playhead" aria-valuemin={0} aria-valuemax={totalDuration} aria-valuenow={currentSec} tabIndex={0}
+        style={{touchAction:'none'}}
+        onPointerDown={event=>{event.currentTarget.setPointerCapture(event.pointerId);setIsScrubbing(true);setIsPlaying(false);setCurrentSec(calculateTimeFromEvent(event.clientX));}}
+        onPointerMove={event=>{if(event.currentTarget.hasPointerCapture(event.pointerId))setCurrentSec(calculateTimeFromEvent(event.clientX));}}
+        onPointerUp={event=>{event.currentTarget.releasePointerCapture(event.pointerId);setIsScrubbing(false);}}
+        onPointerCancel={()=>setIsScrubbing(false)}
+        onLostPointerCapture={()=>setIsScrubbing(false)}
+        onKeyDown={event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();stepFrame(event.key==='ArrowLeft'?-1:1);}}}
         className="relative w-full h-8 bg-card/80 hover:bg-card/95 cursor-pointer border-b border-subtle select-none overflow-hidden group transition-colors"
       >
         {/* Proportional Scene Blocks */}
@@ -426,7 +382,7 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
             const cutNode = cutNodeId ? project.nodes[cutNodeId] : null;
             const versionLabel = cutNode?.versionLabel || 'v1.0';
             const isLast = idx === sceneTimeRanges.length - 1;
-            const waveformBars = getWaveformBars(scene.id, 24);
+            const waveformBars = (cutNode?.artifacts.metadata?.waveform || []).slice(0,24);
 
             return (
               <div
@@ -455,7 +411,7 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
                     preserveAspectRatio="none"
                     viewBox="0 0 100 20"
                   >
-                    {waveformBars.map((h, bIdx) => (
+                    {waveformBars.map((h: number, bIdx: number) => (
                       <rect
                         key={bIdx}
                         x={bIdx * 4.1 + 0.5}
@@ -512,7 +468,7 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
       </div>
 
       {/* Primary Transport Bar */}
-      <div className="flex items-center justify-between px-4 py-2 text-xs font-mono">
+      <div className="studio-transport flex items-center justify-between px-4 py-2 text-xs font-mono">
         {/* Playback Controls & High-Precision SMPTE Timecode */}
         <div className="flex items-center gap-3">
           {/* Transport Controls Deck */}
@@ -601,29 +557,7 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
 
         {/* Right Audio VU Meter, Add Scene & DaVinci Export */}
         <div className="flex items-center gap-3">
-          {/* Calibrated Audio VU Meter */}
-          <div className="flex items-center gap-1.5 text-[10px] text-text-muted font-mono">
-            <Volume2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span className="tabular-nums">-14 LUFS</span>
-            <div className="w-14 h-2 bg-black/40 rounded-sm overflow-hidden flex gap-0.5 p-0.5 border border-subtle">
-              <div
-                className={`h-full rounded-xs transition-all duration-75 ${
-                  isPlaying ? 'bg-emerald-500 w-8' : 'bg-emerald-500/70 w-6'
-                }`}
-              />
-              <div
-                className={`h-full rounded-xs transition-all duration-75 ${
-                  isPlaying ? 'bg-amber-400 w-3' : 'bg-amber-400/30 w-1'
-                }`}
-              />
-              <div
-                className={`h-full rounded-xs transition-all duration-75 ${
-                  isPlaying ? 'bg-rose-500/80 w-1' : 'bg-transparent w-1'
-                }`}
-              />
-            </div>
-          </div>
-
+          <span className="text-xs text-text-muted">Target −14 LUFS</span>
           <span className="text-subtle">|</span>
 
           <button
@@ -674,7 +608,7 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
             const cutNodeId = project.activeCut?.[scene.id];
             const cutNode = cutNodeId ? project.nodes[cutNodeId] : null;
             const sceneNodes = getNodesForScene(scene.id);
-            const waveformBars = getWaveformBars(scene.id, 20);
+            const waveformBars = (cutNode?.artifacts.metadata?.waveform || []).slice(0,20);
 
             return (
               <React.Fragment key={scene.id}>
@@ -694,7 +628,7 @@ export const BottomPlaybackDock: React.FC<BottomPlaybackDockProps> = ({
                       preserveAspectRatio="none"
                       viewBox="0 0 100 20"
                     >
-                      {waveformBars.map((h, bIdx) => (
+                      {waveformBars.map((h: number, bIdx: number) => (
                         <rect
                           key={bIdx}
                           x={bIdx * 5 + 0.5}

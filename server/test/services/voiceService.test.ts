@@ -1,10 +1,12 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import * as runner from '../../src/runners/base.js';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
 import { VoiceService } from '../../src/services/voiceService.js';
 
 describe('VoiceService Local Speech Synthesis', () => {
+  afterEach(()=>vi.restoreAllMocks());
   let tempDir: string;
 
   beforeEach(async () => {
@@ -18,6 +20,10 @@ describe('VoiceService Local Speech Synthesis', () => {
   });
 
   it('synthesizes dialogue into a valid 44.1kHz WAV file with duration', async () => {
+    vi.spyOn(runner,'executeProcess').mockImplementation(async(command,args)=>{
+      if(command==='ffmpeg') await fs.writeFile(args.at(-1)!,Buffer.alloc(2000));
+      return {exitCode:0,stderr:'',durationMs:1,stdout:command==='ffprobe'?JSON.stringify({format:{duration:'3.2'},streams:[{codec_type:'audio'}]}):''};
+    });
     const text = 'Every great story begins with an unexpected moment.';
     const result = await VoiceService.synthesizeSpeech(tempDir, 'node_voice_01', text, 'narrator_daniel');
 
@@ -30,6 +36,13 @@ describe('VoiceService Local Speech Synthesis', () => {
     expect(stat.size).toBeGreaterThan(1000); // WAV header + audio payload
   });
 
+  it('rejects empty output instead of estimating duration',async()=>{
+    vi.spyOn(runner,'executeProcess').mockImplementation(async(command,args)=>{
+      if(command==='ffmpeg') await fs.writeFile(args.at(-1)!,Buffer.alloc(78));
+      return {exitCode:0,stderr:'',durationMs:1,stdout:command==='ffprobe'?JSON.stringify({format:{duration:'0'},streams:[{codec_type:'audio'}]}):''};
+    });
+    await expect(VoiceService.synthesizeSpeech(tempDir,'empty','Test')).rejects.toThrow('empty audio');
+  });
   it('throws an error if dialogue text is empty', async () => {
     await expect(
       VoiceService.synthesizeSpeech(tempDir, 'node_voice_02', '   ')

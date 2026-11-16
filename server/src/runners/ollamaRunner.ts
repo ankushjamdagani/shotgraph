@@ -20,7 +20,10 @@ export async function runOllama(
 
   try {
     // Attempt HTTP API call
+    const timeout = AbortSignal.timeout(options.timeoutMs ?? 120000);
+    const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
     const res = await fetch(`${host}/api/generate`, {
+      signal,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -46,11 +49,13 @@ export async function runOllama(
       };
     }
   } catch (httpErr) {
+    if (options.signal?.aborted) throw new Error('Job canceled');
     // HTTP fetch failed, fallback to CLI
   }
 
   // Fallback to CLI: ollama run <model> "<prompt>"
   const runResult = await executeProcess('ollama', ['run', model, prompt], {
+    signal: options.signal,
     cwd: options.cwd,
     timeoutMs: options.timeoutMs ?? 180000,
     onStdoutChunk: options.onStdoutChunk,

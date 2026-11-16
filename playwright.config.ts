@@ -14,7 +14,7 @@ export default defineConfig({
   },
   reporter: [['list']],
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://127.0.0.1:3100',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -29,15 +29,17 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'npm --workspace=server run dev',
-      url: 'http://127.0.0.1:3030/api/projects',
-      reuseExistingServer: !process.env.CI,
+      command: 'node --import tsx server/src/index.ts',
+      env: { PORT:'3131', STUDIO_HOME:process.cwd()+'/.tmp-e2e/registry', STUDIO_ORIGINS:'http://127.0.0.1:3100' },
+      url: 'http://127.0.0.1:3131/api/projects',
+      reuseExistingServer: process.env.STUDIO_E2E_REUSE === '1',
       timeout: 15000,
     },
     {
       command: 'npm --workspace=client run dev',
-      url: 'http://localhost:3000',
-      reuseExistingServer: !process.env.CI,
+      env: { STUDIO_CLIENT_PORT:'3100', STUDIO_API_URL:'http://127.0.0.1:3131' },
+      url: 'http://127.0.0.1:3100',
+      reuseExistingServer: process.env.STUDIO_E2E_REUSE === '1',
       timeout: 15000,
     },
   ],

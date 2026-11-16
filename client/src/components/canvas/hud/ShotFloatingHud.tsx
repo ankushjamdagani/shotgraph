@@ -1,6 +1,7 @@
+import { apiFetch } from '../../../services/api';
 import React, { useState } from 'react';
 import { VersionNode, FilmProject } from '../../../types.js';
-import { Copy, Check, Pin, X, Sparkles } from 'lucide-react';
+import { Copy, Check, X, Sparkles } from 'lucide-react';
 
 interface ShotFloatingHudProps {
   node: VersionNode;
@@ -16,8 +17,6 @@ export const ShotFloatingHud: React.FC<ShotFloatingHudProps> = ({
   project,
   onUpdateProject,
   onClose,
-  isPinned,
-  onTogglePin,
 }) => {
   const [platform, setPlatform] = useState<'runway' | 'kling' | 'comfyui' | 'luma'>('runway');
   const [copied, setCopied] = useState(false);
@@ -34,7 +33,7 @@ export const ShotFloatingHud: React.FC<ShotFloatingHudProps> = ({
       [field]: val,
     };
     try {
-      const res = await fetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}`, {
+      const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -62,7 +61,7 @@ export const ShotFloatingHud: React.FC<ShotFloatingHudProps> = ({
   const handleCopyPrompt = async () => {
     let textToCopy = richSynthesizedPrompt;
     try {
-      const res = await fetch('http://localhost:3030/api/skills/enrich-prompt', {
+      const res = await apiFetch('http://localhost:3030/api/skills/enrich-prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -93,15 +92,7 @@ export const ShotFloatingHud: React.FC<ShotFloatingHudProps> = ({
           </span>
         </div>
         <div className="flex items-center gap-1">
-          {onTogglePin && (
-            <button
-              onClick={onTogglePin}
-              className={`p-1 rounded text-xs transition ${isPinned ? 'text-amber-400 bg-card' : 'text-text-muted hover:text-text-primary'}`}
-              title={isPinned ? 'Unpin HUD' : 'Pin HUD Open'}
-            >
-              <Pin className="w-3.5 h-3.5" />
-            </button>
-          )}
+
           <button onClick={onClose} className="p-1 rounded text-text-muted hover:text-text-primary transition">
             <X className="w-3.5 h-3.5" />
           </button>

@@ -1,3 +1,4 @@
+import { useDialog } from '../common/useDialog';
 import React, { useEffect } from 'react';
 import { Command } from 'cmdk';
 import { Film, Sliders, GitBranch, Cpu, ShieldAlert, Sparkles, Settings } from 'lucide-react';
@@ -25,10 +26,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        onClose(); // toggle logic handled in parent
-      }
       if (e.key === 'Escape' && isOpen) {
         onClose();
       }
@@ -37,10 +34,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  const dialogRef = useDialog(isOpen, onClose);
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150">
+    <div ref={dialogRef} aria-label="Studio commands" className="fixed inset-0 z-50 flex items-start justify-center pt-24 bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150">
       <div className="w-full max-w-lg rounded-lg bg-surface border border-subtle shadow-2xl overflow-hidden animate-scale-up text-text-primary">
         <Command label="Global Command Menu" className="w-full">
           <div className="flex items-center px-4 border-b border-subtle bg-surface">
@@ -68,7 +66,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                 >
                   <Settings className="w-4 h-4 text-accent-primary" />
                   <div className="flex-1 flex items-center justify-between">
-                    <span>Project Settings (Aspect Ratio, Theme, FPS)</span>
+                    <span>Project Settings (Format, Style, FPS)</span>
                     <span className="text-[10px] font-mono text-text-muted">Cmd+,</span>
                   </div>
                 </Command.Item>
@@ -119,7 +117,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               </Command.Item>
             </Command.Group>
 
-            <Command.Group heading="Switch Default AI Model" className="text-[10px] font-bold text-text-muted px-2 py-1 pt-2 font-mono uppercase">
+            <Command.Group heading="Selected Node AI Model" className="text-[10px] font-bold text-text-muted px-2 py-1 pt-2 font-mono uppercase">
               <Command.Item
                 onSelect={() => {
                   onSelectModel('antigravity-cli');
@@ -138,7 +136,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                 }}
                 className="flex items-center gap-2 p-2 rounded-lg text-text-primary hover:bg-card hover:text-accent-primary cursor-pointer transition"
               >
-                <Cpu className="w-4 h-4 text-purple-400" />
+                <Cpu className="w-4 h-4 text-sky-400" />
                 <span>Switch to Claude Code CLI</span>
               </Command.Item>
 

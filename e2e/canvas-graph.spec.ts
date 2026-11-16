@@ -1,9 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Spatial Director Canvas & Composable DAG', () => {
-  test('renders canvas nodes, allows selection, and displays playback dock', async ({ page }) => {
+  test('renders canvas nodes, allows selection, and displays playback dock', async ({ page, project }) => {
     // 1. Navigate to workspace canvas with known project Vguj34w5
-    await page.goto('/?projectId=Vguj34w5');
+    await page.goto(`/?projectId=${project.id}`);
 
     // 2. Assert Spatial Canvas header and node count pill
     const canvasPill = page.locator('text=/spatial canvas/i').first();

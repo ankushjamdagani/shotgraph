@@ -1,4 +1,8 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { useDialog } from './components/common/useDialog';
+import { ProjectReview } from './components/project/ProjectReview';
+import { toast } from './services/toastService';
+import { apiFetch, sessionToken } from './services/api';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { FilmProject, AgentPresence } from './types.js';
 import { SpatialDirectorCanvas } from './components/canvas/SpatialDirectorCanvas.js';
 import { BottomPlaybackDock } from './components/canvas/BottomPlaybackDock.js';
@@ -41,6 +45,9 @@ import {
 function App() {
   const [project, setProject] = useState<FilmProject | null>(null);
   const [isLoadingProject, setIsLoadingProject] = useState<boolean>(false);
+  const loadSequence = useRef(0);
+  const [connection, setConnection] = useState('Connecting');
+  const [safeAreas, setSafeAreas] = useState(false);
   const [agents, setAgents] = useState<AgentPresence[]>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
@@ -56,11 +63,12 @@ function App() {
   const [isDeletingActiveProject, setIsDeletingActiveProject] = useState(false);
   const [trimmerData, setTrimmerData] = useState<{
     isOpen: boolean;
-    fileName: string;
+    file: File;
     targetDurationSec: number;
     nodeId: string;
   } | null>(null);
 
+  const deleteDialog = useDialog(isDeleteModalOpen,()=>{if(!isDeletingActiveProject)setIsDeleteModalOpen(false);});
   // Meta UI/UX (Only 'film-lab-mono' dark and 'paper-ink' light)
   const [theme, setTheme] = useState<StudioTheme>(() => {
     try {
@@ -92,10 +100,12 @@ function App() {
 
   // Load project by ID (only when requested via query param or user selection)
   const loadProjectById = useCallback(async (projectId: string) => {
+    const sequence = ++loadSequence.current;
     setIsLoadingProject(true);
     try {
-      const res = await fetch(`http://localhost:3030/api/projects/${projectId}`);
+      const res = await apiFetch(`http://localhost:3030/api/projects/${projectId}`);
       const data: FilmProject = await res.json();
+      if (sequence !== loadSequence.current) return;
       if (data && data.id) {
         setProject(data);
         const firstNodeId = Object.keys(data.nodes)[0];
@@ -113,10 +123,12 @@ function App() {
         window.history.replaceState({}, '', newUrl.pathname);
       }
     } catch (err) {
-      console.error('Failed to load project:', err);
+      if (sequence !== loadSequence.current) return;
+      toast.error((err as Error).message);
       setProject(null);
+      const url = new URL(window.location.href); url.searchParams.delete('projectId'); window.history.replaceState({}, '', url);
     } finally {
-      setIsLoadingProject(false);
+      if (sequence === loadSequence.current) setIsLoadingProject(false);
     }
   }, []);
 
@@ -138,7 +150,7 @@ function App() {
       if (pid) {
         loadProjectById(pid);
       } else {
-        setProject(null);
+        ++loadSequence.current;setSelectedNodeId(null);setProject(null);
       }
     };
     window.addEventListener('popstate', handlePopState);
@@ -148,9 +160,10 @@ function App() {
   // Global Keyboard Shortcuts (Cmd+O for Project Hub, Cmd+K for Command Palette, Cmd+, for Settings, Cmd+E for DaVinci Export)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || document.querySelector('[aria-modal=true]')) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'n') {
         e.preventDefault();
-        setIsNewProjectOpen(true);
+        if (!project) window.dispatchEvent(new Event('studio:new-project')); else setIsNewProjectOpen(true);
       }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'o') {
         e.preventDefault();
@@ -171,47 +184,55 @@ function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [project?.id]);
 
   // Connect to Scoped AG-UI WebSocket
   useEffect(() => {
     if (!project?.id) return;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.hostname || 'localhost';
-    const wsUrl = `${protocol}//${host}:3030/ws/ag-ui?projectId=${project.id}`;
-    let ws: WebSocket;
-
-    try {
-      ws = new WebSocket(wsUrl);
-
-      ws.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data);
-          if (msg.event === 'agent:presence') {
-            setAgents((prev) => {
-              const filtered = prev.filter((a) => a.agentId !== msg.data.agentId);
-              return [...filtered, msg.data];
-            });
-          } else if (msg.event === 'state:timeline_sync') {
-            setProject((prev) =>
-              prev ? { ...prev, activeCut: { ...prev.activeCut, ...msg.data.activeCut } } : prev
-            );
-          }
-        } catch {
-          // ignore parse errors
-        }
-      };
-    } catch (e) {
-      console.warn('WebSocket connection not ready yet:', e);
-    }
-
-    return () => {
-      ws?.close();
+    let disposed = false;
+    let ws: WebSocket | undefined;
+    let timer: ReturnType<typeof setTimeout>;
+    let attempts = 0;
+    const connect = async () => {
+      setConnection('Connecting');
+      try {
+        const token = await sessionToken();
+        if (disposed) return;
+        ws = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/ag-ui?projectId=${encodeURIComponent(project.id)}&token=${encodeURIComponent(token)}`);
+        ws.onopen = async () => {
+          attempts = 0; setConnection('Connected');
+          try {const res = await apiFetch(`/api/projects/${project.id}`); const fresh = await res.json();
+          if (!disposed) setProject(fresh);}catch{if(!disposed)setConnection('Offline');}
+        };
+        ws.onmessage = (event) => {
+          if (disposed) return;
+          let msg; try {msg=JSON.parse(event.data);}catch{return;}
+          if (msg.event === 'agent:presence') setAgents(prev => [...prev.filter(a=>a.agentId!==msg.data.agentId),msg.data]);
+          if (msg.event === 'state:timeline_sync') setProject(prev => prev ? {...prev,activeCut:{...prev.activeCut,...msg.data.activeCut}}:prev);
+          if (msg.event === 'project:updated') setProject(prev => prev?.id===msg.data.id && (prev?.revision||0)<=(msg.data.revision||0)?msg.data:prev);
+        };
+        ws.onclose = () => { if (!disposed) { setConnection('Reconnecting');setAgents([]);timer=setTimeout(connect,Math.min(15000,1000*2**attempts++)); } };
+        ws.onerror = () => ws?.close();
+      } catch { if (!disposed) {setConnection('Offline');timer=setTimeout(connect,3000);} }
     };
+    connect();
+    return () => { disposed=true;clearTimeout(timer);ws?.close(); };
   }, [project?.id]);
 
+  useEffect(() => {
+    const saved = (event: Event) => { const next = (event as CustomEvent<FilmProject>).detail; setProject(prev => prev?.id===next.id && (prev?.revision||0)<=(next.revision||0)?next:prev); };
+    window.addEventListener('studio:project-saved',saved);
+    return () => window.removeEventListener('studio:project-saved',saved);
+  }, []);
+  useEffect(() => {
+    setAgents([]);setTrimmerData(null);setIsProjectSettingsOpen(false);setIsTasteMixerOpen(false);
+    setIsSubjectManagerOpen(false);setIsDaVinciExportOpen(false);setIsCmdPaletteOpen(false);setIsDeleteModalOpen(false);
+  }, [project?.id]);
+  const updateProject = (updated: FilmProject) => setProject(prev => prev?.id === updated.id && (prev?.revision||0) > (updated.revision||0) ? prev : updated);
+
   const handleSelectProject = (newProject: FilmProject) => {
+    ++loadSequence.current;
     setProject(newProject);
     const firstNode = Object.keys(newProject.nodes)[0] || null;
     setSelectedNodeId(firstNode);
@@ -222,6 +243,8 @@ function App() {
   };
 
   const handleExitToProjects = () => {
+    ++loadSequence.current;
+    setSelectedNodeId(null);
     setProject(null);
     const newUrl = new URL(window.location.href);
     newUrl.searchParams.delete('projectId');
@@ -234,7 +257,7 @@ function App() {
     const versionLabel = `v${Object.keys(project.nodes).length + 1}.0 Alternate`;
 
     try {
-      const res = await fetch('http://localhost:3030/api/tree/branch', {
+      const res = await apiFetch('http://localhost:3030/api/tree/branch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -251,34 +274,31 @@ function App() {
         setSelectedNodeId(data.node.id);
       }
     } catch (err: any) {
-      alert(`Branching failed: ${err.message}`);
+      toast.error(`Branching failed: ${err.message}`);
     }
   };
 
   const handleSetActiveCut = async (sceneId: string, nodeId: string) => {
     if (!project) return;
     try {
-      const res = await fetch('http://localhost:3030/api/tree/active-cut', {
+      const res = await apiFetch('http://localhost:3030/api/tree/active-cut', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sceneId, nodeId, projectId: project.id }),
       });
       const data = await res.json();
       if (data.success && project) {
-        setProject({ ...project, activeCut: data.activeCut });
+        setProject(data.project);
       }
     } catch (err: any) {
-      alert(`Setting active cut failed: ${err.message}`);
+      toast.error(`Setting active cut failed: ${err.message}`);
     }
   };
 
   const handleMediaDrop = (nodeId: string, file: File) => {
-    setTrimmerData({
-      isOpen: true,
-      fileName: file.name,
-      targetDurationSec: 3.5,
-      nodeId,
-    });
+    const node = project?.nodes[nodeId];
+    const scene = project?.scenes.find(scene=>scene.id===node?.sceneId);
+    setTrimmerData({isOpen:true,file,targetDurationSec:scene?.targetDurationSec || 5,nodeId});
   };
 
   // If loading a specific project from query param
@@ -297,18 +317,18 @@ function App() {
     if (!project) return;
     setIsDeletingActiveProject(true);
     try {
-      const res = await fetch(`http://localhost:3030/api/projects/${project.id}/remove`, {
+      const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/remove`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ moveToTrash }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setProject(null);
+        handleExitToProjects();
         setIsDeleteModalOpen(false);
       }
     } catch (err) {
-      console.error('Error deleting project:', err);
+      toast.error((err as Error).message);
     } finally {
       setIsDeletingActiveProject(false);
     }
@@ -317,13 +337,13 @@ function App() {
   // Root view: When on root (no project loaded), show Projects Page directly!
   if (!project) {
     return (
-      <ProjectHubModal
+      <> <ToastContainer /><ProjectHubModal
         isOpen={true}
         isStandalonePage={true}
         onSelectProject={handleSelectProject}
         currentTheme={theme}
         onThemeChange={setTheme}
-      />
+      /></>
     );
   }
 
@@ -334,8 +354,9 @@ function App() {
 
   return (
     <div className={`flex flex-col h-screen w-screen bg-app text-text-primary overflow-hidden theme-${theme}`}>
+      <div role="status" className="studio-connection px-4 py-1 text-xs bg-surface text-text-muted border-b border-subtle">{connection} · Project connection</div>
       {/* Top Studio Navbar */}
-      <header className="flex items-center justify-between px-4 h-12 bg-surface border-b border-subtle shrink-0 z-40 select-none">
+      <header className="studio-header flex items-center justify-between px-4 h-12 bg-surface border-b border-subtle shrink-0 z-40 select-none">
         <div className="flex items-center gap-3">
           {/* Logo & Return to Projects Page button */}
           <button
@@ -366,7 +387,7 @@ function App() {
           {/* Active Project Switcher Menu Dropdown */}
           <ProjectNameMenu
             project={project}
-            onUpdateProject={(updated) => setProject(updated)}
+            onUpdateProject={updateProject}
             onSelectProject={(newProj) => handleSelectProject(newProj)}
             onOpenProjectSettings={() => setIsProjectSettingsOpen(true)}
             onOpenDaVinciExport={() => setIsDaVinciExportOpen(true)}
@@ -421,8 +442,10 @@ function App() {
         </div>
       </header>
 
+      {!project.scenes.length && <div className="hidden md:flex px-4 py-2 border-b border-subtle text-sm gap-4 items-center"><span className="text-text-muted">Start with your brief, then add a scene to build the active cut.</span><button className="px-3 py-2 rounded bg-accent-primary text-app" onClick={async()=>{try{const response=await apiFetch(`/api/projects/${project.id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision:project.revision||0,scenes:[{id:`scene_${Date.now()}`,name:'Scene 1',order:1,targetDurationSec:5}]})});updateProject((await response.json()).project);}catch(error){toast.error((error as Error).message);}}}>Add first scene</button></div>}
       {/* Main Spatial Director Workspace */}
-      <main className="flex-1 flex flex-col overflow-hidden relative">
+      <ProjectReview key={project.id} project={project}/>
+      <main className="studio-main flex-1 flex flex-col overflow-hidden relative">
         <div className="flex-1 relative">
           <SpatialDirectorCanvas
             project={project}
@@ -430,7 +453,7 @@ function App() {
             selectedNodeId={selectedNodeId}
             onSelectNode={setSelectedNodeId}
             onBranchNode={handleBranchNode}
-            onUpdateProject={(updated) => setProject(updated)}
+            onUpdateProject={updateProject}
             onSetActiveCut={handleSetActiveCut}
             onMediaDrop={handleMediaDrop}
             onOpenDaVinciExport={() => setIsDaVinciExportOpen(true)}
@@ -443,8 +466,10 @@ function App() {
         {/* Bottom Playback Scrubber Dock (Only rendered when concrete scenes exist) */}
         {project.scenes && project.scenes.length > 0 && (
           <BottomPlaybackDock
+            safeAreas={safeAreas}
+            onMediaDrop={handleMediaDrop}
             project={project}
-            onUpdateProject={(updated) => setProject(updated)}
+            onUpdateProject={updateProject}
             onFocusScene={(sceneId) => {
               const cutNodeId = project.activeCut?.[sceneId];
               if (cutNodeId && project.nodes[cutNodeId]) {
@@ -498,7 +523,7 @@ function App() {
             isOpen={isProjectSettingsOpen}
             onClose={() => setIsProjectSettingsOpen(false)}
             project={project}
-            onUpdateProject={(updatedProject) => setProject(updatedProject)}
+            onUpdateProject={updateProject}
             currentTheme={theme}
             onThemeChange={setTheme}
           />
@@ -510,7 +535,7 @@ function App() {
             isOpen={isTasteMixerOpen}
             onClose={() => setIsTasteMixerOpen(false)}
             project={project}
-            onUpdateProject={(updatedProject) => setProject(updatedProject)}
+            onUpdateProject={updateProject}
           />
         )}
 
@@ -520,7 +545,7 @@ function App() {
             isOpen={isSubjectManagerOpen}
             onClose={() => setIsSubjectManagerOpen(false)}
             project={project}
-            onUpdateProject={(updatedProject) => setProject(updatedProject)}
+            onUpdateProject={updateProject}
           />
         )}
 
@@ -529,6 +554,9 @@ function App() {
           <DaVinciExportModal
             isOpen={isDaVinciExportOpen}
             onClose={() => setIsDaVinciExportOpen(false)}
+            projectId={project.id}
+            projectFps={project.fps}
+            revision={project.revision}
             projectName={project.name}
             totalDurationSec={totalDuration}
           />
@@ -539,10 +567,12 @@ function App() {
           <MediaTrimmerModal
             isOpen={trimmerData.isOpen}
             onClose={() => setTrimmerData(null)}
-            fileName={trimmerData.fileName}
+            file={trimmerData.file}
             targetDurationSec={trimmerData.targetDurationSec}
-            onConfirmTrim={(start, dur) => {
-              alert(`Trimmed ${trimmerData.fileName} from ${start}s for ${dur}s and attached to node!`);
+            onConfirmTrim={async (start, dur) => {
+              const query = new URLSearchParams({filename:trimmerData.file.name,start:String(start),duration:String(dur)});
+              const response = await apiFetch(`/api/projects/${project.id}/nodes/${trimmerData.nodeId}/media?${query}`,{method:'POST',headers:{'Content-Type':'application/octet-stream'},body:trimmerData.file});
+              const result = await response.json(); updateProject(result.project);toast.success('Media imported and attached');
             }}
           />
         )}
@@ -556,17 +586,19 @@ function App() {
         onOpenTasteMixer={() => setIsTasteMixerOpen(true)}
         onOpenDaVinciExport={() => setIsDaVinciExportOpen(true)}
         onBranchSelected={() => selectedNodeId && handleBranchNode(selectedNodeId)}
-        onSelectModel={(engine) => {
-          if (selectedNodeId && project.nodes[selectedNodeId]) {
-            project.nodes[selectedNodeId].modelEngine = engine;
-          }
+        onSelectModel={async (engine) => {
+          if (!selectedNodeId) return toast.warning('Select a node first');
+          try {
+            const response=await apiFetch(`/api/projects/${project.id}/nodes/${selectedNodeId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({modelEngine:engine})});
+            const data=await response.json();updateProject(data.project);toast.success('Selected node model saved');
+          } catch(error) {toast.error((error as Error).message);}
         }}
-        onToggleSafeAreas={() => {}}
+        onToggleSafeAreas={() => setSafeAreas(prev=>!prev)}
       />
 
       {/* Active Project Delete / Remove Confirmation Modal */}
       {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150 select-none">
+        <div ref={deleteDialog} aria-label="Remove project" className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150 select-none">
           <div className="relative w-full max-w-sm bg-surface border border-subtle rounded-lg shadow-2xl p-5 text-text-primary space-y-3.5">
             <div className="flex items-center gap-2.5">
               <div className="p-2 rounded bg-red-500/10 text-red-400 border border-red-500/20">

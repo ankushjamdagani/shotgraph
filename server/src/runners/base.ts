@@ -6,6 +6,7 @@ export interface RunOptions {
   timeoutMs?: number;
   onStdoutChunk?: (chunk: string) => void;
   onStderrChunk?: (chunk: string) => void;
+  signal?: AbortSignal;
   onThinking?: (thought: string) => void;
 }
 
@@ -34,6 +35,16 @@ export async function executeProcess(
     let timer: NodeJS.Timeout | null = null;
     let stdout = '';
     let stderr = '';
+    let escalation: NodeJS.Timeout | null = null;
+    let stopped = false;
+    const terminate = () => {
+      if (!proc || proc.exitCode !== null || proc.signalCode !== null) return;
+      const signal = (sig: NodeJS.Signals) => { try { if (process.platform !== 'win32' && proc.pid) process.kill(-proc.pid, sig); else proc.kill(sig); } catch {} };
+      signal('SIGTERM');
+      escalation = setTimeout(() => signal('SIGKILL'), 1000);
+    };
+    const abort = () => { stopped = true; terminate(); reject(new Error('Job canceled')); };
+    options.signal?.addEventListener('abort', abort, { once: true });
 
     try {
       proc = spawn(command, args, {
@@ -45,16 +56,15 @@ export async function executeProcess(
           CI: '1',
         },
         shell: false,
+        detached: process.platform !== 'win32',
       });
     } catch (err) {
       return reject(new Error(`Failed to spawn process "${command}": ${(err as Error).message}`));
     }
 
     timer = setTimeout(() => {
-      proc.kill('SIGTERM');
-      setTimeout(() => {
-        if (!proc.killed) proc.kill('SIGKILL');
-      }, 3000);
+      stopped = true;
+      terminate();
       reject(new Error(`Process "${command} ${args.join(' ')}" timed out after ${timeoutMs}ms`));
     }, timeoutMs);
 
@@ -72,15 +82,20 @@ export async function executeProcess(
 
     proc.on('close', (code) => {
       if (timer) clearTimeout(timer);
+      if (escalation) clearTimeout(escalation);
+      options.signal?.removeEventListener('abort', abort);
+      if (stopped) return;
       resolve({
-        exitCode: code ?? 0,
+        exitCode: code ?? 1,
         stdout: stdout.trim(),
         stderr: stderr.trim(),
         durationMs: Date.now() - startTime,
       });
     });
 
+    if (options.signal?.aborted) abort();
     proc.on('error', (err) => {
+      options.signal?.removeEventListener('abort', abort);
       if (timer) clearTimeout(timer);
       reject(new Error(`Process error in "${command}": ${err.message}`));
     });

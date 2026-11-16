@@ -1,6 +1,7 @@
+import { apiFetch } from '../../../services/api';
 import React, { useState } from 'react';
 import { VersionNode, FilmProject } from '../../../types.js';
-import { Volume2, Pin, X, Check, Loader2, Headphones, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
+import { Volume2, X, Check, Loader2, Headphones, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from '../../../services/toastService.js';
 
 interface ScriptFloatingHudProps {
@@ -17,8 +18,6 @@ export const ScriptFloatingHud: React.FC<ScriptFloatingHudProps> = ({
   project,
   onUpdateProject,
   onClose,
-  isPinned,
-  onTogglePin,
 }) => {
   const [dialogueText, setDialogueText] = useState(node.prompt || '');
   const [actionText, setActionText] = useState(node.artifacts?.textContent || '');
@@ -37,14 +36,14 @@ export const ScriptFloatingHud: React.FC<ScriptFloatingHudProps> = ({
   const subjects = project.subjectAnchors || [];
 
   const audioSrc = node.artifacts?.audioUrl
-    ? `http://localhost:3030/media/${node.artifacts.audioUrl}`
+    ? `/api/projects/${project.id}/media/${node.artifacts.audioUrl}`
     : node.artifacts?.mediaUrl?.endsWith('.wav')
-    ? `http://localhost:3030/media/${node.artifacts.mediaUrl}`
+    ? `/api/projects/${project.id}/media/${node.artifacts.mediaUrl}`
     : null;
 
   const handleSaveBeat = async () => {
     try {
-      const res = await fetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}`, {
+      const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -84,7 +83,7 @@ export const ScriptFloatingHud: React.FC<ScriptFloatingHudProps> = ({
 
     setIsSynthesizingVoice(true);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `http://localhost:3030/api/projects/${project.id}/nodes/${node.id}/synthesize-voice`,
         {
           method: 'POST',
@@ -120,7 +119,7 @@ export const ScriptFloatingHud: React.FC<ScriptFloatingHudProps> = ({
     const sceneDesc = actionText.trim() || dialogueText.trim() || 'Anya in architectural studio space';
     setIsGeneratingFoley(true);
     try {
-      const res = await fetch('http://localhost:3030/api/skills/earshot/audio-cues', {
+      const res = await apiFetch('http://localhost:3030/api/skills/earshot/audio-cues', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -143,7 +142,7 @@ export const ScriptFloatingHud: React.FC<ScriptFloatingHudProps> = ({
             foleyPlan: data.audioPlan,
           },
         };
-        fetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}`, {
+        apiFetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ artifacts: updatedArtifacts }),
@@ -180,15 +179,7 @@ export const ScriptFloatingHud: React.FC<ScriptFloatingHudProps> = ({
           </span>
         </div>
         <div className="flex items-center gap-1">
-          {onTogglePin && (
-            <button
-              onClick={onTogglePin}
-              className={`p-1 rounded text-xs transition ${isPinned ? 'text-amber-400 bg-card' : 'text-text-muted hover:text-text-primary'}`}
-              title={isPinned ? 'Unpin HUD' : 'Pin HUD Open'}
-            >
-              <Pin className="w-3.5 h-3.5" />
-            </button>
-          )}
+
           <button onClick={onClose} className="p-1 rounded text-text-muted hover:text-text-primary transition">
             <X className="w-3.5 h-3.5" />
           </button>

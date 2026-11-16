@@ -4,12 +4,13 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 3000,
+    host: '127.0.0.1',
+    port: Number(process.env.STUDIO_CLIENT_PORT || 3000),
     proxy: {
-      '/api': 'http://127.0.0.1:3030',
-      '/media': 'http://127.0.0.1:3030',
+      '/api': process.env.STUDIO_API_URL || 'http://127.0.0.1:3030',
+      '/media': process.env.STUDIO_API_URL || 'http://127.0.0.1:3030',
       '/ws': {
-        target: 'ws://127.0.0.1:3030',
+        target: (process.env.STUDIO_API_URL || 'http://127.0.0.1:3030').replace('http','ws'),
         ws: true,
       },
     },

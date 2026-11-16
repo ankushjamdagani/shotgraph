@@ -65,7 +65,7 @@ export interface StudioProjectGraph {
   activeSinkNodeId: string;
   activePathNodeIds?: string[];
   targetDurationSec: number;
-  aspectRatio: '9:16' | '16:9' | '1:1';
+  aspectRatio: '9:16' | '16:9' | '1:1' | '2.39:1';
   fps: number;
   scenes: Array<{
     id: string;

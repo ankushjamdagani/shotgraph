@@ -1,8 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('External Production Tool Bridges (DaVinci & Blender)', () => {
-  test('opens DaVinci Resolve modal and verifies FCPXML export UI', async ({ page }) => {
-    await page.goto('/?projectId=Vguj34w5');
+  test('opens DaVinci Resolve modal and verifies FCPXML export UI', async ({ page, project }) => {
+    await page.goto(`/?projectId=${project.id}`);
 
     // Find and click Export DaVinci button in the bottom dock
     const davinciBtn = page.getByRole('button', { name: /Export DaVinci/i }).first();
@@ -17,9 +17,9 @@ test.describe('External Production Tool Bridges (DaVinci & Blender)', () => {
     await page.keyboard.press('Escape');
   });
 
-  test('generates Blender scene assembly python script via API bridge', async ({ request }) => {
-    const res = await request.post('http://127.0.0.1:3030/api/export/blender', {
-      data: { projectId: 'Vguj34w5' },
+  test('generates Blender scene assembly python script via API bridge', async ({ request, project }) => {
+    const res = await request.post('/api/export/blender', {
+      data: { projectId: project.id },
     });
 
     expect(res.ok()).toBeTruthy();

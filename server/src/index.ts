@@ -1,3 +1,7 @@
+import { importMedia, probeMedia } from './services/mediaService.js';
+import { z } from 'zod';
+import { randomBytes } from 'node:crypto';
+import { containedPath } from './services/fileSafety.js';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
@@ -17,14 +21,14 @@ import {
 import { runAntigravityCLIJson } from './runners/antigravityRunner.js';
 import { runClaudeCLIJson } from './runners/claudeRunner.js';
 import { runOllama } from './runners/ollamaRunner.js';
-import { ProjectService, FilmProject, ProjectSubjectAnchor, SubjectVariant } from './services/projectService.js';
+import { ProjectService, projectEvents, FilmProject, ProjectSubjectAnchor, SubjectVariant } from './services/projectService.js';
 import { ProjectRegistry, GlobalStylePreset } from './services/projectRegistry.js';
 import { VoiceService } from './services/voiceService.js';
 import { BlenderBridge } from './bridges/blenderBridge.js';
 import { AgentManager } from './swarm/agentManager.js';
 import { AGUIServerMessage, AGUIClientMessageSchema } from './protocol/aguiEvents.js';
 
-const PORT = 3030;
+const PORT = Number(process.env.PORT || 3030);
 const DEFAULT_WORKSPACE_ROOT = process.cwd();
 
 // Initialize all atomic skills & central project registry
@@ -33,14 +37,41 @@ await ProjectRegistry.initialize();
 
 const server = Fastify({ logger: false });
 
-await server.register(cors, { origin: true });
+const sessionToken = randomBytes(32).toString('hex');
+const allowedOrigins = new Set((process.env.STUDIO_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:3030,http://127.0.0.1:3030').split(','));
+await server.register(cors, { origin: (origin, callback) => callback(null, !origin || allowedOrigins.has(origin)) });
+server.addHook('onRequest', async (req, reply) => {
+  const origin = req.headers.origin;
+  if (origin && !allowedOrigins.has(origin)) return reply.code(403).send({ success: false, error: 'Origin is not allowed' });
+  if (['POST', 'PATCH', 'PUT', 'DELETE'].includes(req.method) && req.headers['x-studio-token'] !== sessionToken) {
+    return reply.code(401).send({ success: false, error: 'Studio session expired. Reload and try again.' });
+  }
+});
+server.addHook('preHandler', async (req, reply) => {
+ const expected=req.headers['x-project-revision'];
+ if(expected===undefined || !['POST','PATCH','DELETE','PUT'].includes(req.method))return;
+ const id=(req.params as any)?.id || (req.body as any)?.projectId;
+ if(!id)return;
+ const entry=await ProjectRegistry.getProjectEntry(id);if(!entry)return;
+ const project=await ProjectService.loadProject(entry.path);
+ if(Number(expected)!==(project.revision||0))return reply.code(409).send({success:false,error:'Project changed in another session. Reload before trying again.'});
+});
+server.get('/api/session', async (_req, reply) => {
+  reply.header('Cache-Control', 'no-store');
+  return { token: sessionToken };
+});
+server.setErrorHandler((error: any, _request, reply) => {
+  const status = error instanceof z.ZodError ? 400 : error.statusCode || 500;
+  reply.code(status).send({ success: false, error: error instanceof z.ZodError ? error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ') : error.message });
+});
 await server.register(websocket);
 
 // Dynamic static media serving for projects
 await server.register(fastifyStatic, {
   root: DEFAULT_WORKSPACE_ROOT,
   prefix: '/media/',
-  decorateReply: false,
+  serve: false,
+  decorateReply: true,
 });
 
 // Map of projectId -> Set of WebSocket client connections
@@ -85,6 +116,8 @@ function broadcastAGUI(msg: AGUIServerMessage, targetProjectId?: string) {
   }
 }
 
+projectEvents.on('saved', (project: FilmProject) => broadcastAGUI({event:'project:updated',data:project} as any,project.id));
+
 // Active project file watchers: projectRoot -> FSWatcher
 const activeWatchers = new Map<string, FSWatcher>();
 
@@ -123,38 +156,11 @@ function ensureProjectWatcher(projectRoot: string, projectId: string) {
  * Resolves the absolute project root from request params / query / body
  */
 async function resolveProjectRoot(identifier?: string): Promise<{ projectRoot: string; project?: FilmProject }> {
-  if (!identifier) {
-    // Default to most recent project or current working directory
-    const recents = await ProjectRegistry.listRecentProjects();
-    if (recents.length > 0) {
-      const first = recents[0];
-      try {
-        const project = await ProjectService.loadProject(first.path);
-        return { projectRoot: first.path, project };
-      } catch {
-        // Fall back to default workspace
-      }
-    }
-    const project = await ProjectService.loadProject(DEFAULT_WORKSPACE_ROOT);
-    return { projectRoot: DEFAULT_WORKSPACE_ROOT, project };
-  }
-
-  // Check if identifier is an existing entry in the registry
+  if (!identifier) throw Object.assign(new Error('An explicit project ID is required'), { statusCode: 400 });
   const entry = await ProjectRegistry.getProjectEntry(identifier);
-  if (entry) {
-    const project = await ProjectService.loadProject(entry.path);
-    return { projectRoot: entry.path, project };
-  }
-
-  // Check if identifier is an absolute path on disk
-  try {
-    const resolved = path.resolve(identifier);
-    const project = await ProjectService.loadProject(resolved);
-    return { projectRoot: resolved, project };
-  } catch {
-    const project = await ProjectService.loadProject(DEFAULT_WORKSPACE_ROOT);
-    return { projectRoot: DEFAULT_WORKSPACE_ROOT, project };
-  }
+  if (!entry) throw Object.assign(new Error('Project not found'), { statusCode: 404 });
+  const project = await ProjectService.loadProject(entry.path);
+  return { projectRoot: entry.path, project };
 }
 
 // ==========================================
@@ -199,7 +205,7 @@ server.post('/api/projects/open', async (req, reply) => {
 
     return { success: true, project };
   } catch (err: any) {
-    reply.status(500);
+    reply.status(err.statusCode || 500);
     return { success: false, error: err.message };
   }
 });
@@ -214,9 +220,9 @@ server.post('/api/projects/create', async (req, reply) => {
     targetDurationSec,
     basePresetId = 'liquid_glass',
     ideaPrompt,
-    emptyDAG = false,
+    emptyDAG = true,
     genesisConfig,
-  } = (req.body as any) || {};
+  } = z.object({name:z.string().trim().max(200).optional(),path:z.string().max(4096).optional(),preset:z.enum(['reel_9_16','youtube_16_9','ad_1_1']).optional(),aspectRatio:z.enum(['9:16','16:9','1:1','2.39:1']).optional(),targetDurationSec:z.number().positive().max(86400).optional(),basePresetId:z.string().optional(),ideaPrompt:z.string().optional(),emptyDAG:z.boolean().optional(),genesisConfig:z.object({modelEngine:z.enum(['antigravity-cli','claude-cli','ollama','external','hyperframes']).optional(),mood:z.string().optional(),customMood:z.string().optional(),directorDirective:z.string().optional(),referenceUrls:z.array(z.string()).optional(),customSpecs:z.string().optional(),branches:z.array(z.object({id:z.number(),title:z.string(),aesthetic:z.string(),customLook:z.string().optional(),beats:z.array(z.object({label:z.string(),text:z.string()})).optional()})).optional()}).optional()}).strict().parse(req.body);
 
   const projectName = (name && name.trim()) || 'Untitled Video Project';
   const sanitized = projectName.toLowerCase().replace(/[^a-z0-9_-]/g, '_') || 'untitled_project';
@@ -246,7 +252,7 @@ server.post('/api/projects/create', async (req, reply) => {
     ensureProjectWatcher(resolvedPath, project.id);
     return { success: true, project };
   } catch (err: any) {
-    reply.status(500);
+    reply.status(err.statusCode || 500);
     return { success: false, error: err.message };
   }
 });
@@ -317,6 +323,19 @@ Return valid JSON with the exact structure:
   }
 });
 
+server.post('/api/ai/story-directions', async (req, reply) => {
+ const input=z.object({prompt:z.string().trim().min(1),duration:z.number().positive(),modelEngine:z.enum(['antigravity-cli','claude-cli','ollama']),mood:z.string().optional(),directive:z.string().optional()}).parse(req.body);
+ const controller=new AbortController(); const cancel=()=>{if(!reply.raw.writableEnded)controller.abort();}; reply.raw.on('close',cancel);
+ const prompt=`Create three distinct film directions for this brief: ${JSON.stringify(input)}. Each must fit the requested duration and brief. Return JSON {"directions":[{"title":"title","beats":[{"label":"beat with timing","text":"visual action and dialogue"}]}]}.`;
+ try {
+  const opts={timeoutMs:60000,signal:controller.signal};
+  const raw=input.modelEngine==='claude-cli'?(await runClaudeCLIJson<any>(prompt,opts)).data:input.modelEngine==='ollama'?JSON.parse((await runOllama(prompt,opts)).text.replace(/```(?:json)?|```/g,'')):(await runAntigravityCLIJson<any>(prompt,opts)).data;
+  const parsed=z.object({directions:z.array(z.object({title:z.string().min(1),beats:z.array(z.object({label:z.string(),text:z.string()})).min(1)})).min(1).max(5)}).parse(raw);
+  return {success:true,directions:parsed.directions};
+ } catch(error:any) {return reply.code(502).send({success:false,error:error.message || 'Generation failed. Retry or create a blank project.'});}
+ finally{reply.raw.off('close',cancel);}
+});
+
 // Get specific project by ID or path
 server.get('/api/projects/:id', async (req, reply) => {
   const { id } = req.params as { id: string };
@@ -338,33 +357,58 @@ server.get('/api/projects/:id/media/*', async (req, reply) => {
     return { error: 'Project not found' };
   }
   const relPath = (req.params as any)['*'];
-  const fullPath = path.resolve(entry.path, relPath);
-  if (!fullPath.startsWith(path.resolve(entry.path))) {
-    reply.status(403);
-    return { error: 'Access denied' };
-  }
+  const fullPath = containedPath(entry.path, relPath);
+  const realRoot = await fs.realpath(entry.path);
+  containedPath(realRoot, await fs.realpath(fullPath));
   return reply.sendFile(path.basename(fullPath), path.dirname(fullPath));
 });
 
 // Update project settings, scenes, sticky notes, or metadata
 server.patch('/api/projects/:id', async (req, reply) => {
   const { id } = req.params as { id: string };
-  const updates = (req.body as any) || {};
+  const updates = z.object({
+    revision: z.number().int().nonnegative().optional(),
+    name: z.string().trim().min(1).max(200).optional(),
+    aspectRatio: z.enum(['9:16', '16:9', '1:1', '2.39:1']).optional(),
+    targetDurationSec: z.number().positive().max(86400).optional(),
+    fps: z.union([z.literal(24), z.literal(25), z.literal(29.97), z.literal(30), z.literal(60)]).optional(),
+    scenes: z.array(z.object({ id: z.string().min(1), name: z.string(), order: z.number(), targetDurationSec: z.number().positive() })).optional(),
+    edges: z.record(z.any()).optional(),
+    nodes: z.record(z.object({ id: z.string(), parentId: z.string().nullable(), sceneId: z.string().nullable().optional(), artifacts: z.record(z.any()), metadata: z.record(z.any()) }).passthrough()).optional(),
+    activeCut: z.record(z.string()).optional(), stickyNotes: z.array(z.object({ id: z.string(), text: z.string(), color: z.enum(['yellow','cyan','rose','emerald']), position: z.object({x:z.number(), y:z.number()}), isPinned:z.boolean().optional() })).optional(),
+    activeSinkNodeId: z.string().nullable().optional(),
+    styleMarkdown: z.string().optional(), basePresetId: z.string().optional(),
+    styleOverrides: z.record(z.any()).optional(), additionalConstraints: z.array(z.string()).optional(),
+  }).strict().parse(req.body);
   const { project } = await resolveProjectRoot(id);
-
-  if (!project) {
-    reply.status(404);
-    return { success: false, error: 'Project not found' };
+  if (!project) return reply.code(404).send({ success: false, error: 'Project not found' });
+  if (updates.revision !== undefined && updates.revision !== (project.revision || 0)) return reply.code(409).send({success:false,error:'Project changed. Reload before saving.'});
+  Object.assign(project, updates);
+  if (updates.scenes) {
+    for (const scene of project.scenes) {
+      if(!Object.values(project.nodes).some(node=>node.sceneId===scene.id)) {
+        const nodeId=`node_${nanoid(8)}`;
+        project.nodes[nodeId]={id:nodeId,parentId:null,sceneId:scene.id,title:scene.name,stage:'script',modelEngine:'external',prompt:'',versionLabel:'v1.0',artifacts:{},metadata:{createdAt:new Date().toISOString(),status:'idle'}};
+        project.activeCut[scene.id]=nodeId;
+      }
+    }
   }
-
-  if (updates.name !== undefined) project.name = updates.name;
-  if (updates.aspectRatio !== undefined) project.aspectRatio = updates.aspectRatio;
-  if (updates.targetDurationSec !== undefined) project.targetDurationSec = Number(updates.targetDurationSec);
-  if (updates.fps !== undefined) project.fps = Number(updates.fps);
-  if (updates.scenes !== undefined) project.scenes = updates.scenes;
-  if (updates.stickyNotes !== undefined) project.stickyNotes = updates.stickyNotes;
-  if (updates.activeCut !== undefined) project.activeCut = updates.activeCut;
-  if (updates.nodes !== undefined) project.nodes = updates.nodes;
+  if (updates.scenes && !updates.activeCut) project.activeCut=Object.fromEntries(Object.entries(project.activeCut).filter(([sceneId])=>project.scenes.some(scene=>scene.id===sceneId)));
+  if(new Set(project.scenes.map(scene=>scene.id)).size!==project.scenes.length) throw Object.assign(new Error('Scene IDs must be unique'),{statusCode:400});
+  for (const [id,node] of Object.entries(project.nodes)) {
+    if(node.id!==id || (node.parentId && !project.nodes[node.parentId])) throw Object.assign(new Error('Invalid node identity or parent'),{statusCode:400});
+    const visited=new Set<string>();let current:any=node;
+    while(current){if(visited.has(current.id))throw Object.assign(new Error('The graph cannot contain cycles'),{statusCode:400});visited.add(current.id);current=project.nodes[current.parentId];}
+  }
+  for (const [sceneId, nodeId] of Object.entries(project.activeCut)) {
+    if (!project.scenes.some(scene => scene.id === sceneId) || !project.nodes[nodeId]) throw Object.assign(new Error('Active cut contains an unknown scene or node'), { statusCode: 400 });
+  }
+  if (updates.basePresetId || updates.styleOverrides || updates.additionalConstraints) {
+    const base = await ProjectRegistry.getStylePreset(project.basePresetId || 'liquid_glass');
+    const resolved = ProjectRegistry.resolveCompositeStyle(base, project.styleOverrides || {}, project.additionalConstraints || []);
+    project.styleTokens = resolved.tokens;
+    project.styleMarkdown = updates.styleMarkdown || resolved.markdown;
+  }
 
   await ProjectService.saveProject(project);
   return { success: true, project };
@@ -410,7 +454,9 @@ server.post('/api/projects/:id/nodes', async (req, reply) => {
 server.post('/api/projects/:id/remove', async (req) => {
   const { id } = req.params as { id: string };
   const { moveToTrash = false } = (req.body as any) || {};
+  const entry=await ProjectRegistry.getProjectEntry(id);
   const removed = await ProjectRegistry.removeProject(id, moveToTrash);
+  if(removed && entry){await activeWatchers.get(entry.path)?.close();activeWatchers.delete(entry.path);for(const client of projectRooms.get(id)||[])client.close(1000,'Project removed');projectRooms.delete(id);}
   return { success: removed };
 });
 
@@ -499,6 +545,7 @@ server.post('/api/skills/execute', async (req, reply) => {
     return { success: false, error: 'Project not found' };
   }
 
+  const controller=new AbortController();const cancel=()=>{if(!reply.raw.writableEnded)controller.abort();};reply.raw.on('close',cancel);
   // Update agent status to working
   const agentId =
     modelEngine === 'claude-cli' ? 'claude-motion' : modelEngine === 'ollama' ? 'ollama-local' : 'agy-director';
@@ -519,6 +566,7 @@ server.post('/api/skills/execute', async (req, reply) => {
 
   try {
     const result = await SkillRegistry.execute(skillId, input, {
+      signal:controller.signal,
       projectRoot,
       modelEngine: modelEngine || 'antigravity-cli',
       styleGuideMd: project.styleMarkdown,
@@ -557,6 +605,8 @@ server.post('/api/skills/execute', async (req, reply) => {
       },
     });
 
+    if(controller.signal.aborted) throw new Error('Job canceled');
+    reply.raw.off('close',cancel);
     // If a target node was specified, attach output artifacts
     if (targetNodeId && project.nodes[targetNodeId]) {
       const node = project.nodes[targetNodeId];
@@ -588,6 +638,7 @@ server.post('/api/skills/execute', async (req, reply) => {
 
     return { success: true, result };
   } catch (err: any) {
+    reply.raw.off('close',cancel);
     AgentManager.updatePresence(agentId, {
       status: 'error',
       activeNodeId: null,
@@ -602,7 +653,7 @@ server.post('/api/skills/execute', async (req, reply) => {
       project.id
     );
 
-    reply.status(500);
+    reply.status(err.statusCode || 500);
     return { success: false, error: err.message };
   }
 });
@@ -708,7 +759,7 @@ server.post('/api/tree/active-cut', async (req, reply) => {
     project.id
   );
 
-  return { success: true, activeCut: project.activeCut };
+  return { success: true, activeCut: project.activeCut, project };
 });
 
 // Delete node from project DAG with child edge re-linking (and optional filesystem cleanup)
@@ -733,96 +784,83 @@ server.delete('/api/projects/:id/nodes/:nodeId', async (req, reply) => {
 // Update node attributes (position, colorTag, title, overrides)
 server.patch('/api/projects/:id/nodes/:nodeId', async (req, reply) => {
   const { id, nodeId } = req.params as { id: string; nodeId: string };
-  const patch = req.body as any;
+  const patch = z.object({ title:z.string().optional(), prompt:z.string().optional(), versionLabel:z.string().optional(), modelEngine:z.enum(['antigravity-cli','claude-cli','ollama','hyperframes','external']).optional(), artifacts:z.record(z.any()).optional(), metadata:z.record(z.any()).optional(), colorTag:z.string().optional(), width:z.number().positive().optional(), position:z.object({x:z.number(),y:z.number()}).optional(), shotContextOverrides:z.record(z.any()).optional(), vfxMetadata:z.record(z.any()).optional(), assetMetadata:z.record(z.any()).optional() }).strict().parse(req.body);
   const { project } = await resolveProjectRoot(id);
   if (!project) {
     reply.status(404);
     return { success: false, error: 'Project not found' };
   }
-  const updatedNode = await ProjectService.updateNode(project, nodeId, patch);
+  const updatedNode = await ProjectService.updateNode(project, nodeId, patch as any);
   return { success: true, node: updatedNode, project };
 });
 
 // ==========================================
 // 6. DaVinci Resolve Multi-Track Export
 // ==========================================
+server.addContentTypeParser('application/octet-stream', { parseAs: 'buffer', bodyLimit: 512 * 1024 * 1024 }, (_req, body, done) => done(null, body));
+server.post('/api/projects/:id/nodes/:nodeId/media', { bodyLimit: 512 * 1024 * 1024 }, async (req, reply) => {
+  const {id,nodeId} = req.params as {id:string;nodeId:string};
+  const query = z.object({filename:z.string().min(1),start:z.coerce.number().nonnegative(),duration:z.coerce.number().positive()}).parse(req.query);
+  const {project,projectRoot} = await resolveProjectRoot(id);
+  if (!project?.nodes[nodeId]) return reply.code(404).send({success:false,error:'Node not found'});
+  if (!Buffer.isBuffer(req.body) || !req.body.length) return reply.code(400).send({success:false,error:'A media file is required'});
+  const media = await importMedia(projectRoot,req.body,query.filename,query.start,query.duration);
+  const fresh = await ProjectService.loadProject(projectRoot);
+  const node = fresh.nodes[nodeId];
+  if (!node) return reply.code(409).send({success:false,error:'Node was deleted during import. Original media was retained.'});
+  node.artifacts = {...node.artifacts, [media.hasVideo || media.image ? 'mediaUrl':'audioUrl']:media.relative, metadata:{...node.artifacts.metadata,sourceFile:media.source,durationSec:media.duration,waveform:media.waveform}};
+  node.metadata.status = 'ready';
+  await ProjectService.saveProject(fresh);
+  return {success:true,project:fresh,node};
+});
+
 server.post('/api/export/davinci', async (req, reply) => {
-  const { fps = 30, projectId } = (req.body as any) || {};
+  const { projectId, fps: requestedFps, revision } = z.object({projectId:z.string().min(1), fps:z.number().optional(), revision:z.number().optional()}).parse(req.body);
   const { projectRoot, project } = await resolveProjectRoot(projectId);
-  if (!project) {
-    reply.status(404);
-    return { success: false, error: 'Project not found' };
-  }
-
+  if (!project) return reply.code(404).send({success:false,error:'Project not found'});
+  if (revision !== undefined && revision !== (project.revision || 0)) return reply.code(409).send({success:false,error:'Project changed. Reload before export.'});
+  const fps = requestedFps || project.fps;
   const clips: any[] = [];
-  let currentTime = 0;
-
-  for (const scene of project.scenes) {
-    const activeNodeId = project.activeCut[scene.id];
-    const node = project.nodes[activeNodeId];
-    const duration = scene.targetDurationSec;
-
-    clips.push({
-      id: `clip_${scene.id}`,
-      name: `${scene.name} (${node?.versionLabel || 'v1'})`,
-      relativeFilePath: node?.artifacts.mediaUrl || `V1_footage/${scene.id}.mp4`,
-      startSec: currentTime,
-      durationSec: duration,
-      track: 'V1_footage',
-    });
-
-    if (node?.artifacts.alphaOverlayUrl) {
-      clips.push({
-        id: `overlay_${scene.id}`,
-        name: `${scene.name} Overlay`,
-        relativeFilePath: node.artifacts.alphaOverlayUrl,
-        startSec: currentTime,
-        durationSec: duration,
-        track: 'V2_overlay',
-      });
-    }
-
-    currentTime += duration;
-  }
-
-  // Add dialogue stem
-  clips.push({
-    id: 'voice_master',
-    name: 'Voiceover Dialogue Master',
-    relativeFilePath: 'A1_dialogue/dialogue_master.wav',
-    startSec: 0,
-    durationSec: currentTime,
-    track: 'A1_dialogue',
-  });
-
-  const exportResult: any = await SkillRegistry.execute(
-    'skill-fcpxml-builder',
-    {
-      projectName: project.name,
-      totalDurationSec: currentTime,
-      fps: fps,
-      width: project.aspectRatio === '9:16' ? 1080 : 1920,
-      height: project.aspectRatio === '9:16' ? 1920 : 1080,
-      clips,
-    },
-    { projectRoot }
-  );
-
-  const bundleDir = path.join(projectRoot, 'exports', 'davinci_bundle');
-  await fs.mkdir(bundleDir, { recursive: true });
-
-  await fs.writeFile(path.join(bundleDir, 'timeline.fcpxml'), exportResult.fcpxmlContent, 'utf-8');
-  await fs.writeFile(path.join(bundleDir, 'timeline.edl'), exportResult.edlContent, 'utf-8');
-  await fs.writeFile(path.join(bundleDir, 'subtitles.srt'), exportResult.srtContent, 'utf-8');
-  await fs.writeFile(path.join(bundleDir, 'STYLE_GUIDE.md'), project.styleMarkdown, 'utf-8');
-
-  return {
-    success: true,
-    bundlePath: bundleDir,
-    totalDurationSec: currentTime,
-    clipCount: clips.length,
-    instructions: exportResult.instructions,
+  const sources: Array<{source:string;relative:string}> = [];
+  const missing: string[] = [];
+  let currentTime=0;
+  const add = async (relative:string|undefined, scene:any, track:string, duration:number, text?:string) => {
+    if (!relative) { if(track==='V1_footage') missing.push(`${scene.name}: select a take with imported video`); return; }
+    try {
+      const source=containedPath(projectRoot,relative);
+      containedPath(await fs.realpath(projectRoot),await fs.realpath(source));
+      const info = await probeMedia(source);
+      if ((track==='V1_footage' && !info.hasVideo) || info.duration + 1/fps < duration) { missing.push(`${scene.name}: media is shorter than the scene or has no video`);return; }
+      const filename=`${sources.length+1}_${path.basename(relative)}`;
+      const bundled=`${track}/${filename}`;
+      sources.push({source,relative:bundled});
+      clips.push({id:`clip_${sources.length}`,name:scene.name,relativeFilePath:bundled,startSec:currentTime,durationSec:duration,track,text,hasAudio:info.hasAudio});
+    } catch { missing.push(`${scene.name}: missing ${relative}`); }
   };
+  for (const scene of project.scenes) {
+    const node=project.nodes[project.activeCut[scene.id]];
+    await add(node?.artifacts.mediaUrl,scene,'V1_footage',scene.targetDurationSec);
+    await add(node?.artifacts.alphaOverlayUrl,scene,'V2_overlay',scene.targetDurationSec);
+    await add(node?.artifacts.audioUrl,scene,'A1_dialogue',scene.targetDurationSec,node?.artifacts.metadata?.transcript);
+    currentTime+=scene.targetDurationSec;
+  }
+  if (!project.scenes.length || missing.length) return reply.code(422).send({success:false,error:missing.join('; ') || 'Add at least one scene before exporting'});
+  const dimensions:Record<string,[number,number]>={'9:16':[1080,1920],'16:9':[1920,1080],'1:1':[1080,1080],'2.39:1':[1920,804]};
+  const [width,height]=dimensions[project.aspectRatio] || dimensions['16:9'];
+  const result:any=await SkillRegistry.execute('skill-fcpxml-builder',{projectName:project.name,totalDurationSec:currentTime,fps,width,height,clips},{projectRoot});
+  const bundleDir=path.join(projectRoot,'exports',`davinci_${Date.now()}_${nanoid(4)}`);
+  const staging=`${bundleDir}.tmp`;
+  try {
+    await fs.mkdir(staging,{recursive:true});
+    for (const file of sources) { const destination=path.join(staging,file.relative);await fs.mkdir(path.dirname(destination),{recursive:true});await fs.copyFile(file.source,destination); }
+    await fs.writeFile(path.join(staging,'timeline.fcpxml'),result.fcpxmlContent);
+    await fs.writeFile(path.join(staging,'timeline.edl'),result.edlContent);
+    if(result.srtContent) await fs.writeFile(path.join(staging,'subtitles.srt'),result.srtContent);
+    await fs.writeFile(path.join(staging,'STYLE_GUIDE.md'),project.styleMarkdown);
+    await fs.writeFile(path.join(staging,'manifest.json'),JSON.stringify({projectId,revision:project.revision||0,fps,width,height,clips},null,2));
+    await fs.rename(staging,bundleDir);
+  } catch(error) { await fs.rm(staging,{recursive:true,force:true});throw error; }
+  return {success:true,bundlePath:bundleDir,totalDurationSec:currentTime,clipCount:clips.length,instructions:result.instructions};
 });
 
 // 6b. Blender Scene Assembly Export
@@ -1202,7 +1240,7 @@ server.post('/api/projects/:id/nodes/:nodeId/synthesize-voice', async (req, repl
       ...node.artifacts,
       textContent: dialogueText,
       audioUrl: result.audioRelPath,
-      mediaUrl: result.audioRelPath,
+      metadata: {...node.artifacts.metadata, transcript: dialogueText, durationSec: result.durationSec},
     };
     node.metadata = {
       ...node.metadata,
@@ -1351,6 +1389,7 @@ server.post('/api/projects/:id/assets/spawn-node', async (req, reply) => {
 // ==========================================
 server.get('/ws/ag-ui', { websocket: true }, (connection, req) => {
   const query = (req.query as any) || {};
+  if (query.token !== sessionToken) { connection.close(1008, 'Invalid session'); return; }
   const projectId = query.projectId as string | undefined;
 
   if (projectId) {

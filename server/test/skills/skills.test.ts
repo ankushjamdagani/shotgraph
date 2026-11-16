@@ -253,11 +253,11 @@ describe('Atomic Skill Swarm Suite', () => {
     );
 
     expect(result.fcpxmlContent).toContain('<fcpxml version="1.10">');
-    expect(result.fcpxmlContent).toContain('FFVideoFormat1080x1920p30');
+    expect(result.fcpxmlContent).toContain('width="1080" height="1920"');
     expect(result.fcpxmlContent).toContain('V1_footage/scene_01.mp4');
     expect(result.fcpxmlContent).toContain('V2_overlay/card_01.mov');
     expect(result.edlContent).toContain('TITLE: AI Reel Project 01');
-    expect(result.srtContent).toContain('Voiceover Stem');
+    expect(result.srtContent).toBe('');
   });
 
   it('skillAssetGenerator enforces Three-Pillar Style Lock across different subjects (e.g. Girl and Boy)', async () => {

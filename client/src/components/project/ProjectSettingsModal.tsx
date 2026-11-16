@@ -1,3 +1,5 @@
+import { useDialog } from '../common/useDialog';
+import { apiFetch } from '../../services/api';
 import React, { useState } from 'react';
 import { FilmProject } from '../../types.js';
 import { StudioTheme } from '../ui-ux/ThemeCustomizer.js';
@@ -42,6 +44,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
   const [constraints, setConstraints] = useState<string[]>(project.additionalConstraints || []);
   const [newConstraint, setNewConstraint] = useState('');
 
+  const dialogRef = useDialog(isOpen, onClose);
   if (!isOpen) return null;
 
   const handleSaveGeneral = async () => {
@@ -63,10 +66,11 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
         additionalConstraints: constraints,
       };
 
-      const res = await fetch(`http://localhost:3030/api/projects/${project.id}`, {
+      const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          revision: project.revision || 0,
           name,
           aspectRatio,
           targetDurationSec: Number(targetDurationSec),
@@ -84,10 +88,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
         toast.success('Project settings saved successfully');
         onClose();
       } else {
-        // Fallback local update if patch route not present
-        onUpdateProject(updatedProject);
-        toast.success('Project settings updated in memory');
-        onClose();
+        throw new Error(data.error || 'Settings could not be saved. Your edits are still here.');
       }
     } catch (err: any) {
       console.error('Error saving project settings:', err);
@@ -98,7 +99,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
   };
 
   return (
-    <div
+    <div ref={dialogRef} aria-label="Project Settings"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in select-none"
       onClick={onClose}
     >
@@ -117,6 +118,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
             </div>
           </div>
           <button
+            aria-label="Close dialog"
             onClick={onClose}
             className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-card transition"
           >

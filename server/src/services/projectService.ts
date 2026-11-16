@@ -1,3 +1,7 @@
+import { validateProject } from './projectValidation.js';
+import { EventEmitter } from 'node:events';
+export const projectEvents = new EventEmitter();
+import { atomicWrite, serialized, containedPath, moveToTrash } from './fileSafety.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { exec } from 'child_process';
@@ -107,11 +111,12 @@ export interface VersionNode {
 }
 
 export interface FilmProject {
+  revision?: number;
   id: string;
   name: string;
   projectRoot: string;
   targetDurationSec: number;
-  aspectRatio: '9:16' | '16:9' | '1:1';
+  aspectRatio: '9:16' | '16:9' | '1:1' | '2.39:1';
   fps: number;
   scenes: Array<{
     id: string;
@@ -162,7 +167,7 @@ export interface GenesisProjectConfig {
 }
 
 export interface ProjectInitOptions {
-  aspectRatio?: '9:16' | '16:9' | '1:1';
+  aspectRatio?: '9:16' | '16:9' | '1:1' | '2.39:1';
   fps?: number;
   targetDurationSec?: number;
   preset?: 'reel_9_16' | 'youtube_16_9' | 'ad_1_1';
@@ -182,6 +187,11 @@ export class ProjectService {
     name: string,
     options?: ProjectInitOptions
   ): Promise<FilmProject> {
+    return serialized(projectRoot, async () => {
+    try {
+      await fs.access(path.join(projectRoot, '.studio', 'project.json'));
+      throw Object.assign(new Error('A project already exists in this folder. Open it instead.'), { statusCode: 409 });
+    } catch (err: any) { if (err.code !== 'ENOENT') throw err; }
     const subdirs = [
       '.studio',
       'raw_footage',
@@ -214,7 +224,7 @@ export class ProjectService {
       }
     }
 
-    const aspectRatio: '9:16' | '16:9' | '1:1' =
+    const aspectRatio: '9:16' | '16:9' | '1:1' | '2.39:1' =
       options?.aspectRatio ||
       (options?.preset === 'youtube_16_9' ? '16:9' : options?.preset === 'ad_1_1' ? '1:1' : '9:16');
     const targetDurationSec =
@@ -573,6 +583,7 @@ export class ProjectService {
     });
 
     return project;
+    });
   }
 
   /**
@@ -583,6 +594,7 @@ export class ProjectService {
     try {
       const data = await fs.readFile(projectJsonPath, 'utf-8');
       const raw = JSON.parse(data);
+      if (!raw || typeof raw.id !== 'string' || typeof raw.name !== 'string' || !raw.nodes || !Array.isArray(raw.scenes)) throw new Error('Invalid project state');
       const project = ProjectMigrationService.migrateProjectV2toV3(raw) as FilmProject;
       project.subjectAnchors = project.subjectAnchors || [];
       // Register in central index as recently opened
@@ -592,9 +604,11 @@ export class ProjectService {
         additionalConstraints: project.additionalConstraints,
       });
       return project;
-    } catch {
-      // If project doesn't exist yet, initialize it automatically
-      return this.initProject(projectRoot, path.basename(projectRoot));
+    } catch (error: any) {
+      throw Object.assign(new Error(error.code === 'ENOENT' ? 'Project not found' : 'Project could not be read. Original files were preserved.'), {
+        statusCode: error.code === 'ENOENT' ? 404 : 422,
+        cause: error,
+      });
     }
   }
 
@@ -602,16 +616,24 @@ export class ProjectService {
    * Persists project state to disk.
    */
   static async saveProject(project: FilmProject): Promise<void> {
-    const projectJsonPath = path.join(project.projectRoot, '.studio', 'project.json');
-    const projectV3 = ProjectMigrationService.migrateProjectV2toV3(project) as FilmProject;
-    await fs.writeFile(projectJsonPath, JSON.stringify(projectV3, null, 2), 'utf-8');
-    if (project.styleMarkdown) {
-      await fs.writeFile(path.join(project.projectRoot, 'STYLE.md'), project.styleMarkdown, 'utf-8');
-    }
-    await ProjectRegistry.registerProject(project.projectRoot, projectV3, {
-      basePresetId: project.basePresetId,
-      styleOverrides: project.styleOverrides,
-      additionalConstraints: project.additionalConstraints,
+    await serialized(project.projectRoot, async () => {
+      const projectJsonPath = path.join(project.projectRoot, '.studio', 'project.json');
+      const existing = JSON.parse(await fs.readFile(projectJsonPath, 'utf8'));
+      if ((existing.revision || 0) !== (project.revision || 0)) {
+        throw Object.assign(new Error('This project changed in another session. Reload before saving.'), { statusCode: 409 });
+      }
+      const projectV3 = ProjectMigrationService.migrateProjectV2toV3(project) as FilmProject;
+      validateProject(projectV3, existing);
+      projectV3.revision = (existing.revision || 0) + 1;
+      await atomicWrite(`${projectJsonPath}.bak`, JSON.stringify(existing, null, 2));
+      await atomicWrite(projectJsonPath, JSON.stringify(projectV3, null, 2));
+      Object.assign(project, projectV3);
+      projectEvents.emit('saved', structuredClone(projectV3));
+      if (project.styleMarkdown) await atomicWrite(path.join(project.projectRoot, 'STYLE.md'), project.styleMarkdown);
+      await ProjectRegistry.registerProject(project.projectRoot, project, {
+        basePresetId: project.basePresetId, styleOverrides: project.styleOverrides,
+        additionalConstraints: project.additionalConstraints,
+      });
     });
   }
 
@@ -633,6 +655,7 @@ export class ProjectService {
     const prefix = parent.sceneId || parent.stage || 'node';
     const newNodeId = `node_${prefix}_${nanoid(6)}`;
     const newNode: VersionNode = {
+      ...parent,
       id: newNodeId,
       parentId: parentNodeId,
       sceneId: parent.sceneId,
@@ -656,6 +679,12 @@ export class ProjectService {
     };
 
     project.nodes[newNodeId] = newNode;
+    // A version alternative inherits the parent's upstream dependencies, not a cyclic peer link.
+    if(project.edges) for(const edge of Object.values(project.edges).filter(edge=>edge.targetNodeId===parentNodeId)) {
+      const output=project.nodes[edge.sourceNodeId]?.outputPorts?.[edge.sourcePortId];
+      const input=newNode.inputPorts?.[edge.targetPortId];
+      if(output && input && output.type===input.type){const id=`edge_${nanoid(8)}`;project.edges[id]={...edge,id,targetNodeId:newNodeId};}
+    }
     await this.saveProject(project);
 
     return newNode;
@@ -669,6 +698,7 @@ export class ProjectService {
     sceneId: string,
     nodeId: string
   ): Promise<void> {
+    if (!project.scenes.some(scene=>scene.id===sceneId) || project.nodes[nodeId]?.sceneId !== sceneId) throw new Error('Select a node belonging to this scene');
     if (!project.nodes[nodeId]) {
       throw new Error(`Node "${nodeId}" does not exist in project DAG.`);
     }
@@ -708,16 +738,8 @@ export class ProjectService {
       const root = project.projectRoot || (project as any).path;
       for (const relPath of mediaFilesToDelete) {
         if (!relPath) continue;
-        const absPath = path.isAbsolute(relPath) ? relPath : path.join(root, relPath);
-        try {
-          await execAsync(`osascript -e 'tell application "Finder" to delete POSIX file "${absPath}"'`);
-        } catch {
-          try {
-            await fs.rm(absPath, { force: true });
-          } catch {
-            // Ignore missing files or non-critical cleanup failures
-          }
-        }
+        const absPath = containedPath(root, relPath);
+        await moveToTrash(absPath);
       }
     }
 
@@ -744,6 +766,9 @@ export class ProjectService {
       }
     }
 
+    project.edges = Object.fromEntries(Object.entries(project.edges || {}).filter(([,edge])=>edge.sourceNodeId!==nodeId && edge.targetNodeId!==nodeId));
+    if(project.activeSinkNodeId===nodeId)project.activeSinkNodeId=undefined;
+    project.activePathNodeIds=undefined;
     delete project.nodes[nodeId];
     await this.saveProject(project);
     return project;

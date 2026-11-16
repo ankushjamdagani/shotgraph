@@ -1,9 +1,14 @@
+import { useDialog } from '../common/useDialog';
+import { apiFetch } from '../../services/api';
 import React, { useState } from 'react';
 import { X, Film, CheckCircle2, FolderCheck, Loader2 } from 'lucide-react';
 
 interface DaVinciExportModalProps {
   isOpen: boolean;
   onClose: () => void;
+  projectId: string;
+  projectFps: number;
+  revision?: number;
   projectName: string;
   totalDurationSec: number;
 }
@@ -11,10 +16,12 @@ interface DaVinciExportModalProps {
 export const DaVinciExportModal: React.FC<DaVinciExportModalProps> = ({
   isOpen,
   onClose,
+  projectId, projectFps, revision,
   projectName,
   totalDurationSec,
 }) => {
-  const [fps, setFps] = useState<number>(30);
+  const [fps, setFps] = useState<number>(projectFps);
+  const [error, setError] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [exportResult, setExportResult] = useState<any | null>(null);
 
@@ -27,34 +34,39 @@ export const DaVinciExportModal: React.FC<DaVinciExportModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  const dialogRef = useDialog(isOpen, onClose);
   if (!isOpen) return null;
 
   const handleExport = async () => {
     setIsExporting(true);
+    setError('');
+    setExportResult(null);
     try {
-      const res = await fetch('/api/export/davinci', {
+      const res = await apiFetch('/api/export/davinci', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fps }),
+        body: JSON.stringify({ fps, projectId, revision }),
       });
       const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Export failed');
       setExportResult(data);
     } catch (err: any) {
-      alert(`Export failed: ${err.message}`);
+      setError(err.message);
     } finally {
       setIsExporting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-lg rounded-lg bg-surface border border-subtle shadow-2xl p-6 text-text-primary">
+    <div ref={dialogRef} aria-label="Export project" className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+      <div className="max-h-[90vh] overflow-y-auto w-full max-w-lg rounded-lg bg-surface border border-subtle shadow-2xl p-6 text-text-primary">
         <div className="flex items-center justify-between pb-3 border-b border-subtle">
           <div className="flex items-center gap-2 text-sm font-bold text-text-primary">
             <Film className="w-4 h-4 text-accent-primary" />
             <span>DaVinci Resolve Multi-Track Export Bundle</span>
           </div>
           <button
+            aria-label="Close export"
             onClick={onClose}
             className="p-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-card transition"
           >
@@ -90,21 +102,11 @@ export const DaVinciExportModal: React.FC<DaVinciExportModalProps> = ({
             </div>
           </div>
 
-          {/* Stems Manifest Preview */}
-          <div className="p-3.5 rounded bg-card border border-subtle text-xs space-y-2">
-            <span className="font-bold text-text-primary block">Export Bundle Stems:</span>
-            <div className="space-y-1 font-mono text-[11px] text-text-muted">
-              <div>📹 <span className="text-text-primary">timeline.fcpxml</span> (FCPXML v1.10)</div>
-              <div>📼 <span className="text-text-primary">timeline.edl</span> (Universal EDL)</div>
-              <div>🎞️ <span className="text-text-primary">V1_footage/</span> (Cut background video clips)</div>
-              <div>✨ <span className="text-text-primary">V2_motion_overlays/</span> (ProRes 4444 with alpha)</div>
-              <div>🎙️ <span className="text-text-primary">A1_dialogue/</span> (Normalized voiceover master)</div>
-              <div>🔔 <span className="text-text-primary">A2_sfx/</span> (Exact frame SFX stems)</div>
-              <div>🎵 <span className="text-text-primary">A3_music/</span> (Ducked bed at -14 LUFS)</div>
-              <div>💬 <span className="text-text-primary">subtitles.srt</span> (Word-level SRT)</div>
-            </div>
+          <div className="p-3 rounded bg-card text-sm text-text-muted">
+            Creates FCPXML and EDL timelines. Exports the active video takes, attached overlays and dialogue into a portable media bundle.
+            Missing footage blocks export. Subtitles are included only when transcript text is available.
           </div>
-
+          {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
           {exportResult && (
             <div className="p-3 rounded bg-emerald-950/40 border border-emerald-600/50 text-xs text-emerald-300 space-y-1">
               <div className="flex items-center gap-1.5 font-bold">
@@ -123,6 +125,7 @@ export const DaVinciExportModal: React.FC<DaVinciExportModalProps> = ({
 
         <div className="flex items-center justify-end gap-2 pt-3 border-t border-subtle">
           <button
+            aria-label="Close export"
             onClick={onClose}
             className="px-3 py-1.5 rounded-lg text-xs font-medium text-text-muted hover:text-text-primary transition"
           >

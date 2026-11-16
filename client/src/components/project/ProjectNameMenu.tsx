@@ -1,3 +1,4 @@
+import { apiFetch } from '../../services/api';
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Folder,
@@ -48,7 +49,7 @@ export const ProjectNameMenu: React.FC<ProjectNameMenuProps> = ({
   // Load recent projects when dropdown opens
   useEffect(() => {
     if (isOpen) {
-      fetch('http://localhost:3030/api/projects')
+      apiFetch('http://localhost:3030/api/projects')
         .then((res) => res.json())
         .then((list: ProjectRegistryEntry[]) => {
           if (Array.isArray(list)) {
@@ -124,7 +125,7 @@ export const ProjectNameMenu: React.FC<ProjectNameMenuProps> = ({
       return;
     }
     try {
-      const res = await fetch(`http://localhost:3030/api/projects/${project.id}`, {
+      const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: trimmed }),
@@ -149,7 +150,7 @@ export const ProjectNameMenu: React.FC<ProjectNameMenuProps> = ({
     try {
       const copyName = `${project.name} (Copy)`;
       const copyPath = `${project.projectRoot}_copy_${Date.now().toString(36)}`;
-      const res = await fetch('http://localhost:3030/api/projects/create', {
+      const res = await apiFetch('http://localhost:3030/api/projects/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -176,7 +177,7 @@ export const ProjectNameMenu: React.FC<ProjectNameMenuProps> = ({
     setIsOpen(false);
     setIsSubmenuOpen(false);
     try {
-      const res = await fetch(`http://localhost:3030/api/projects/${projId}`);
+      const res = await apiFetch(`http://localhost:3030/api/projects/${projId}`);
       const data = await res.json();
       if (data && data.id) {
         onSelectProject(data);

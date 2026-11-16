@@ -1,10 +1,10 @@
+import { useDialog } from '../common/useDialog';
+import { apiFetch } from '../../services/api';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   ArrowLeft,
   X,
   FolderOpen,
-  Play,
-  Square,
   Check,
   Plus,
   Loader2,
@@ -95,11 +95,6 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
     5: [],
   });
 
-  // Audio preview state
-  const [playingCardId, setPlayingCardId] = useState<number | null>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const activeOscRef = useRef<OscillatorNode | null>(null);
-
   // Submission state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -113,71 +108,9 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
   const aestheticInputRef = useRef<HTMLInputElement | null>(null);
 
   // Initial Storyboard Variations
-  const initialVariations: StoryVariation[] = [
-    {
-      id: 1,
-      title: 'The Midnight Surge',
-      durationLabel: '30s • 3 Beats',
-      audioFreq: 140,
-      audioType: 'sawtooth',
-      beats: [
-        {
-          label: 'Hook (0–3s)',
-          text: "Neon puddle match-cut as the runner's foot strikes Tokyo asphalt in the rain.",
-        },
-        {
-          label: 'Action (3–20s)',
-          text: 'Rapid tracking shot following carbon plate flex in slow motion with dynamic FPV motion.',
-        },
-        {
-          label: 'Climax (20–30s)',
-          text: 'Kinetic typography glitch reveal: "Engineered for Midnight."',
-        },
-      ],
-    },
-    {
-      id: 2,
-      title: 'Defying Gravity',
-      durationLabel: '30s • 3 Beats',
-      audioFreq: 240,
-      audioType: 'sine',
-      beats: [
-        {
-          label: 'Hook (0–3s)',
-          text: '120fps super slow-motion morning breath in cold, crisp sunrise daylight.',
-        },
-        {
-          label: 'Action (3–22s)',
-          text: 'Macro daylight textures capturing woven mesh flex and airborne foam deflection.',
-        },
-        {
-          label: 'Climax (22–30s)',
-          text: 'Gentle fade to black with warm resonant piano chords.',
-        },
-      ],
-    },
-    {
-      id: 3,
-      title: 'Engineering the Stride',
-      durationLabel: '30s • 3 Beats',
-      audioFreq: 380,
-      audioType: 'triangle',
-      beats: [
-        {
-          label: 'Hook (0–3s)',
-          text: 'CAD wireframe schematics dissolving into physical carbon fiber prototype.',
-        },
-        {
-          label: 'Action (3–20s)',
-          text: 'Split-screen stress test telemetry data syncing with dynamic runner telemetry.',
-        },
-        {
-          label: 'Climax (20–30s)',
-          text: 'Sound cutoff to total silence before clean bass drop and product logo mark.',
-        },
-      ],
-    },
-  ];
+  const [initialVariations, setInitialVariations] = useState<StoryVariation[]>([]);
+  const generation = useRef<AbortController | null>(null);
+  useEffect(()=>()=>generation.current?.abort(),[]);
 
   const allVariations = [...initialVariations, ...customVariations];
 
@@ -265,6 +198,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, currentStep, prompt, title, selectedCards, branchAesthetics]);
 
+  const dialogRef = useDialog(isOpen, onClose);
   if (!isOpen) return null;
 
   // Real AI Mood Call (Asynchronous prefetch on Step 1 submit)
@@ -274,7 +208,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
     setAiMoodError(null);
 
     try {
-      const res = await fetch('http://localhost:3030/api/ai/suggest-moods', {
+      const res = await apiFetch('http://localhost:3030/api/ai/suggest-moods', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -320,27 +254,16 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
   };
 
   // Step 5: Ambient breathing generation
-  const triggerAmbientGeneration = () => {
-    advanceToStep(5);
-    setIsAmbientGenerating(true);
-
-    const statuses = [
-      'Directing camera optics...',
-      'Scoring audio tempo & rhythm...',
-      'Compiling screenplay beats...',
-      'Finalizing story variations...',
-    ];
-
-    let idx = 0;
-    const interval = setInterval(() => {
-      idx++;
-      if (idx < statuses.length) {
-        setAmbientStatus(statuses[idx]);
-      } else {
-        clearInterval(interval);
-        setIsAmbientGenerating(false);
-      }
-    }, 550);
+  const triggerAmbientGeneration = async () => {
+    advanceToStep(5);setIsAmbientGenerating(true);setAmbientStatus('Generating story directions…');setErrorMsg('');
+    generation.current?.abort();const controller=new AbortController();generation.current=controller;
+    try {
+      const response=await apiFetch('/api/ai/story-directions',{method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:prompt.trim()||title,duration:selectedDuration,modelEngine:selectedModel,mood:customMood||selectedMood,directive:customDirective})});
+      const data=await response.json();
+      const directions:StoryVariation[]=data.directions.map((item:any,index:number)=>({...item,id:index+1,durationLabel:`${selectedDuration}s • ${item.beats.length} beats`,audioFreq:0,audioType:'sine'}));
+      setInitialVariations(directions);setSelectedCards(new Set([directions[0].id]));
+    } catch(error) {if(!controller.signal.aborted)setErrorMsg((error as Error).message);}
+    finally{if(!controller.signal.aborted)setIsAmbientGenerating(false);}
   };
 
   const toggleCardPick = (id: number) => {
@@ -395,7 +318,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
     setIsPickingDir(true);
     setErrorMsg('');
     try {
-      const res = await fetch('http://localhost:3030/api/projects/pick-directory', {
+      const res = await apiFetch('http://localhost:3030/api/projects/pick-directory', {
         method: 'POST',
       });
       const data = await res.json();
@@ -412,64 +335,14 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
   // Navigation handlers
   const advanceToStep = (step: number) => {
     setCurrentStep(step);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    dialogRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const goBack = () => {
     if (currentStep > 1) {
       setCurrentStep((prev) => prev - 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      dialogRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  };
-
-  // Audio playback via Web Audio API
-  const playAudio = (variation: StoryVariation) => {
-    if (!window.AudioContext && !(window as any).webkitAudioContext) return;
-
-    if (playingCardId === variation.id) {
-      stopAudio();
-      return;
-    }
-
-    stopAudio();
-
-    try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      const ctx = audioCtxRef.current || new AudioCtx();
-      audioCtxRef.current = ctx;
-
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = variation.audioType;
-      osc.frequency.setValueAtTime(variation.audioFreq, ctx.currentTime);
-
-      gain.gain.setValueAtTime(0.08, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 3.0);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-
-      activeOscRef.current = osc;
-      setPlayingCardId(variation.id);
-
-      setTimeout(() => {
-        setPlayingCardId((cur) => (cur === variation.id ? null : cur));
-      }, 3000);
-    } catch (err) {
-      console.warn('Audio playback not supported:', err);
-    }
-  };
-
-  const stopAudio = () => {
-    if (activeOscRef.current) {
-      try {
-        activeOscRef.current.stop();
-      } catch {}
-      activeOscRef.current = null;
-    }
-    setPlayingCardId(null);
   };
 
   // Final Action: Project Creation with Smooth Dissolve Transition
@@ -478,7 +351,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
     setErrorMsg('');
 
     const projectName = title.trim() || 'Untitled Video Project';
-    const primaryAesthetic = branchAesthetics[1] || 'Liquid Glass';
+    const primaryAesthetic = branchAesthetics[Array.from(selectedCards)[0]] || 'Liquid Glass';
 
     const presetMap: Record<string, string> = {
       'Liquid Glass': 'liquid_glass',
@@ -502,7 +375,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
     const allUrls = Object.values(stepUrls).flat();
 
     try {
-      const res = await fetch('http://localhost:3030/api/projects/create', {
+      const res = await apiFetch('http://localhost:3030/api/projects/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -544,8 +417,8 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
   };
 
   return (
-    <div
-      className={`fixed inset-0 z-50 bg-[#08080A] canvas-dots w-screen h-screen min-h-screen overflow-y-auto flex flex-col justify-between font-sans selection:bg-neutral-800 selection:text-white transition-all duration-300 ${
+    <div ref={dialogRef} aria-label="Create project"
+      className={`studio-wizard fixed inset-0 z-50 bg-[#08080A] canvas-dots w-screen h-screen min-h-screen overflow-y-auto flex flex-col justify-between font-sans selection:bg-neutral-800 selection:text-white transition-all duration-300 ${
         isExiting ? 'opacity-0 scale-[0.98] pointer-events-none' : 'opacity-100 scale-100'
       }`}
     >
@@ -574,6 +447,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
       {/* ==================================================================== */}
       {/* MAIN FORM CONTAINER (CENTERED WITH EDGE-TO-EDGE CANVAS DOTS)         */}
       {/* ==================================================================== */}
+      {currentStep <= 4 && <div className="px-6 text-center"><button disabled={isSubmitting} onClick={()=>handleStartProduction(true)} className="px-5 py-2 border border-subtle rounded text-sm text-text-primary">Create project now · refine in studio</button></div>}
       <main className="flex-1 max-w-3xl w-full mx-auto px-6 py-8 md:py-12 flex flex-col justify-center relative pb-28">
         {errorMsg && (
           <div className="mb-6 p-3 rounded-xl bg-red-950/60 border border-red-800 text-xs text-red-200 flex items-center justify-between">
@@ -1146,11 +1020,12 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
                     </div>
                   </div>
                   <div className="text-xs text-neutral-400 font-mono max-w-sm mx-auto">
-                    Structuring narrative pacing, audio stems, and visual beats on open canvas.
+                    Waiting for the selected engine. You can cancel and create a blank project.
                   </div>
                 </div>
               )}
 
+              {!isAmbientGenerating && errorMsg && <div role="alert" className="p-4 text-sm text-red-500">{errorMsg}<button className="ml-3 underline" onClick={triggerAmbientGeneration}>Retry generation</button><button className="ml-3 underline" onClick={()=>handleStartProduction(true)}>Create blank project</button></div>}
               {/* 2. Horizontally Arranged Minimal Story Cards (Inner box UI removed) */}
               {!isAmbientGenerating && (
                 <div className="space-y-6">
@@ -1166,7 +1041,6 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
                   <div className="flex items-stretch gap-4 overflow-x-auto pb-4 snap-x">
                     {allVariations.map((v) => {
                       const isSelected = selectedCards.has(v.id);
-                      const isPlaying = playingCardId === v.id;
 
                       return (
                         <div
@@ -1210,56 +1084,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
                             </div>
                           </div>
 
-                          {/* Audio Preview directly inside card */}
-                          <div className="pt-3 border-t border-[#222226] flex items-center justify-between">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                playAudio(v);
-                              }}
-                              className={`px-2.5 py-1 rounded-lg border text-[11px] font-mono flex items-center gap-2 transition ${
-                                isPlaying
-                                  ? 'bg-white text-black border-white'
-                                  : 'bg-[#151518] border-[#222226] hover:bg-neutral-800 text-white'
-                              }`}
-                            >
-                              {isPlaying ? (
-                                <>
-                                  <Square className="w-3 h-3 fill-black" />
-                                  <span>Stop Preview</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Play className="w-3 h-3 fill-white" />
-                                  <span>Play Audio (0:08)</span>
-                                </>
-                              )}
-                            </button>
 
-                            <div className="flex items-center gap-1 h-3">
-                              <div
-                                className={`w-1 rounded-full transition-all ${
-                                  isPlaying
-                                    ? 'playing-bar bg-white h-3'
-                                    : 'bg-neutral-700 h-1.5'
-                                }`}
-                              />
-                              <div
-                                className={`w-1 rounded-full transition-all ${
-                                  isPlaying
-                                    ? 'playing-bar bg-white h-4'
-                                    : 'bg-neutral-700 h-3'
-                                }`}
-                              />
-                              <div
-                                className={`w-1 rounded-full transition-all ${
-                                  isPlaying
-                                    ? 'playing-bar bg-white h-2'
-                                    : 'bg-neutral-700 h-2'
-                                }`}
-                              />
-                            </div>
-                          </div>
                         </div>
                       );
                     })}

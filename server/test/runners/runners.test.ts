@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import * as base from '../../src/runners/base.js';
 import { executeProcess } from '../../src/runners/base.js';
 import { MediaRunner } from '../../src/runners/mediaRunner.js';
 import { runAntigravityCLIJson } from '../../src/runners/antigravityRunner.js';
@@ -31,14 +32,17 @@ describe('Base Process Runner', () => {
 });
 
 describe('Antigravity CLI Runner', () => {
-  it('parses structured JSON or provides fallback for creative hooks and scripts', async () => {
-    const res = await runAntigravityCLIJson<any>('Generate 3-second hook candidates', {
-      timeoutMs: 15000,
-    });
-    expect(res).toBeDefined();
-    expect(res.data).toBeDefined();
-    expect(res.runResult).toBeDefined();
-  }, 30000);
+ afterEach(()=>vi.restoreAllMocks());
+ it('parses engine output without fabricating a replacement',async()=>{
+  vi.spyOn(base,'executeProcess').mockResolvedValue({exitCode:0,stdout:'{"directions":[]}',stderr:'',durationMs:1});
+  expect((await runAntigravityCLIJson<any>('test')).data).toEqual({directions:[]});
+ });
+ it('reports malformed output and unavailable engines',async()=>{
+  const run=vi.spyOn(base,'executeProcess').mockResolvedValue({exitCode:0,stdout:'not json',stderr:'',durationMs:1});
+  await expect(runAntigravityCLIJson('test')).rejects.toThrow('invalid JSON');
+  run.mockRejectedValue(new Error('Engine offline'));
+  await expect(runAntigravityCLIJson('test')).rejects.toThrow('offline');
+ });
 });
 
 describe('MediaRunner Silence Detection', () => {
@@ -47,4 +51,13 @@ describe('MediaRunner Silence Detection', () => {
     const gaps = await MediaRunner.detectSilence('/dev/null', -30, 0.5);
     expect(Array.isArray(gaps)).toBe(true);
   });
+});
+
+describe('Timeout cleanup',()=>{
+ it('kills an engine that ignores SIGTERM',async()=>{
+  let pid=0;
+  await expect(executeProcess('node',['-e','process.on("SIGTERM",()=>{});console.log(process.pid);setInterval(()=>{},1000)'],{timeoutMs:1000,onStdoutChunk:chunk=>{pid=Number(chunk.trim());}})).rejects.toThrow('timed out');
+  expect(pid).toBeGreaterThan(0);
+  await vi.waitFor(()=>expect(()=>process.kill(pid,0)).toThrow(),{timeout:2500,interval:50});
+ },5000);
 });

@@ -1,6 +1,7 @@
+import { apiFetch } from '../../../services/api';
 import React, { useState } from 'react';
 import { VersionNode, FilmProject } from '../../../types.js';
-import { Lightbulb, Copy, Check, Pin, X, Sparkles } from 'lucide-react';
+import { Lightbulb, Copy, Check, X, Sparkles } from 'lucide-react';
 
 interface IdeaFloatingHudProps {
   node: VersionNode;
@@ -16,8 +17,6 @@ export const IdeaFloatingHud: React.FC<IdeaFloatingHudProps> = ({
   project,
   onUpdateProject,
   onClose,
-  isPinned,
-  onTogglePin,
 }) => {
   const [promptText, setPromptText] = useState(node.prompt || '');
   const [thesisText, setThesisText] = useState(node.artifacts?.textContent || '');
@@ -28,7 +27,7 @@ export const IdeaFloatingHud: React.FC<IdeaFloatingHudProps> = ({
 
   const handleSaveIdea = async () => {
     try {
-      const res = await fetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}`, {
+      const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -74,15 +73,7 @@ export const IdeaFloatingHud: React.FC<IdeaFloatingHudProps> = ({
           </span>
         </div>
         <div className="flex items-center gap-1">
-          {onTogglePin && (
-            <button
-              onClick={onTogglePin}
-              className={`p-1 rounded text-xs transition ${isPinned ? 'text-amber-400 bg-card' : 'text-text-muted hover:text-text-primary'}`}
-              title={isPinned ? 'Unpin HUD' : 'Pin HUD Open'}
-            >
-              <Pin className="w-3.5 h-3.5" />
-            </button>
-          )}
+
           <button
             onClick={onClose}
             className="p-1 rounded text-text-muted hover:text-text-primary transition"

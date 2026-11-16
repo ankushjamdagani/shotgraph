@@ -1,6 +1,7 @@
+import { apiFetch } from '../../../services/api';
 import React, { useState } from 'react';
 import { VersionNode, FilmProject } from '../../../types.js';
-import { Play, Pause, Star, Pin, X, Upload, Sparkles, Copy, Check } from 'lucide-react';
+import { Star, X, Upload, Sparkles, Copy, Check } from 'lucide-react';
 import { toast } from '../../../services/toastService.js';
 
 interface TakeFloatingHudProps {
@@ -8,6 +9,7 @@ interface TakeFloatingHudProps {
   project: FilmProject;
   onUpdateProject: (updated: FilmProject) => void;
   onClose: () => void;
+  onMediaDrop?: (nodeId:string,file:File)=>void;
   isPinned?: boolean;
   onTogglePin?: () => void;
 }
@@ -16,11 +18,8 @@ export const TakeFloatingHud: React.FC<TakeFloatingHudProps> = ({
   node,
   project,
   onUpdateProject,
-  onClose,
-  isPinned,
-  onTogglePin,
+  onClose, onMediaDrop,
 }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
   const [coverageType, setCoverageType] = useState('Master Angle');
   const [copied, setCopied] = useState(false);
   const [activeSkills, setActiveSkills] = useState(['take-one', 'video-director']);
@@ -30,7 +29,7 @@ export const TakeFloatingHud: React.FC<TakeFloatingHudProps> = ({
   const handleCopyEnrichedPrompt = async () => {
     let basePrompt = node.prompt || 'Cinematic footage take';
     try {
-      const res = await fetch('http://localhost:3030/api/skills/enrich-prompt', {
+      const res = await apiFetch('http://localhost:3030/api/skills/enrich-prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -47,14 +46,14 @@ export const TakeFloatingHud: React.FC<TakeFloatingHudProps> = ({
 
     navigator.clipboard.writeText(basePrompt);
     setCopied(true);
-    toast.success('Take-One prompt with seed & coverage copied!');
+    toast.success('Take prompt copied');
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleMakeActiveCut = async () => {
     if (!node.sceneId) return;
     try {
-      const res = await fetch('http://localhost:3030/api/tree/active-cut', {
+      const res = await apiFetch('http://localhost:3030/api/tree/active-cut', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -89,52 +88,15 @@ export const TakeFloatingHud: React.FC<TakeFloatingHudProps> = ({
           </span>
         </div>
         <div className="flex items-center gap-1">
-          {onTogglePin && (
-            <button
-              onClick={onTogglePin}
-              className={`p-1 rounded text-xs transition ${isPinned ? 'text-amber-400 bg-card' : 'text-text-muted hover:text-text-primary'}`}
-              title={isPinned ? 'Unpin HUD' : 'Pin HUD Open'}
-            >
-              <Pin className="w-3.5 h-3.5" />
-            </button>
-          )}
+
           <button onClick={onClose} className="p-1 rounded text-text-muted hover:text-text-primary transition">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
-      {/* Video Preview Monitor */}
-      <div className="w-full h-36 rounded-xl bg-card border border-subtle relative overflow-hidden flex flex-col justify-end p-2.5">
-        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-black/80 via-black/30 to-transparent">
-          <button
-            onClick={() => setIsPlaying(!isPlaying)}
-            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center text-white transition backdrop-blur-sm"
-          >
-            {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
-          </button>
-        </div>
-
-        {/* Video Scrubber & Timecode */}
-        <div className="relative z-10 space-y-1">
-          <div className="flex items-center justify-between text-[9px] font-mono text-text-muted">
-            <span>{isPlaying ? 'PLAYING...' : 'PAUSED'}</span>
-            <span>00:00:02:18 / 00:00:05:00</span>
-          </div>
-          <div className="w-full h-1 bg-subtle rounded-full overflow-hidden">
-            <div className="w-1/2 h-full bg-accent-primary"></div>
-          </div>
-        </div>
-      </div>
-
-      {/* Take Metadata & Status */}
-      <div className="p-2 rounded-xl bg-card border border-subtle text-[10px] font-mono grid grid-cols-2 gap-1.5 text-text-muted">
-        <div>Engine: <span className="text-text-primary">Runway Gen-3</span></div>
-        <div>Duration: <span className="text-text-primary">5.0s</span></div>
-        <div>Format: <span className="text-text-primary">4K 24fps</span></div>
-        <div>Resolution: <span className="text-text-primary">2160x3840</span></div>
-      </div>
-
+      {node.artifacts.mediaUrl ? <video controls playsInline className="w-full max-h-60 bg-black rounded" src={`/api/projects/${project.id}/media/${node.artifacts.mediaUrl}`}/> : <p className="p-5 bg-card rounded text-sm text-text-muted">Import a video to review this take.</p>}
+      <p className="text-xs text-text-muted">Engine: {node.modelEngine} · {node.artifacts.metadata?.durationSec ? `${node.artifacts.metadata.durationSec}s`:'Duration not measured'}</p>
       {/* Take-One Coverage Matrix & Actor Seed Pinning */}
       <div className="p-2.5 rounded-xl bg-card border border-subtle space-y-2">
         <div className="flex items-center justify-between">
@@ -144,7 +106,7 @@ export const TakeFloatingHud: React.FC<TakeFloatingHudProps> = ({
               Take-One Consistency
             </span>
             <span className="text-[8px] px-1 py-0.2 rounded bg-surface text-accent-primary font-mono border border-subtle">
-              Seed #8492019
+              Prompt settings
             </span>
           </div>
           <button
@@ -217,11 +179,7 @@ export const TakeFloatingHud: React.FC<TakeFloatingHudProps> = ({
         <span>{isActiveCut ? '⭐ Currently Active Cut (Live Edit)' : 'Star as Active Cut'}</span>
       </button>
 
-      {/* Replacement Dropzone */}
-      <div className="p-2.5 rounded-xl border border-dashed border-subtle hover:border-accent-primary bg-card/40 text-center cursor-pointer transition">
-        <Upload className="w-3.5 h-3.5 mx-auto mb-1 text-accent-primary" />
-        <div className="text-[10px] font-bold text-text-primary">Drop MP4 Video File to Replace</div>
-      </div>
+      {onMediaDrop && <label className="block p-3 rounded border border-dashed border-subtle text-center text-sm cursor-pointer"><Upload className="w-4 h-4 mx-auto mb-1"/>Import replacement video<input className="sr-only" aria-label="Import replacement video" type="file" accept="video/*" onChange={event=>{const file=event.target.files?.[0];if(file)onMediaDrop(node.id,file);event.target.value='';}}/></label>}
     </div>
   );
 };

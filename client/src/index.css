@@ -129,14 +129,6 @@ button:active:not(:disabled) {
   transform: scale(0.98);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *, ::before, ::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
 
 /* Canvas dot grid */
 .canvas-dots {
@@ -155,7 +147,6 @@ button:active:not(:disabled) {
 /* Genesis unboxed inputs */
 .unboxed-input {
   border: none !important;
-  outline: none !important;
   background: transparent !important;
   box-shadow: none !important;
   resize: none;
@@ -247,4 +238,46 @@ button:active:not(:disabled) {
 }
 .react-flow__controls button:hover {
   background-color: var(--bg-card) !important;
+}
+
+/* Editor work surfaces share the existing Film Lab / Paper token system. */
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--accent-primary); outline-offset: 3px;
+}
+::selection { background: var(--text-primary); color: var(--bg-app); }
+input, textarea { caret-color: var(--accent-primary); }
+.studio-inspector > div { width: 100% !important; border: 0; border-radius: 0; box-shadow: none; }
+.studio-inspector { font-size: 13px; }
+.studio-inspector [class*="text-[9px]"], .studio-inspector [class*="text-[10px]"] { font-size: 11px; }
+.studio-inspector button { min-height: 28px; }
+.studio-dock { max-height: 55vh; overflow-y: auto; }
+.studio-transport { flex-wrap: wrap; row-gap: 8px; }
+.studio-wizard { background: var(--bg-app) !important; color: var(--text-primary); }
+.studio-wizard .text-white, .studio-wizard .text-neutral-200, .studio-wizard .text-neutral-300 { color: var(--text-primary); }
+.studio-wizard .text-neutral-400, .studio-wizard .text-neutral-500 { color: var(--text-muted); }
+.studio-wizard [class*="bg-[#"] { background-color: var(--bg-card); border-color: var(--border-subtle); }
+.studio-wizard input, .studio-wizard textarea { color: var(--text-primary); }
+.studio-wizard .bg-white { background: var(--text-primary); color: var(--bg-app); }
+.studio-wizard .border-white { border-color: var(--text-primary); }
+@media (max-width: 767px) {
+  .studio-main { display: none !important; }
+  .studio-header { height: auto !important; min-height: 48px; padding: 8px; flex-wrap: wrap; gap: 8px; }
+  .studio-header > div { flex-wrap: wrap; gap: 6px; max-width: 100%; }
+  .studio-header button { min-height: 40px; }
+  [role="dialog"] > div { max-width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse, .animate-spin, .animate-ambient-breathe { animation: none !important; }
+  .studio-wizard, .studio-inspector, button { transition-duration: 0s !important; }
+}
+
+.theme-paper-ink .studio-inspector .text-amber-300,
+.theme-paper-ink .studio-inspector .text-amber-400 { color: #92400e; }
+.theme-paper-ink .studio-inspector .text-purple-400 { color: #7e22ce; }
+.theme-paper-ink .studio-inspector .text-emerald-400 { color: #047857; }
+.theme-paper-ink .studio-inspector .text-cyan-400 { color: #0e7490; }
+@media (prefers-reduced-motion: reduce) {
+  html { transition: none; }
+  .wire-active, .dag-wire, .playing-bar { animation: none !important; }
+  .react-flow__edge.animated path { stroke-dasharray: none; animation: none; }
 }

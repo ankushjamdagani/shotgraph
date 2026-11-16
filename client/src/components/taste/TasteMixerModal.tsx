@@ -1,3 +1,5 @@
+import { useDialog } from '../common/useDialog';
+import { apiFetch } from '../../services/api';
 import React, { useState, useEffect } from 'react';
 import {
   X,
@@ -66,7 +68,7 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      fetch('http://localhost:3030/api/styles/presets')
+      apiFetch('http://localhost:3030/api/styles/presets')
         .then((res) => res.json())
         .then((presets) => {
           if (Array.isArray(presets)) {
@@ -77,6 +79,7 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
     }
   }, [isOpen]);
 
+  const dialogRef = useDialog(isOpen, onClose);
   if (!isOpen) return null;
 
   const handleAddConstraint = () => {
@@ -104,7 +107,7 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
         additionalConstraints,
       };
 
-      const res = await fetch(`http://localhost:3030/api/projects/${project.id}/styles/apply`, {
+      const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/style/resolve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -158,7 +161,7 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
         updatedAt: Date.now(),
       };
 
-      const res = await fetch('http://localhost:3030/api/styles/presets', {
+      const res = await apiFetch('http://localhost:3030/api/styles/presets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newPreset),
@@ -179,7 +182,7 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-150">
+    <div ref={dialogRef} aria-label="Project style" className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-150">
       <div className="w-full max-w-3xl rounded-lg bg-surface border border-subtle shadow-2xl flex flex-col max-h-[90vh] overflow-hidden text-text-primary">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-subtle bg-surface">
@@ -197,6 +200,7 @@ export const TasteMixerModal: React.FC<TasteMixerModalProps> = ({
             </div>
           </div>
           <button
+            aria-label="Close dialog"
             onClick={onClose}
             className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-card transition"
           >

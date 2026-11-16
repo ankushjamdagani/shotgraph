@@ -1,6 +1,7 @@
+import { apiFetch } from '../../../services/api';
 import React, { useState } from 'react';
 import { VersionNode, FilmProject } from '../../../types.js';
-import { Film, Wand2, Pin, X, Sparkles, Loader2, Scissors, ChevronDown, ChevronUp } from 'lucide-react';
+import { Film, Wand2, X, Sparkles, Loader2, Scissors, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from '../../../services/toastService.js';
 
 interface CompositionFloatingHudProps {
@@ -17,8 +18,6 @@ export const CompositionFloatingHud: React.FC<CompositionFloatingHudProps> = ({
   project,
   onClose,
   onOpenDaVinciExport,
-  isPinned,
-  onTogglePin,
 }) => {
   const [pacingStyle, setPacingStyle] = useState<'frenetic' | 'rhythmic' | 'measured' | 'contemplative'>('rhythmic');
   const [targetBpm, setTargetBpm] = useState(120);
@@ -38,7 +37,7 @@ export const CompositionFloatingHud: React.FC<CompositionFloatingHudProps> = ({
         focalLength: '35mm',
       }));
 
-      const res = await fetch('http://localhost:3030/api/skills/cook/montage-recipe', {
+      const res = await apiFetch('http://localhost:3030/api/skills/cook/montage-recipe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -74,15 +73,7 @@ export const CompositionFloatingHud: React.FC<CompositionFloatingHudProps> = ({
           </span>
         </div>
         <div className="flex items-center gap-1">
-          {onTogglePin && (
-            <button
-              onClick={onTogglePin}
-              className={`p-1 rounded text-xs transition ${isPinned ? 'text-amber-400 bg-card' : 'text-text-muted hover:text-text-primary'}`}
-              title={isPinned ? 'Unpin HUD' : 'Pin HUD Open'}
-            >
-              <Pin className="w-3.5 h-3.5" />
-            </button>
-          )}
+
           <button onClick={onClose} className="p-1 rounded text-text-muted hover:text-text-primary transition">
             <X className="w-3.5 h-3.5" />
           </button>

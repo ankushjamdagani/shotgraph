@@ -142,11 +142,12 @@ export interface VersionNode extends UniversalGraphNode {
 }
 
 export interface FilmProject {
+  revision?: number;
   id: string;
   name: string;
   projectRoot: string;
   targetDurationSec: number;
-  aspectRatio: '9:16' | '16:9' | '1:1';
+  aspectRatio: '9:16' | '16:9' | '1:1' | '2.39:1';
   fps: number;
   scenes: Array<{
     id: string;
@@ -183,7 +184,7 @@ export interface ProjectRegistryEntry {
   id: string;
   name: string;
   path: string;
-  aspectRatio: '9:16' | '16:9' | '1:1';
+  aspectRatio: '9:16' | '16:9' | '1:1' | '2.39:1';
   fps: number;
   targetDurationSec: number;
   lastOpenedAt: number;

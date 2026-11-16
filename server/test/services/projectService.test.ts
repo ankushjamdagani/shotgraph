@@ -1,4 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+vi.mock('../../src/services/fileSafety.js', async () => {
+ const actual = await vi.importActual<any>('../../src/services/fileSafety.js');
+ return {...actual, moveToTrash: async (file:string) => fs.rename(file, file+'.trashed')};
+});
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';

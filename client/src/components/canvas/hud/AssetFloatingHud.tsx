@@ -1,6 +1,7 @@
+import { apiFetch } from '../../../services/api';
 import React, { useState } from 'react';
 import { VersionNode, FilmProject } from '../../../types.js';
-import { Star, Copy, Check, Upload, Pin, X } from 'lucide-react';
+import { Star, Copy, Check, Upload, X } from 'lucide-react';
 
 interface AssetFloatingHudProps {
   node: VersionNode;
@@ -16,8 +17,6 @@ export const AssetFloatingHud: React.FC<AssetFloatingHudProps> = ({
   project,
   onUpdateProject,
   onClose,
-  isPinned,
-  onTogglePin,
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -34,7 +33,7 @@ export const AssetFloatingHud: React.FC<AssetFloatingHudProps> = ({
     const newMasterUrl = newAnchorStatus ? mediaUrl : undefined;
 
     try {
-      const res = await fetch(`http://localhost:3030/api/projects/${project.id}/assets/master-style-anchor`, {
+      const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/assets/master-style-anchor`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ assetUrl: newMasterUrl }),
@@ -67,7 +66,7 @@ export const AssetFloatingHud: React.FC<AssetFloatingHudProps> = ({
 
   const handleSelectAngle = async (angle: 'portrait' | 'three_quarter' | 'full_body' | 'macro_detail') => {
     try {
-      const res = await fetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}`, {
+      const res = await apiFetch(`http://localhost:3030/api/projects/${project.id}/nodes/${node.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -112,15 +111,7 @@ export const AssetFloatingHud: React.FC<AssetFloatingHudProps> = ({
           </span>
         </div>
         <div className="flex items-center gap-1">
-          {onTogglePin && (
-            <button
-              onClick={onTogglePin}
-              className={`p-1 rounded text-xs transition ${isPinned ? 'text-amber-400 bg-card' : 'text-text-muted hover:text-text-primary'}`}
-              title={isPinned ? 'Unpin HUD' : 'Pin HUD Open'}
-            >
-              <Pin className="w-3.5 h-3.5" />
-            </button>
-          )}
+
           <button
             onClick={onClose}
             className="p-1 rounded text-text-muted hover:text-text-primary transition"

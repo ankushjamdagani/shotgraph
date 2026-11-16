@@ -52,6 +52,7 @@ const NEXT_STAGE_MAP: Record<string, NextStageOption[]> = {
 interface CustomVersionNodeProps {
   data: {
     node: VersionNode;
+    projectId: string;
     isActiveCut: boolean;
     isSelected: boolean;
     isHudOpen?: boolean;
@@ -105,50 +106,50 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
       case 'ideation':
         return {
           label: 'Ideation / Premise',
-          icon: <Lightbulb className="w-3.5 h-3.5 text-zinc-400 shrink-0" />,
+          icon: <Lightbulb className="w-3.5 h-3.5 text-text-muted shrink-0" />,
         };
       case 'taste':
         return {
           label: 'Taste DNA',
-          icon: <Sliders className="w-3.5 h-3.5 text-zinc-400 shrink-0" />,
+          icon: <Sliders className="w-3.5 h-3.5 text-text-muted shrink-0" />,
         };
       case 'script':
         return {
           label: 'Screenplay Beat',
-          icon: <FileText className="w-3.5 h-3.5 text-zinc-400 shrink-0" />,
+          icon: <FileText className="w-3.5 h-3.5 text-text-muted shrink-0" />,
         };
       case 'assets':
         return {
           label: 'Subject Anchor',
-          icon: <User className="w-3.5 h-3.5 text-zinc-400 shrink-0" />,
+          icon: <User className="w-3.5 h-3.5 text-text-muted shrink-0" />,
         };
       case 'shot':
       case 'storyboard':
         return {
           label: 'Shot & Optics',
-          icon: <Camera className="w-3.5 h-3.5 text-zinc-400 shrink-0" />,
+          icon: <Camera className="w-3.5 h-3.5 text-text-muted shrink-0" />,
         };
       case 'footage':
       case 'motion':
         return {
           label: 'Video Take',
-          icon: <Clapperboard className="w-3.5 h-3.5 text-zinc-400 shrink-0" />,
+          icon: <Clapperboard className="w-3.5 h-3.5 text-text-muted shrink-0" />,
         };
       case 'vfx':
         return {
           label: 'VFX / Motion',
-          icon: <Sparkles className="w-3.5 h-3.5 text-zinc-400 shrink-0" />,
+          icon: <Sparkles className="w-3.5 h-3.5 text-text-muted shrink-0" />,
         };
       case 'assembly':
       case 'render':
         return {
           label: 'Master Cut',
-          icon: <Film className="w-3.5 h-3.5 text-zinc-400 shrink-0" />,
+          icon: <Film className="w-3.5 h-3.5 text-text-muted shrink-0" />,
         };
       default:
         return {
           label: stage.toUpperCase(),
-          icon: <Film className="w-3.5 h-3.5 text-zinc-400 shrink-0" />,
+          icon: <Film className="w-3.5 h-3.5 text-text-muted shrink-0" />,
         };
     }
   };
@@ -236,7 +237,7 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
             variant={ResizeControlVariant.Line}
             minWidth={280}
             maxWidth={640}
-            className="!border-r !border-white/30 hover:!border-white/70"
+            className="!border-r !border-subtle hover:!border-subtle"
             onResize={(_e, params) => {
               if (onResize) onResize(node.id, params.width);
             }}
@@ -246,7 +247,7 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
             variant={ResizeControlVariant.Line}
             minWidth={280}
             maxWidth={640}
-            className="!border-l !border-white/30 hover:!border-white/70"
+            className="!border-l !border-subtle hover:!border-subtle"
             onResize={(_e, params) => {
               if (onResize) onResize(node.id, params.width);
             }}
@@ -273,7 +274,7 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
               />
               <span
                 style={{ top: `${topPercent}%` }}
-                className="absolute left-3.5 -translate-y-1/2 hidden group-hover/port:inline-block z-50 px-1.5 py-0.5 rounded text-[9px] font-mono whitespace-nowrap bg-zinc-900/95 border border-white/20 text-white shadow-xl pointer-events-none"
+                className="absolute left-3.5 -translate-y-1/2 hidden group-hover/port:inline-block z-50 px-1.5 py-0.5 rounded text-[9px] font-mono whitespace-nowrap bg-surface border border-subtle text-text-primary shadow-xl pointer-events-none"
               >
                 {port.name}
               </span>
@@ -295,14 +296,14 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
       />
 
       {/* ON-NODE HOVER QUICK ACTION TOOLBAR */}
-      <div className="absolute top-2 right-2 hidden group-hover:flex items-center gap-0.5 bg-[#141418]/95 backdrop-blur-md p-1 rounded-lg border border-white/10 shadow-2xl z-20 animate-in fade-in duration-100">
+      <div className="absolute top-2 right-2 hidden group-hover:flex items-center gap-0.5 bg-card backdrop-blur-md p-1 rounded-lg border border-subtle shadow-2xl z-20 animate-in fade-in duration-100">
         {onToggleHud && (
           <button
             onClick={(e) => {
               e.stopPropagation();
               onToggleHud(node.id);
             }}
-            className="p-1 rounded text-zinc-400 hover:text-white hover:bg-white/[0.08] active:scale-90 transition-all cursor-pointer"
+            className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-white/[0.08] active:scale-90 transition-all cursor-pointer"
             title="Open in-place floating HUD"
           >
             <Maximize2 className="w-3 h-3" />
@@ -318,7 +319,7 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
             className={`p-1 rounded active:scale-90 transition-all cursor-pointer ${
               isActiveCut
                 ? 'text-amber-400 bg-amber-400/20'
-                : 'text-zinc-400 hover:text-amber-400 hover:bg-white/[0.08]'
+                : 'text-text-muted hover:text-amber-400 hover:bg-white/[0.08]'
             }`}
             title="Set as Active Cut"
           >
@@ -333,13 +334,13 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
                 e.stopPropagation();
                 setShowColorPicker(!showColorPicker);
               }}
-              className="p-1 rounded text-zinc-400 hover:text-white hover:bg-white/[0.08] active:scale-90 transition-all cursor-pointer"
+              className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-white/[0.08] active:scale-90 transition-all cursor-pointer"
               title="Set Color Tag"
             >
               <Tag className="w-3 h-3" />
             </button>
             {showColorPicker && (
-              <div className="absolute top-8 right-0 flex items-center gap-1.5 bg-[#18181C] p-1.5 rounded-lg border border-white/10 shadow-2xl z-30">
+              <div className="absolute top-8 right-0 flex items-center gap-1.5 bg-card p-1.5 rounded-lg border border-subtle shadow-2xl z-30">
                 {(['default', 'white', 'blue', 'purple', 'emerald', 'amber'] as const).map((color) => (
                   <button
                     key={color}
@@ -374,7 +375,7 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
               e.stopPropagation();
               setIsEditingTitle(true);
             }}
-            className="p-1 rounded text-zinc-400 hover:text-white hover:bg-white/[0.08] active:scale-90 transition-all cursor-pointer"
+            className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-white/[0.08] active:scale-90 transition-all cursor-pointer"
             title="Rename node"
           >
             <Edit2 className="w-3 h-3" />
@@ -386,7 +387,7 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
             e.stopPropagation();
             onBranch(node.id);
           }}
-          className="p-1 rounded text-zinc-400 hover:text-sky-400 hover:bg-white/[0.08] active:scale-90 transition-all cursor-pointer"
+          className="p-1 rounded text-text-muted hover:text-sky-400 hover:bg-white/[0.08] active:scale-90 transition-all cursor-pointer"
           title="Branch this version"
         >
           <GitBranch className="w-3 h-3" />
@@ -398,7 +399,7 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
               e.stopPropagation();
               onDelete(node.id);
             }}
-            className="p-1 rounded text-zinc-400 hover:text-rose-400 hover:bg-white/[0.08] active:scale-90 transition-all cursor-pointer"
+            className="p-1 rounded text-text-muted hover:text-rose-400 hover:bg-white/[0.08] active:scale-90 transition-all cursor-pointer"
             title="Delete node"
           >
             <Trash2 className="w-3 h-3" />
@@ -407,10 +408,10 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
       </div>
 
       {/* DISCIPLINED GRAPHITE STAGE HEADER */}
-      <div className="px-3 py-1.5 bg-[#17171B] border-b border-white/[0.06] flex items-center justify-between">
+      <div className="px-3 py-1.5 bg-card border-b border-subtle flex items-center justify-between">
         <div className="flex items-center gap-1.5 min-w-0">
           {stage.icon}
-          <span className="text-[10px] font-mono font-medium tracking-[0.14em] uppercase text-zinc-300 truncate">
+          <span className="text-[10px] font-mono font-medium tracking-[0.14em] uppercase text-text-primary truncate">
             {stage.label}
           </span>
         </div>
@@ -428,7 +429,7 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
             </span>
           )}
           {isHudOpen && (
-            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold tracking-wider uppercase bg-zinc-800 text-zinc-200 border border-zinc-700">
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold tracking-wider uppercase bg-card text-text-primary border border-subtle">
               HUD
             </span>
           )}
@@ -473,7 +474,7 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
                   if (e.key === 'Escape') setIsEditingTitle(false);
                 }}
                 autoFocus
-                className="w-full px-2 py-1 rounded bg-[#0A0A0D] border border-white/20 text-xs text-white font-mono focus:outline-none focus:border-white/50"
+                className="w-full px-2 py-1 rounded bg-card border border-subtle text-xs text-text-primary font-mono focus:outline-none focus:border-subtle"
               />
               <button
                 onClick={handleCommitRename}
@@ -483,14 +484,14 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
               </button>
             </div>
           ) : (
-            <div className="text-xs font-semibold text-zinc-100 truncate tracking-tight">{node.title}</div>
+            <div className="text-xs font-semibold text-text-primary truncate tracking-tight">{node.title}</div>
           )}
-          <div className="text-[10px] font-mono text-zinc-400 flex items-center justify-between mt-1">
-            <span className="bg-white/[0.04] px-1.5 py-0.5 rounded border border-white/[0.06] text-zinc-300 tracking-wider">
+          <div className="text-[10px] font-mono text-text-muted flex items-center justify-between mt-1">
+            <span className="bg-white/[0.04] px-1.5 py-0.5 rounded border border-subtle text-text-primary tracking-wider">
               {node.versionLabel}
             </span>
             {node.sceneId && (
-              <span className="text-zinc-500 tracking-widest text-[9px] uppercase font-mono">
+              <span className="text-text-muted tracking-widest text-[9px] uppercase font-mono">
                 {node.sceneId}
               </span>
             )}
@@ -500,18 +501,18 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
         {/* BESPOKE CONTENT BASED ON STAGE */}
         {/* 1. Asset Anchor: Precision Studio Portrait Monitor */}
         {node.stage === 'assets' && (
-          <div className="relative rounded-lg overflow-hidden border border-white/[0.08] h-32 bg-[#050508] flex items-center justify-center group/monitor">
+          <div className="relative rounded-lg overflow-hidden border border-subtle h-32 bg-card flex items-center justify-center group/monitor">
             {/* Corner Reticles */}
             <div className="absolute inset-0 pointer-events-none z-10">
-              <div className="absolute top-1 left-1 w-2 h-2 border-t border-l border-white/20" />
-              <div className="absolute top-1 right-1 w-2 h-2 border-t border-r border-white/20" />
-              <div className="absolute bottom-1 left-1 w-2 h-2 border-b border-l border-white/20" />
-              <div className="absolute bottom-1 right-1 w-2 h-2 border-b border-r border-white/20" />
+              <div className="absolute top-1 left-1 w-2 h-2 border-t border-l border-subtle" />
+              <div className="absolute top-1 right-1 w-2 h-2 border-t border-r border-subtle" />
+              <div className="absolute bottom-1 left-1 w-2 h-2 border-b border-l border-subtle" />
+              <div className="absolute bottom-1 right-1 w-2 h-2 border-b border-r border-subtle" />
             </div>
 
             {node.artifacts?.mediaUrl || node.assetMetadata?.styleReferenceAssetUrl ? (
               <img
-                src={`http://localhost:3030/media/${(
+                src={`/api/projects/${data.projectId}/media/${(
                   node.artifacts?.mediaUrl || node.assetMetadata?.styleReferenceAssetUrl || ''
                 ).replace(/^\//, '')}`}
                 alt={node.title}
@@ -521,21 +522,21 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
                 }}
               />
             ) : (
-              <div className="flex flex-col items-center justify-center text-zinc-500 gap-1.5 text-[9px] font-mono uppercase tracking-widest">
-                <div className="w-7 h-7 rounded bg-white/[0.03] border border-white/[0.06] flex items-center justify-center">
-                  <User className="w-3.5 h-3.5 text-zinc-400 stroke-[1.5]" />
+              <div className="flex flex-col items-center justify-center text-text-muted gap-1.5 text-[9px] font-mono uppercase tracking-widest">
+                <div className="w-7 h-7 rounded bg-white/[0.03] border border-subtle flex items-center justify-center">
+                  <User className="w-3.5 h-3.5 text-text-muted stroke-[1.5]" />
                 </div>
-                <span className="text-[9px] text-zinc-400 font-medium">Style Anchor</span>
+                <span className="text-[9px] text-text-muted font-medium">Style Anchor</span>
               </div>
             )}
 
             {/* Precision Telemetry Overlays */}
-            <div className="absolute top-1.5 left-1.5 z-10 flex items-center gap-1 bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-mono tracking-wider text-zinc-300 border border-white/10 uppercase">
+            <div className="absolute top-1.5 left-1.5 z-10 flex items-center gap-1 bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-mono tracking-wider text-text-primary border border-subtle uppercase">
               <span className="w-1.5 h-1.5 rounded-full bg-purple-400/90 shrink-0 shadow-[0_0_4px_rgba(192,132,252,0.5)]" />
               <span>ANCHOR</span>
             </div>
 
-            <div className="absolute bottom-1.5 right-1.5 z-10 bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-mono text-zinc-300 border border-white/10 uppercase">
+            <div className="absolute bottom-1.5 right-1.5 z-10 bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-mono text-text-primary border border-subtle uppercase">
               {node.assetMetadata?.turnaroundAngle || 'Portrait'}
             </div>
           </div>
@@ -543,18 +544,18 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
 
         {/* 2. Footage Take: Precision Letterboxed Video Monitor */}
         {(node.stage === 'footage' || node.stage === 'motion') && (
-          <div className="relative rounded-lg overflow-hidden border border-white/[0.08] h-28 bg-[#050508] flex items-center justify-center group/monitor">
+          <div className="relative rounded-lg overflow-hidden border border-subtle h-28 bg-card flex items-center justify-center group/monitor">
             {/* Framing Guides & Letterbox Corner Reticles */}
             <div className="absolute inset-0 pointer-events-none z-10">
-              <div className="absolute top-1 left-1 w-2 h-2 border-t border-l border-white/20" />
-              <div className="absolute top-1 right-1 w-2 h-2 border-t border-r border-white/20" />
-              <div className="absolute bottom-1 left-1 w-2 h-2 border-b border-l border-white/20" />
-              <div className="absolute bottom-1 right-1 w-2 h-2 border-b border-r border-white/20" />
+              <div className="absolute top-1 left-1 w-2 h-2 border-t border-l border-subtle" />
+              <div className="absolute top-1 right-1 w-2 h-2 border-t border-r border-subtle" />
+              <div className="absolute bottom-1 left-1 w-2 h-2 border-b border-l border-subtle" />
+              <div className="absolute bottom-1 right-1 w-2 h-2 border-b border-r border-subtle" />
             </div>
 
             {node.artifacts?.mediaUrl ? (
               <video
-                src={`http://localhost:3030/media/${node.artifacts.mediaUrl.replace(/^\//, '')}`}
+                src={`/api/projects/${data.projectId}/media/${node.artifacts.mediaUrl.replace(/^\//, '')}`}
                 className="w-full h-full object-cover transition-opacity duration-200"
                 muted
                 loop
@@ -563,27 +564,27 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
                 onMouseOut={(e) => (e.target as HTMLVideoElement).pause()}
               />
             ) : (
-              <div className="flex flex-col items-center justify-center text-zinc-500 gap-1.5 text-[9px] font-mono uppercase tracking-widest">
-                <div className="w-7 h-7 rounded bg-white/[0.03] border border-white/[0.06] flex items-center justify-center">
-                  <Clapperboard className="w-3.5 h-3.5 text-zinc-400 stroke-[1.5]" />
+              <div className="flex flex-col items-center justify-center text-text-muted gap-1.5 text-[9px] font-mono uppercase tracking-widest">
+                <div className="w-7 h-7 rounded bg-white/[0.03] border border-subtle flex items-center justify-center">
+                  <Clapperboard className="w-3.5 h-3.5 text-text-muted stroke-[1.5]" />
                 </div>
-                <span className="text-[9px] text-zinc-400 font-medium">Awaiting Take</span>
+                <span className="text-[9px] text-text-muted font-medium">Awaiting Take</span>
               </div>
             )}
 
             {/* Precision Telemetry Overlays */}
-            <div className="absolute top-1.5 left-1.5 z-10 flex items-center gap-1 bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-mono tracking-wider text-zinc-300 border border-white/10 uppercase">
+            <div className="absolute top-1.5 left-1.5 z-10 flex items-center gap-1 bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-mono tracking-wider text-text-primary border border-subtle uppercase">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/90 shrink-0 shadow-[0_0_4px_rgba(52,211,153,0.5)]" />
               <span>{node.modelEngine}</span>
             </div>
 
-            <div className="absolute top-1.5 right-1.5 z-10 bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-mono tabular-nums text-zinc-400 border border-white/10">
+            <div className="absolute top-1.5 right-1.5 z-10 bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-mono tabular-nums text-text-muted border border-subtle">
               24 FPS
             </div>
 
             {node.artifacts?.mediaUrl && (
-              <div className="absolute bottom-1.5 right-1.5 z-10 bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-mono text-zinc-400 border border-white/10 opacity-0 group-hover/monitor:opacity-100 transition-opacity duration-150 flex items-center gap-1">
-                <Play className="w-2 h-2 fill-zinc-400 text-zinc-400" />
+              <div className="absolute bottom-1.5 right-1.5 z-10 bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] font-mono text-text-muted border border-subtle opacity-0 group-hover/monitor:opacity-100 transition-opacity duration-150 flex items-center gap-1">
+                <Play className="w-2 h-2 fill-zinc-400 text-text-muted" />
                 <span>PLAY</span>
               </div>
             )}
@@ -592,20 +593,20 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
 
         {/* 3. Script Beat: Screenplay Beat Card */}
         {node.stage === 'script' && (
-          <div className="p-2.5 rounded-lg bg-[#0A0A0D] border border-white/[0.06] text-xs font-mono space-y-1.5">
-            <div className="text-[9px] font-mono font-medium tracking-[0.12em] uppercase text-zinc-400 flex items-center justify-between">
+          <div className="p-2.5 rounded-lg bg-card border border-subtle text-xs font-mono space-y-1.5">
+            <div className="text-[9px] font-mono font-medium tracking-[0.12em] uppercase text-text-muted flex items-center justify-between">
               <span className="flex items-center gap-1.5">
-                <FileText className="w-3 h-3 text-zinc-500" />
+                <FileText className="w-3 h-3 text-text-muted" />
                 <span>Dialogue Beat</span>
               </span>
               {node.artifacts?.audioUrl && (
-                <span className="flex items-center gap-1 text-[8px] text-zinc-400 bg-white/[0.05] px-1 py-0.5 rounded border border-white/[0.06]">
-                  <Volume2 className="w-2.5 h-2.5 text-zinc-400" />
+                <span className="flex items-center gap-1 text-[8px] text-text-muted bg-white/[0.05] px-1 py-0.5 rounded border border-subtle">
+                  <Volume2 className="w-2.5 h-2.5 text-text-muted" />
                   <span>STEM</span>
                 </span>
               )}
             </div>
-            <div className="line-clamp-2 leading-relaxed italic text-zinc-200 text-[11px] border-l-2 border-zinc-700/80 pl-2">
+            <div className="line-clamp-2 leading-relaxed italic text-text-primary text-[11px] border-l-2 border-zinc-700/80 pl-2">
               "{node.artifacts?.textContent || node.prompt || 'Dialogue text line...'}"
             </div>
           </div>
@@ -614,15 +615,15 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
         {/* 4. Shot Optics: Lens Specs & Camera Motion */}
         {(node.stage === 'shot' || node.stage === 'storyboard') && (
           <div className="grid grid-cols-2 gap-1.5 text-[10px] font-mono">
-            <div className="bg-[#0A0A0D] p-2 rounded-lg border border-white/[0.06]">
-              <span className="text-[8px] font-mono uppercase tracking-widest text-zinc-500 block">Lens</span>
-              <span className="text-zinc-200 font-semibold truncate block mt-0.5">
+            <div className="bg-card p-2 rounded-lg border border-subtle">
+              <span className="text-[8px] font-mono uppercase tracking-widest text-text-muted block">Lens</span>
+              <span className="text-text-primary font-semibold truncate block mt-0.5">
                 {node.shotContextOverrides?.lensFocalLength || '35mm Prime'}
               </span>
             </div>
-            <div className="bg-[#0A0A0D] p-2 rounded-lg border border-white/[0.06]">
-              <span className="text-[8px] font-mono uppercase tracking-widest text-zinc-500 block">Motion</span>
-              <span className="text-zinc-200 font-semibold truncate block mt-0.5">
+            <div className="bg-card p-2 rounded-lg border border-subtle">
+              <span className="text-[8px] font-mono uppercase tracking-widest text-text-muted block">Motion</span>
+              <span className="text-text-primary font-semibold truncate block mt-0.5">
                 {node.shotContextOverrides?.cameraMovement || 'Slow Push-In'}
               </span>
             </div>
@@ -631,20 +632,20 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
 
         {/* Fallback Text excerpt for Ideation/Taste/VFX */}
         {['ideation', 'taste', 'vfx', 'assembly', 'render'].includes(node.stage) && (
-          <div className="bg-[#0A0A0D] rounded-lg p-2.5 border border-white/[0.06] text-[10px] text-zinc-300 font-mono line-clamp-2 leading-relaxed">
+          <div className="bg-card rounded-lg p-2.5 border border-subtle text-[10px] text-text-primary font-mono line-clamp-2 leading-relaxed">
             {node.artifacts?.textContent || node.prompt || 'Awaiting generation prompt...'}
           </div>
         )}
 
         {/* Footer Details */}
-        <div className="flex items-center justify-between pt-2 border-t border-white/[0.06] text-[9px] font-mono text-zinc-500">
+        <div className="flex items-center justify-between pt-2 border-t border-subtle text-[9px] font-mono text-text-muted">
           <span className="uppercase tracking-wider">{node.modelEngine}</span>
           <button
             onClick={(e) => {
               e.stopPropagation();
               onToggleHud && onToggleHud(node.id);
             }}
-            className="text-zinc-400 hover:text-white font-medium transition active:scale-95 cursor-pointer flex items-center gap-1"
+            className="text-text-muted hover:text-text-primary font-medium transition active:scale-95 cursor-pointer flex items-center gap-1"
           >
             <span>{isHudOpen ? 'CLOSE HUD' : 'INSPECT HUD'}</span>
             <span className="text-[10px]">{isHudOpen ? '✕' : '↗'}</span>
@@ -671,7 +672,7 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
               />
               <span
                 style={{ top: `${topPercent}%` }}
-                className="absolute right-3.5 -translate-y-1/2 hidden group-hover/port:inline-block z-50 px-1.5 py-0.5 rounded text-[9px] font-mono whitespace-nowrap bg-zinc-900/95 border border-white/20 text-white shadow-xl pointer-events-none"
+                className="absolute right-3.5 -translate-y-1/2 hidden group-hover/port:inline-block z-50 px-1.5 py-0.5 rounded text-[9px] font-mono whitespace-nowrap bg-surface border border-subtle text-text-primary shadow-xl pointer-events-none"
               >
                 {port.name}
               </span>
@@ -704,11 +705,11 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
                     e.stopPropagation();
                     if (onAutoAddNextStage) onAutoAddNextStage(node.id, nextStages[0].stage);
                   }}
-                  className="px-2.5 py-1 rounded-md bg-[#1F1F24] hover:bg-[#2A2A30] active:scale-95 text-zinc-200 hover:text-white font-medium text-[9px] font-mono tracking-wider uppercase shadow-2xl flex items-center gap-1.5 border border-white/10 transition-all cursor-pointer"
+                  className="px-2.5 py-1 rounded-md bg-card hover:bg-card active:scale-95 text-text-primary hover:text-text-primary font-medium text-[9px] font-mono tracking-wider uppercase shadow-2xl flex items-center gap-1.5 border border-subtle transition-all cursor-pointer"
                   title={`Auto-Add Next Stage: ${nextStages[0].label}`}
                 >
-                  <Plus className="w-2.5 h-2.5 text-zinc-400" />
-                  <NextIcon className="w-3 h-3 text-zinc-300" />
+                  <Plus className="w-2.5 h-2.5 text-text-muted" />
+                  <NextIcon className="w-3 h-3 text-text-primary" />
                   <span>{nextStages[0].label}</span>
                 </button>
               );
@@ -720,14 +721,14 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
                   e.stopPropagation();
                   setShowNextStagePicker(!showNextStagePicker);
                 }}
-                className="w-6 h-6 rounded-md bg-[#1F1F24] hover:bg-[#2A2A30] active:scale-95 text-zinc-200 hover:text-white font-medium text-[10px] font-mono shadow-2xl flex items-center justify-center border border-white/10 transition-all cursor-pointer"
+                className="w-6 h-6 rounded-md bg-card hover:bg-card active:scale-95 text-text-primary hover:text-text-primary font-medium text-[10px] font-mono shadow-2xl flex items-center justify-center border border-subtle transition-all cursor-pointer"
                 title="Auto-Add Next Stage"
               >
                 <Plus className="w-3.5 h-3.5" />
               </button>
               {showNextStagePicker && (
-                <div className="absolute left-7 top-1/2 -translate-y-1/2 w-44 bg-[#18181C] border border-white/10 rounded-lg shadow-2xl p-1 z-40 space-y-0.5 animate-scale-in">
-                  <div className="text-[8px] font-mono text-zinc-400 px-2 py-1 uppercase tracking-widest font-semibold border-b border-white/[0.06]">
+                <div className="absolute left-7 top-1/2 -translate-y-1/2 w-44 bg-card border border-subtle rounded-lg shadow-2xl p-1 z-40 space-y-0.5 animate-scale-in">
+                  <div className="text-[8px] font-mono text-text-muted px-2 py-1 uppercase tracking-widest font-semibold border-b border-subtle">
                     Add Next Stage
                   </div>
                   {nextStages.map((nxt) => {
@@ -740,9 +741,9 @@ const CustomVersionNodeComponent: React.FC<CustomVersionNodeProps> = ({ data }) 
                           setShowNextStagePicker(false);
                           if (onAutoAddNextStage) onAutoAddNextStage(node.id, nxt.stage);
                         }}
-                        className="w-full text-left px-2 py-1.5 rounded text-[10px] font-mono tracking-wide text-zinc-300 hover:bg-white/[0.08] hover:text-white transition flex items-center gap-2 cursor-pointer active:scale-95"
+                        className="w-full text-left px-2 py-1.5 rounded text-[10px] font-mono tracking-wide text-text-primary hover:bg-white/[0.08] hover:text-text-primary transition flex items-center gap-2 cursor-pointer active:scale-95"
                       >
-                        <NextIcon className="w-3 h-3 text-zinc-400 shrink-0" />
+                        <NextIcon className="w-3 h-3 text-text-muted shrink-0" />
                         <span className="truncate">{nxt.label}</span>
                       </button>
                     );

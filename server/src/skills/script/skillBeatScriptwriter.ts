@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { SkillDefinition, SkillExecutionContext } from '../core/types.js';
-import { runAntigravityCLIJson } from '../../runners/antigravityRunner.js';
-import { runClaudeCLIJson } from '../../runners/claudeRunner.js';
+import { runModelJson } from '../../runners/modelRunner.js';
 
 function normalizeVisualType(val: string): 'talking_head' | 'motion_card' | 'kinetic_text' | 'broll_video' | '3d_object' {
   const v = (val || '').toLowerCase().replace(/[\s-]/g, '_');
@@ -114,20 +113,6 @@ Return JSON in this format:
   "pacingReviewNotes": "Pacing calibrated at 2.4 words per second."
 }`;
 
-    if (context.modelEngine === 'claude-cli') {
-      const { data } = await runClaudeCLIJson<ScriptwriterOutput>(prompt, {
-        cwd: context.projectRoot,
-        onStdoutChunk: context.onStdoutChunk,
-        onThinking: context.onThinking,
-      });
-      return data;
-    } else {
-      const { data } = await runAntigravityCLIJson<ScriptwriterOutput>(prompt, {
-        cwd: context.projectRoot,
-        onStdoutChunk: context.onStdoutChunk,
-        onThinking: context.onThinking,
-      });
-      return data;
-    }
+    return runModelJson<ScriptwriterOutput>(prompt,context.modelEngine,{...context,cwd:context.projectRoot,model:context.modelName});
   },
 };

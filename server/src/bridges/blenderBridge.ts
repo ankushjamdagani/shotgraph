@@ -1,13 +1,9 @@
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
 
 export interface BlenderExportOptions {
   fps?: number;
-  aspectRatio?: '9:16' | '16:9' | '1:1';
+  aspectRatio?: '9:16' | '16:9' | '1:1' | '2.39:1';
   resolutionWidth?: number;
   resolutionHeight?: number;
   cameraKeyframes?: Array<{
@@ -24,8 +20,9 @@ export class BlenderBridge {
    */
   static generateAssemblyScript(options: BlenderExportOptions = {}): string {
     const fps = options.fps || 30;
-    const width = options.resolutionWidth || (options.aspectRatio === '16:9' ? 1920 : 1080);
-    const height = options.resolutionHeight || (options.aspectRatio === '16:9' ? 1080 : 1920);
+    const dimensions = ({'9:16':[1080,1920],'16:9':[1920,1080],'1:1':[1080,1080],'2.39:1':[1920,804]} as const)[options.aspectRatio || '9:16'];
+    const width = options.resolutionWidth || dimensions[0];
+    const height = options.resolutionHeight || dimensions[1];
 
     const keyframes = options.cameraKeyframes || [
       { timeSec: 0, position: [0, -3.2, 1.4], target: [0, 0, 1.2], fov: 42.5 },
@@ -63,7 +60,8 @@ import mathutils
 
 def build_scene():
     scene = bpy.context.scene
-    scene.render.fps = ${fps}
+    scene.render.fps = ${Math.round(fps)}
+    scene.render.fps_base = ${Math.round(fps) / fps}
     scene.render.resolution_x = ${width}
     scene.render.resolution_y = ${height}
     scene.frame_start = 1
@@ -143,7 +141,8 @@ if __name__ == "__main__":
     const scriptPath = path.join(bundleDir, 'scene_assembly.py');
     await fs.writeFile(scriptPath, script, 'utf-8');
 
-    const cliCommand = `blender -b -P "${scriptPath}"`;
+    const shellPath = "'" + scriptPath.replace(/'/g, "'\\''") + "'";
+    const cliCommand = `blender -b -P ${shellPath}`;
 
     return {
       bundleDir,

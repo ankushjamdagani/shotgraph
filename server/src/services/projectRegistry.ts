@@ -1,3 +1,4 @@
+import { atomicWrite, serialized, moveToTrash as trashProject } from './fileSafety.js';
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
 import path from 'node:path';
@@ -10,7 +11,7 @@ const execAsync = promisify(exec);
 export interface ProjectRegistryInput {
   id: string;
   name: string;
-  aspectRatio?: '9:16' | '16:9' | '1:1';
+  aspectRatio?: '9:16' | '16:9' | '1:1' | '2.39:1';
   fps?: number;
   targetDurationSec?: number;
 }
@@ -19,7 +20,7 @@ export interface ProjectRegistryEntry {
   id: string;
   name: string;
   path: string;
-  aspectRatio: '9:16' | '16:9' | '1:1';
+  aspectRatio: '9:16' | '16:9' | '1:1' | '2.39:1';
   fps: number;
   targetDurationSec: number;
   lastOpenedAt: number;
@@ -316,7 +317,7 @@ export class ProjectRegistry {
                 return fsSync.existsSync(fullMedia);
               });
               if (videoNode) {
-                videoUrl = `http://localhost:3030/api/projects/${entry.id}/media/${videoNode.artifacts.mediaUrl}`;
+                videoUrl = `/api/projects/${entry.id}/media/${videoNode.artifacts.mediaUrl}`;
               }
             }
 
@@ -356,6 +357,7 @@ export class ProjectRegistry {
       additionalConstraints?: string[];
     }
   ): Promise<ProjectRegistryEntry> {
+    return serialized(this.getIndexFilePath(), async () => {
     await this.initialize();
     const resolvedPath = path.resolve(projectRoot);
     const list = await this.listRecentProjects();
@@ -385,40 +387,24 @@ export class ProjectRegistry {
       list.unshift(entry);
     }
 
-    await fs.writeFile(this.getIndexFilePath(), JSON.stringify(list, null, 2), 'utf-8');
+    await atomicWrite(this.getIndexFilePath(), JSON.stringify(list, null, 2));
     return entry;
+    });
   }
 
   /**
    * Remove a project from the recent index (and optionally move directory to trash)
    */
   static async removeProject(idOrPath: string, moveToTrash = false): Promise<boolean> {
-    await this.initialize();
-    const list = await this.listRecentProjects();
-    const resolvedPath = path.resolve(idOrPath);
-    const target = list.find((p) => p.id === idOrPath || path.resolve(p.path) === resolvedPath);
-
-    if (!target) return false;
-
-    const filtered = list.filter((p) => p.id !== target.id);
-    await fs.writeFile(this.getIndexFilePath(), JSON.stringify(filtered, null, 2), 'utf-8');
-
-    if (moveToTrash && target.path) {
-      try {
-        // macOS trash utility or apple script
-        await execAsync(`osascript -e 'tell application "Finder" to delete POSIX file "${target.path}"'`);
-      } catch (err: any) {
-        // Fallback: remove directory from disk if Finder trash command is unavailable
-        console.warn(`Could not move ${target.path} to Trash via Finder: ${err?.message}. Removing via fs.rm...`);
-        try {
-          await fs.rm(target.path, { recursive: true, force: true });
-        } catch (rmErr: any) {
-          console.error(`Failed to delete ${target.path} from disk:`, rmErr);
-        }
-      }
-    }
-
-    return true;
+    return serialized(this.getIndexFilePath(), async () => {
+      const list = await this.listRecentProjects();
+      const resolvedPath = path.resolve(idOrPath);
+      const target = list.find(p => p.id === idOrPath || path.resolve(p.path) === resolvedPath);
+      if (!target) return false;
+      if (moveToTrash) await trashProject(target.path);
+      await atomicWrite(this.getIndexFilePath(), JSON.stringify(list.filter(p => p.id !== target.id), null, 2));
+      return true;
+    });
   }
 
   /**

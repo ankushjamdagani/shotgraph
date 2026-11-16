@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { SkillDefinition, SkillExecutionContext } from '../core/types.js';
-import { runAntigravityCLIJson } from '../../runners/antigravityRunner.js';
-import { runClaudeCLIJson } from '../../runners/claudeRunner.js';
+import { runModelJson } from '../../runners/modelRunner.js';
 
 export const TasteAnalysisInputSchema = z.object({
   referenceTitle: z.string(),
@@ -106,22 +105,7 @@ Extract the following JSON structure:
 
     let result: TasteAnalysisOutput;
 
-    if (context.modelEngine === 'claude-cli') {
-      const response = await runClaudeCLIJson<TasteAnalysisOutput>(prompt, {
-        cwd: context.projectRoot,
-        onStdoutChunk: context.onStdoutChunk,
-        onThinking: context.onThinking,
-      });
-      result = response.data;
-    } else {
-      // Default to Antigravity CLI
-      const response = await runAntigravityCLIJson<TasteAnalysisOutput>(prompt, {
-        cwd: context.projectRoot,
-        onStdoutChunk: context.onStdoutChunk,
-        onThinking: context.onThinking,
-      });
-      result = response.data;
-    }
+    result = await runModelJson<TasteAnalysisOutput>(prompt,context.modelEngine,{...context,cwd:context.projectRoot,model:context.modelName});
 
     return result;
   },

@@ -1,3 +1,5 @@
+import { useDialog } from '../common/useDialog';
+import { apiFetch } from '../../services/api';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Folder,
@@ -288,7 +290,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
   const loadProjects = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('http://localhost:3030/api/projects');
+      const res = await apiFetch('http://localhost:3030/api/projects');
       const data = await res.json();
       if (Array.isArray(data)) {
         setProjects(data);
@@ -306,13 +308,16 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     }
   }, [isOpen]);
 
+  const hubDialog = useDialog(isOpen && !isStandalonePage,()=>onClose?.());
+  const deleteDialog = useDialog(!!projectToDelete,()=>{if(!isDeleting)setProjectToDelete(null);});
+  useEffect(()=>{const open=()=>setIsWizardOpen(true);window.addEventListener('studio:new-project',open);return()=>window.removeEventListener('studio:new-project',open);},[]);
   if (!isOpen) return null;
 
   const handleOpenProject = async (idOrPath: string) => {
     setIsLoading(true);
     setErrorMsg('');
     try {
-      const res = await fetch(`http://localhost:3030/api/projects/${encodeURIComponent(idOrPath)}`);
+      const res = await apiFetch(`http://localhost:3030/api/projects/${encodeURIComponent(idOrPath)}`);
       const project = await res.json();
       if (!res.ok || !project.id) {
         throw new Error(project.error || 'Failed to load project');
@@ -330,12 +335,12 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     setIsOpeningNativeFinder(true);
     setErrorMsg('');
     try {
-      const res = await fetch('http://localhost:3030/api/projects/pick-directory', {
+      const res = await apiFetch('http://localhost:3030/api/projects/pick-directory', {
         method: 'POST',
       });
       const data = await res.json();
       if (data.path) {
-        const openRes = await fetch('http://localhost:3030/api/projects/open', {
+        const openRes = await apiFetch('http://localhost:3030/api/projects/open', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ path: data.path }),
@@ -364,7 +369,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     setErrorMsg('');
 
     try {
-      const res = await fetch(`http://localhost:3030/api/projects/${projectToDelete.id}/remove`, {
+      const res = await apiFetch(`http://localhost:3030/api/projects/${projectToDelete.id}/remove`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ moveToTrash }),
@@ -475,7 +480,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
   };
 
   const content = (
-    <div className={containerClasses}>
+    <div ref={hubDialog} aria-label="Projects" className={containerClasses}>
       {/* Studio Header */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-subtle bg-surface shrink-0">
         <div className="flex items-center gap-2.5">
@@ -867,7 +872,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
 
       {/* Delete / Remove Project Confirmation Modal */}
       {projectToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150">
+        <div ref={deleteDialog} aria-label="Remove project" className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150">
           <div className="relative w-full max-w-sm bg-surface border border-subtle rounded-lg shadow-2xl p-5 text-text-primary space-y-3.5">
             {/* Header */}
             <div className="flex items-center gap-2.5">

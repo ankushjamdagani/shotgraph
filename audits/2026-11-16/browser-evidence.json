@@ -1,0 +1,80 @@
+[
+  {
+    "name": "hub",
+    "width": 1440,
+    "viewport": 1440,
+    "scrollWidth": 1440,
+    "buttons": 21,
+    "unnamedButtons": 0,
+    "smallButtons": 3,
+    "dialogRoles": 0,
+    "errors": []
+  },
+  {
+    "name": "canvas",
+    "width": 1440,
+    "viewport": 1440,
+    "scrollWidth": 1440,
+    "buttons": 116,
+    "unnamedButtons": 0,
+    "smallButtons": 24,
+    "dialogRoles": 0,
+    "errors": []
+  },
+  {
+    "commandPaletteAfterShortcut": true
+  },
+  {
+    "settingsDialogRoles": 0
+  },
+  {
+    "name": "hub",
+    "width": 1024,
+    "viewport": 1024,
+    "scrollWidth": 1024,
+    "buttons": 21,
+    "unnamedButtons": 0,
+    "smallButtons": 3,
+    "dialogRoles": 0,
+    "errors": []
+  },
+  {
+    "name": "canvas",
+    "width": 1024,
+    "viewport": 1024,
+    "scrollWidth": 1024,
+    "buttons": 116,
+    "unnamedButtons": 0,
+    "smallButtons": 24,
+    "dialogRoles": 0,
+    "errors": []
+  },
+  {
+    "name": "hub",
+    "width": 390,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "buttons": 21,
+    "unnamedButtons": 0,
+    "smallButtons": 0,
+    "dialogRoles": 0,
+    "errors": []
+  },
+  {
+    "name": "canvas",
+    "width": 390,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "buttons": 116,
+    "unnamedButtons": 0,
+    "smallButtons": 22,
+    "dialogRoles": 0,
+    "errors": []
+  },
+  {
+    "unknownProject": {
+      "status": 200,
+      "returnedProjectId": "2GZ0cILM"
+    }
+  }
+]

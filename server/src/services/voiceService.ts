@@ -1,10 +1,9 @@
+import { executeProcess } from '../runners/base.js';
+import { probeMedia } from './mediaService.js';
+import { containedPath } from './fileSafety.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
 
 export interface VoicePreset {
   id: string;
@@ -65,12 +64,12 @@ export class VoiceService {
       throw new Error('Speech synthesis requires non-empty dialogue text.');
     }
 
-    const cleanText = text.replace(/["\\`$]/g, ' ').trim();
+    const cleanText = text.trim();
     const voiceDir = path.join(projectRoot, 'assets', 'voice');
     await fs.mkdir(voiceDir, { recursive: true });
 
     const targetFileName = `${nodeId}_voice.wav`;
-    const targetAbsPath = path.join(voiceDir, targetFileName);
+    const targetAbsPath = containedPath(voiceDir, targetFileName);
     const targetRelPath = path.join('assets', 'voice', targetFileName);
 
     const preset = AVAILABLE_VOICE_PRESETS.find((p) => p.id === presetId) || AVAILABLE_VOICE_PRESETS[0];
@@ -80,33 +79,14 @@ export class VoiceService {
     const tempAiff = path.join(os.tmpdir(), `studio_synth_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.aiff`);
 
     try {
-      // 1. Synthesize via macOS say
-      try {
-        await execAsync(`say -v "${systemVoice}" "${cleanText}" -o "${tempAiff}"`);
-      } catch {
-        // Fallback to default say voice if named voice is not installed
-        await execAsync(`say "${cleanText}" -o "${tempAiff}"`);
-      }
-
-      // 2. Transcode to high-quality 44.1kHz stereo broadcast WAV using ffmpeg
-      await execAsync(`ffmpeg -y -i "${tempAiff}" -ar 44100 -ac 2 "${targetAbsPath}"`);
-
-      // 3. Inspect duration using ffprobe
-      let durationSec = 3.0;
-      try {
-        const { stdout } = await execAsync(
-          `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${targetAbsPath}"`
-        );
-        const parsed = parseFloat(stdout.trim());
-        if (!isNaN(parsed) && parsed > 0) {
-          durationSec = Math.round(parsed * 100) / 100;
-        }
-      } catch {
-        // Fallback duration estimate based on word count (~150 words per minute)
-        const wordCount = cleanText.split(/\s+/).length;
-        durationSec = Math.max(1.5, Math.round((wordCount / 2.5) * 10) / 10);
-      }
-
+      let spoken = await executeProcess('say',['-v',systemVoice,cleanText,'-o',tempAiff],{timeoutMs:60000});
+      if(spoken.exitCode) spoken = await executeProcess('say',[cleanText,'-o',tempAiff],{timeoutMs:60000});
+      if(spoken.exitCode) throw new Error('Speech synthesis failed. Check installed system voices.');
+      const converted = await executeProcess('ffmpeg',['-y','-i',tempAiff,'-ar','44100','-ac','2',targetAbsPath],{timeoutMs:60000});
+      if(converted.exitCode) throw new Error('Speech conversion failed. Check FFmpeg.');
+      const info=await probeMedia(targetAbsPath);
+      if(!info.hasAudio || !info.duration || (await fs.stat(targetAbsPath)).size<1000) throw new Error('Speech engine produced an empty audio file. Try another installed voice.');
+      const durationSec=info.duration;
       return {
         audioRelPath: targetRelPath,
         audioAbsPath: targetAbsPath,
