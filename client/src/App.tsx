@@ -11,7 +11,6 @@ import { ProjectHubModal } from './components/project/ProjectHubModal.js';
 import { ProjectNameMenu } from './components/project/ProjectNameMenu.js';
 import { StudioTheme, ThemeToggle } from './components/ui-ux/ThemeCustomizer.js';
 import { StudioErrorBoundary } from './components/common/StudioErrorBoundary.js';
-import { ToastContainer } from './components/common/ToastContainer.js';
 
 // Lazy-loaded on-demand modals (Vercel rule: bundle-dynamic-imports)
 const TasteMixerModal = lazy(() =>
@@ -337,7 +336,7 @@ function App() {
   // Root view: When on root (no project loaded), show Projects Page directly!
   if (!project) {
     return (
-      <> <ToastContainer /><ProjectHubModal
+      <> <ProjectHubModal
         isOpen={true}
         isStandalonePage={true}
         onSelectProject={handleSelectProject}
@@ -660,8 +659,6 @@ function App() {
         </div>
       )}
 
-      {/* Global Interactive Toast Notification System */}
-      <ToastContainer />
     </div>
   );
 }

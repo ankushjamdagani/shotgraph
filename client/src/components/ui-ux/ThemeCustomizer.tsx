@@ -17,9 +17,9 @@ export const THEME_METADATA: Record<
   'paper-ink': {
     name: 'Paper & Ink',
     mode: 'light',
-    description: 'Warm editorial ivory/cream with crisp dark ink typography',
-    previewBg: '#F5F3EF',
-    accent: '#1C1917',
+    description: 'Crisp white surfaces with charcoal text',
+    previewBg: '#FFFFFF',
+    accent: '#252525',
   },
 };
 
