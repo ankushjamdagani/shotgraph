@@ -242,7 +242,7 @@ server.post('/api/projects/create', async (req, reply) => {
     ideaPrompt,
     emptyDAG = true,
     genesisConfig,
-  } = z.object({name:z.string().trim().max(200).optional(),path:z.string().max(4096).optional(),preset:z.enum(['reel_9_16','youtube_16_9','ad_1_1']).optional(),aspectRatio:z.enum(['9:16','16:9','1:1','2.39:1']).optional(),targetDurationSec:z.number().positive().max(86400).optional(),basePresetId:z.string().optional(),ideaPrompt:z.string().optional(),emptyDAG:z.boolean().optional(),genesisConfig:z.object({modelEngine:z.enum(['antigravity-cli','claude-cli','ollama','external','hyperframes']).optional(),mood:z.string().optional(),customMood:z.string().optional(),directorDirective:z.string().optional(),referenceUrls:z.array(z.string()).optional(),customSpecs:z.string().optional(),branches:z.array(z.object({id:z.number(),title:z.string(),aesthetic:z.string(),customLook:z.string().optional(),beats:z.array(z.object({label:z.string(),text:z.string()})).optional()})).optional()}).optional()}).strict().parse(req.body);
+  } = z.object({name:z.string().trim().max(200).optional(),path:z.string().max(4096).optional(),preset:z.enum(['reel_9_16','youtube_16_9','ad_1_1']).optional(),aspectRatio:z.enum(['9:16','16:9','1:1','2.39:1']).optional(),targetDurationSec:z.number().positive().max(86400).optional(),basePresetId:z.string().optional(),ideaPrompt:z.string().optional(),emptyDAG:z.boolean().optional(),genesisConfig:z.object({modelEngine:z.enum(['antigravity-cli','claude-cli','ollama','external','hyperframes']).optional(),mood:z.string().optional(),customMood:z.string().optional(),directorDirective:z.string().optional(),referenceUrls:z.array(z.string()).optional(),customSpecs:z.string().optional(),branches:z.array(z.object({id:z.number(),title:z.string(),aesthetic:z.string(),customLook:z.string().optional(),summary:z.string().optional(),story:z.string().optional(),beats:z.array(z.object({label:z.string(),text:z.string()})).optional()})).optional()}).optional()}).strict().parse(req.body);
 
   const projectName = (name && name.trim()) || 'Untitled Video Project';
   const sanitized = projectName.toLowerCase().replace(/[^a-z0-9_-]/g, '_') || 'untitled_project';
@@ -386,20 +386,11 @@ server.post('/api/ai/story-directions', async (req, reply) => {
   const cancel = () => { if (!reply.raw.writableEnded) controller.abort(); };
   reply.raw.on('close', cancel);
 
-  const prompt = `Create three distinct film directions for this brief: ${JSON.stringify(input)}. Each must fit the requested duration and brief.
+  const prompt = `Suggest three distinct story concepts for this brief: ${JSON.stringify(input)}.
+This is ideation before scriptwriting. Describe the premise, central character or subject, main tension, and emotional promise in 60–90 words of flowing prose. Keep each concept suitable for the requested duration without dividing it into scenes or timestamps. Do not generate a script, dialogue, shot list, timed beats, scene breakdown, or production instructions. The script stage handles those later.
+Also provide alternate concise descriptions of the SAME concept for comparison: subject (under 12 words), tension (under 18 words), payoff (under 18 words), pitch (two sentences, at most 40 words), and distinction (under 12 words explaining what makes this direction different). These are conceptual descriptions, never scene beats.
 Return JSON with the exact structure:
-{
-  "directions": [
-    {
-      "title": "compelling short title",
-      "summary": "crisp 1-line summary capturing the core premise and narrative hook (under 120 chars)",
-      "story": "compelling full story narrative describing the scene progression, character motivation, and visual climax",
-      "beats": [
-        {"label": "beat with timing", "text": "visual action and dialogue"}
-      ]
-    }
-  ]
-}`;
+{"directions":[{"title":"short evocative title","summary":"one sentence premise under 120 characters","story":"one short paragraph describing the story concept","subject":"central subject","tension":"main tension","payoff":"emotional promise","pitch":"two sentence pitch","distinction":"what makes it different"}]}`;
 
   try {
     const opts = { timeoutMs: 60000, signal: controller.signal };
@@ -413,16 +404,21 @@ Return JSON with the exact structure:
       directions: z.array(z.object({
         title: z.string().min(1),
         summary: z.string().optional().default(''),
-        story: z.string().optional().default(''),
-        beats: z.array(z.object({ label: z.string(), text: z.string() })).min(1),
+        story: z.string().min(1),
+        subject: z.string().optional(),
+        tension: z.string().optional(),
+        payoff: z.string().optional(),
+        pitch: z.string().optional(),
+        distinction: z.string().optional(),
+
       })).min(1).max(5),
     }).parse(raw);
 
     const normalized = parsed.directions.map((d) => ({
+      ...d,
       title: d.title,
-      summary: d.summary || d.beats[0]?.text?.slice(0, 120) || 'A cinematic narrative journey.',
-      story: d.story || d.beats.map((b) => `${b.label}: ${b.text}`).join('\n\n'),
-      beats: d.beats,
+      summary: d.summary || d.story.slice(0, 120),
+      story: d.story,
     }));
 
     aiStoryCache.set(cacheKey, { data: normalized, timestamp: Date.now() });

@@ -151,6 +151,8 @@ export interface GenesisBranchConfig {
   title: string;
   aesthetic: string;
   customLook?: string;
+  summary?: string;
+  story?: string;
   beats?: Array<{ label: string; text: string }>;
 }
 
@@ -284,11 +286,11 @@ export class ProjectService {
 
       branches.forEach((branch, idx) => {
         const nodeId = `node_idea_var_${idx + 1}`;
-        const beatsText = branch.beats && branch.beats.length > 0
+        const conceptText = branch.story || branch.summary || (branch.beats && branch.beats.length > 0
           ? branch.beats.map((b) => `${b.label}: ${b.text}`).join('\n\n')
-          : branch.title;
+          : branch.title);
 
-        const fullDescription = `${beatsText}\n\nVisual Aesthetic: ${branch.aesthetic}${branch.customLook ? ` (${branch.customLook})` : ''}\nMood Energy: ${genConfig.mood || 'Adrenaline & Speed'}${genConfig.customMood ? `\nCustom Mood Notes: ${genConfig.customMood}` : ''}${genConfig.referenceUrls?.length ? `\nReferences: ${genConfig.referenceUrls.join(', ')}` : ''}`;
+        const fullDescription = `${conceptText}\n\nVisual Aesthetic: ${branch.aesthetic}${branch.customLook ? ` (${branch.customLook})` : ''}\nMood Energy: ${genConfig.mood || 'Adrenaline & Speed'}${genConfig.customMood ? `\nCustom Mood Notes: ${genConfig.customMood}` : ''}${genConfig.customSpecs?.trim() ? `\nExtra project instructions: ${genConfig.customSpecs.trim()}` : ''}${genConfig.referenceUrls?.length ? `\nReferences: ${genConfig.referenceUrls.join(', ')}` : ''}`;
 
         initialNodes[nodeId] = {
           id: nodeId,
@@ -297,7 +299,7 @@ export class ProjectService {
           stage: 'ideation',
           title: branch.title,
           modelEngine: (genConfig.modelEngine as ModelEngineType) || 'antigravity-cli',
-          prompt: beatsText,
+          prompt: conceptText,
           position: { x: 120, y: 120 + idx * 320 }, // Vertically stacked
           artifacts: {
             textContent: fullDescription,

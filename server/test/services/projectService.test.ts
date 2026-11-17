@@ -16,6 +16,20 @@ describe('ProjectService DAG and Folder Management', () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'video_studio_test_'));
   });
 
+  it('preserves the selected prose concept in the idea node without generating scenes', async () => {
+    const concept = 'A traveler reconnects with their hometown through an unexpected encounter.';
+    const project = await ProjectService.initProject(tempDir, 'Story concept', {
+      initGit: false,
+      genesisConfig: { customSpecs: 'Keep all dialogue in French.', branches: [{ id: 1, title: 'Home again', aesthetic: 'Editorial 35mm', summary: 'An unexpected reunion.', story: concept }] },
+    });
+    expect(project.scenes).toEqual([]);
+    const idea = Object.values(project.nodes).find(node => node.stage === 'ideation');
+    expect(idea?.prompt).toBe(concept);
+    expect(idea?.artifacts?.textContent).toContain(concept);
+    expect(idea?.artifacts?.textContent).toContain('Extra project instructions: Keep all dialogue in French.');
+    expect((await ProjectService.loadProject(tempDir)).nodes[idea!.id].prompt).toBe(concept);
+  });
+
   it('duplicates project state and media independently without copying repository content', async () => {
     const sourceRoot = path.join(tempDir, 'source');
     const source = await ProjectService.initProject(sourceRoot, 'Original', { initGit: false });
