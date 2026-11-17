@@ -3,12 +3,13 @@ import { Label as LabelPrimitive } from 'radix-ui';
 import { cn } from './cn';
 export const Input = React.forwardRef<
   HTMLInputElement,
-  React.InputHTMLAttributes<HTMLInputElement>
->(({ className, ...props }, ref) => (
+  React.InputHTMLAttributes<HTMLInputElement> & { borderTone?: 'control' | 'subtle' }
+>(({ className, borderTone = 'control', ...props }, ref) => (
   <input
     ref={ref}
     className={cn(
-      'h-control w-full min-w-0 rounded-md border border-subtle bg-surface px-3 text-sm text-text-primary outline-none placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-app disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-danger aria-[invalid=true]:ring-danger',
+      'appearance-none h-control w-full min-w-0 rounded-md border border-control bg-surface px-3 text-sm text-text-primary outline-none placeholder:text-text-muted focus-visible:ring-1 focus-visible:ring-focus focus-visible:ring-offset-1 focus-visible:ring-offset-app disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-danger aria-[invalid=true]:ring-danger',
+      borderTone === 'subtle' && 'border-subtle',
       className,
     )}
     {...props}
@@ -22,7 +23,7 @@ export const Textarea = React.forwardRef<
   <textarea
     ref={ref}
     className={cn(
-      'min-h-24 w-full rounded-md border border-subtle bg-surface p-3 text-sm text-text-primary outline-none placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-50 aria-[invalid=true]:border-danger',
+      'min-h-24 w-full rounded-md border border-control bg-surface p-3 text-sm text-text-primary outline-none placeholder:text-text-muted focus-visible:ring-1 focus-visible:ring-focus disabled:opacity-50 aria-[invalid=true]:border-danger',
       className,
     )}
     {...props}

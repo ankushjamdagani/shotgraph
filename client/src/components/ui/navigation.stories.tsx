@@ -1,3 +1,4 @@
+import { CollectionSort, type CollectionSortValue } from './collection-sort';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState } from 'react';
 import {
@@ -7,6 +8,9 @@ import {
   MoreHorizontal,
   Grid2X2,
   List,
+  RectangleHorizontal,
+  RectangleVertical,
+  Square,
 } from 'lucide-react';
 import { Button, IconButton } from './button';
 import { Tooltip } from './tooltip';
@@ -29,13 +33,51 @@ export const Filters: Story = {
     const [value, setValue] = useState('all');
     return (
       <SegmentedControl
+        variant="inset"
         label="Aspect ratio"
         value={value}
         onValueChange={setValue}
         options={[
-          { value: 'all', label: 'All' },
-          { value: '9:16', label: '9:16' },
-          { value: '16:9', label: '16:9' },
+          {
+            value: 'all',
+            label: 'All formats',
+            content: (
+              <>
+                <Grid2X2 />
+                All formats <span>12</span>
+              </>
+            ),
+          },
+          {
+            value: '9:16',
+            label: '9:16',
+            content: (
+              <>
+                <RectangleVertical />
+                9:16 <span>8</span>
+              </>
+            ),
+          },
+          {
+            value: '16:9',
+            label: '16:9',
+            content: (
+              <>
+                <RectangleHorizontal />
+                16:9 <span>4</span>
+              </>
+            ),
+          },
+          {
+            value: '1:1',
+            label: '1:1',
+            content: (
+              <>
+                <Square />
+                1:1 <span>0</span>
+              </>
+            ),
+          },
         ]}
       />
     );
@@ -89,4 +131,11 @@ export const Help: Story = {
       <Button>New Project</Button>
     </Tooltip>
   ),
+};
+
+export const ProjectSort: Story = {
+  render: () => {
+    const [value,setValue] = useState<CollectionSortValue>({by:'opened',direction:'desc'});
+    return <div className="space-y-4"><CollectionSort value={value} onChange={setValue}/><p className="text-xs text-text-muted">{value.by} · {value.direction}</p></div>;
+  },
 };

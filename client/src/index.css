@@ -162,8 +162,8 @@ code, .font-mono {
 }
 
 /* Editor work surfaces share the existing Film Lab / Paper token system. */
-button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, [tabindex]:focus-visible {
-  outline: 2px solid var(--accent-primary); outline-offset: 3px;
+:where(button, a, input, textarea, select, [tabindex]):focus-visible {
+  outline: 1px solid var(--border-focus); outline-offset: 1px;
 }
 ::selection { background: var(--text-primary); color: var(--bg-app); }
 input, textarea { caret-color: var(--accent-primary); }
@@ -210,3 +210,9 @@ input, textarea { caret-color: var(--accent-primary); }
 [data-sonner-toast][data-styled='true'] [data-close-button] { top: 50%; right: 12px; left: auto; transform: translateY(-50%); width: 24px; height: 24px; border: 0; background: transparent; color: var(--text-muted); border-radius: var(--radius-control); }
 [data-sonner-toast][data-styled='true'] [data-close-button]:hover { background: var(--bg-hover); }
 @media(prefers-reduced-motion:reduce) { [data-sonner-toast] { transition: none !important; animation: none !important; } }
+
+/* Sonner integration uses the same surfaces, borders and compact controls. */
+[data-sonner-toast][data-styled='true'] [data-button] { height: 28px; padding: 0 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-control); background: var(--bg-card); color: var(--text-primary); font-family: inherit; font-size: 12px; font-weight: 500; }
+[data-sonner-toast][data-styled='true'] [data-button]:hover { background: var(--bg-hover); }
+
+[data-sonner-toast][data-styled='true'] [data-title] { font-size: 13px; font-weight: 600; line-height: 1.5; }

@@ -6,7 +6,8 @@
   --bg-card: #141414;
   --bg-hover: #1e1e1e;
   --border-subtle: #242424;
-  --border-focus: #525252;
+  --border-focus: #888888;
+  --border-control: #707070;
   --text-primary: #ffffff;
   --text-muted: #888888;
   --accent-primary: #ffffff;
@@ -48,6 +49,7 @@
   --bg-hover: #ebebeb;
   --border-subtle: #dedede;
   --border-focus: #626262;
+  --border-control: #858585;
   --text-primary: #252525;
   --text-muted: #626262;
   --accent-primary: #252525;
@@ -92,7 +94,7 @@
   --control-sm: 28px;
   --control: 34px;
   --control-lg: 40px;
-  --thumbnail-height: 215px;
+  --thumbnail-height: 200px;
   --radius-control: 6px;
   --radius-thumbnail: 12px;
   --radius-dialog: 16px;
@@ -100,6 +102,7 @@
   --duration-normal: 240ms;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --shadow-dialog: 0 16px 48px rgba(0, 0, 0, 0.24);
+  --shadow-preview: 0 6px 18px -8px rgba(0, 0, 0, 0.65);
 }
 .theme-paper-ink {
   --danger: #b52f2f;
@@ -109,4 +112,14 @@
   --notification: #2563eb;
   --row-hover: rgba(0, 0, 0, 0.04);
   --shadow-dialog: 0 16px 48px rgba(0, 0, 0, 0.14);
+  --shadow-preview: 0 6px 18px -8px rgba(0, 0, 0, 0.22);
 }
+
+/* Approved Projects ground: Warm Stock, shared with the framed welcome. */
+:root { --project-body-background: color-mix(in srgb, var(--bg-app), #bda788 5%); }
+
+:root { --action-primary: var(--text-primary); --action-primary-text: var(--bg-app); }
+
+/* Saturated color belongs to decorative ASCII glyphs, not page surfaces. */
+:root { --collection-art-hue: 215; --collection-art-lightness: 66%; }
+.theme-paper-ink { --collection-art-lightness: 42%; }

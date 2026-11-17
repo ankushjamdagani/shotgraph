@@ -81,3 +81,5 @@ export const States: Story = {
     ).toBeDisabled();
   },
 };
+
+export const SubtleBorder: Story = { args: { variant: 'secondary', borderTone: 'subtle', children: 'Open folder' } };

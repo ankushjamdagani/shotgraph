@@ -15,7 +15,11 @@ export default {
         normal: 'var(--duration-normal)',
       },
       transitionTimingFunction: { studio: 'var(--ease-out)' },
-      boxShadow: { dialog: 'var(--shadow-dialog)' },
+      boxShadow: {
+        dialog: 'var(--shadow-dialog)',
+        preview: 'var(--shadow-preview)',
+        'inset-panel': 'inset 0 8px 12px -12px rgba(0,0,0,.4)',
+      },
       keyframes: {
         enter: { from: { opacity: '.3' }, to: { opacity: '1' } },
         'copy-arrive': {
@@ -92,6 +96,7 @@ export default {
         card: 'var(--bg-card)',
         hover: 'var(--bg-hover)',
         subtle: 'var(--border-subtle)',
+        control: 'var(--border-control)',
         focus: 'var(--border-focus)',
         'border-subtle': 'var(--border-subtle)',
         'border-focus': 'var(--border-focus)',

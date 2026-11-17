@@ -5,13 +5,13 @@ import { Loader2 } from 'lucide-react';
 import { cn } from './cn';
 
 export const buttonVariants = cva(
-  'inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-xs font-medium outline-none transition-colors duration-fast motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-app disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-3.5 [&_svg]:shrink-0',
+  'inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-xs font-medium outline-none transition-colors duration-fast motion-reduce:transition-none focus-visible:ring-1 focus-visible:ring-focus focus-visible:ring-offset-1 focus-visible:ring-offset-app disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-3.5 [&_svg]:shrink-0',
   {
     variants: {
       variant: {
-        primary: 'bg-text-primary text-app hover:opacity-80',
+        primary: 'bg-[var(--action-primary)] text-[var(--action-primary-text)] hover:opacity-80',
         secondary:
-          'border border-subtle bg-surface text-text-primary hover:bg-hover',
+          'border border-control bg-surface text-text-primary hover:bg-hover',
         ghost: 'text-text-primary hover:bg-hover',
         quiet: 'text-text-muted hover:bg-hover hover:text-text-primary',
         destructive: 'bg-danger-solid text-white hover:bg-danger-hover',
@@ -31,6 +31,7 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
+  borderTone?: 'control' | 'subtle';
   loading?: boolean;
 }
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -38,6 +39,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     {
       className,
       variant,
+      borderTone = 'control',
       size,
       asChild,
       loading,
@@ -55,7 +57,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         type={type}
         disabled={disabled || loading}
         aria-busy={loading || undefined}
-        className={cn(buttonVariants({ variant, size }), className)}
+        className={cn(buttonVariants({ variant, size }), variant === 'secondary' && borderTone === 'subtle' && 'border-subtle', className)}
         {...props}
       >
         {loading && !asChild ? (

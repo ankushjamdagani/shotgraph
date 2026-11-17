@@ -88,3 +88,7 @@ export const Choices: Story = {
     );
   },
 };
+
+export const CollectionSearch: Story = {
+  args: { type: 'search', borderTone: 'subtle', placeholder: 'Search projects…', 'aria-label': 'Search projects' },
+};

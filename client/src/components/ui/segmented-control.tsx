@@ -7,6 +7,7 @@ export function SegmentedControl({
   label,
   options,
   className,
+  variant = 'plain',
 }: {
   value: string;
   onValueChange: (value: string) => void;
@@ -18,6 +19,7 @@ export function SegmentedControl({
     disabled?: boolean;
   }[];
   className?: string;
+  variant?: 'plain' | 'inset';
 }) {
   return (
     <ToggleGroup.Root
@@ -27,7 +29,11 @@ export function SegmentedControl({
         if (next) onValueChange(next);
       }}
       aria-label={label}
-      className={cn('inline-flex items-center gap-1 rounded-md', className)}
+      className={cn(
+        'inline-flex flex-wrap items-center gap-1 rounded-lg',
+        variant === 'inset' && 'border border-control bg-surface p-1',
+        className,
+      )}
     >
       {options.map((option) => (
         <ToggleGroup.Item
@@ -35,7 +41,11 @@ export function SegmentedControl({
           value={option.value}
           aria-label={option.label}
           disabled={option.disabled}
-          className="inline-flex h-control items-center justify-center gap-1.5 rounded-md px-3 text-xs text-text-muted outline-none transition-colors duration-fast hover:bg-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-50 data-[state=on]:bg-card data-[state=on]:font-semibold data-[state=on]:text-text-primary motion-reduce:transition-none [&_svg]:size-3.5"
+          className={cn(
+            'inline-flex h-control items-center justify-center gap-1.5 rounded-md px-3 text-xs text-text-muted outline-none transition-colors duration-fast hover:bg-hover hover:text-text-primary focus-visible:ring-1 focus-visible:ring-focus disabled:opacity-50 data-[state=on]:bg-card data-[state=on]:font-semibold data-[state=on]:text-text-primary motion-reduce:transition-none [&_svg]:size-3.5',
+            variant === 'inset' &&
+              'data-[state=on]:bg-text-primary data-[state=on]:text-app [&[data-state=on]_span]:text-app',
+          )}
         >
           {option.content || option.label}
         </ToggleGroup.Item>

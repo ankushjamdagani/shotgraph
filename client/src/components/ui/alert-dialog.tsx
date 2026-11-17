@@ -10,7 +10,7 @@ export function AlertDialogContent({
 }: React.ComponentProps<typeof Primitive.Content>) {
   return (
     <Primitive.Portal>
-      <Primitive.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm data-[state=open]:animate-enter motion-reduce:animate-none" />
+      <Primitive.Overlay className={cn("fixed inset-0 z-50 data-[state=open]:animate-enter motion-reduce:animate-none", '[background-color:color-mix(in_srgb,var(--bg-app)_85%,transparent)] backdrop-blur-[2px]')} />
       <Primitive.Content
         className={cn(
           'fixed left-1/2 top-1/2 z-50 w-[calc(100%-40px)] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-dialog bg-surface text-text-primary shadow-dialog outline-none',
@@ -63,7 +63,7 @@ export const AlertDialogCancel = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <Primitive.Cancel
     ref={ref}
-    className={cn(buttonVariants({ variant: 'secondary' }), className)}
+    className={cn(buttonVariants({ variant: 'secondary' }), 'border-subtle', className)}
     {...props}
   />
 ));

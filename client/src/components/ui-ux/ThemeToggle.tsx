@@ -30,6 +30,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
       <IconButton
         label={title}
         variant="secondary"
+        borderTone="subtle"
         className={className}
         data-testid="theme-toggle"
       >

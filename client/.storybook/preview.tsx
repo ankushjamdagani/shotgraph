@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { Preview } from '@storybook/react-vite';
-import { Toaster } from 'sonner';
+import { Toaster } from '../src/components/ui/toaster';
 import { TooltipProvider } from '../src/components/ui';
 import '../src/index.css';
 const preview: Preview = {
@@ -40,17 +40,7 @@ const preview: Preview = {
           <div className="w-full bg-app p-6 font-sans text-text-primary">
             <Story />
           </div>
-          <Toaster
-            position="bottom-right"
-            closeButton
-            toastOptions={{
-              style: {
-                background: 'var(--bg-surface)',
-                color: 'var(--text-primary)',
-                borderColor: 'var(--border-subtle)',
-              },
-            }}
-          />
+          <Toaster />
         </TooltipProvider>
       );
     },

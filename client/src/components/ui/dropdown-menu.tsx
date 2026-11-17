@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react';
 import * as React from 'react';
 import { DropdownMenu as Primitive } from 'radix-ui';
 import { cn } from './cn';
@@ -41,4 +42,11 @@ export function DropdownMenuSeparator(
   props: React.ComponentProps<typeof Primitive.Separator>,
 ) {
   return <Primitive.Separator className="my-1 h-px bg-subtle" {...props} />;
+}
+
+export const DropdownMenuRadioGroup = Primitive.RadioGroup;
+export function DropdownMenuRadioItem({className,children,...props}:React.ComponentProps<typeof Primitive.RadioItem>) {
+  return <Primitive.RadioItem className={cn('relative flex cursor-default select-none items-center gap-2.5 rounded-md py-2 pl-3 pr-8 text-sm outline-none focus:bg-hover [&_svg]:size-3.5',className)} {...props}>
+    {children}<Primitive.ItemIndicator className="absolute right-2.5"><Check/></Primitive.ItemIndicator>
+  </Primitive.RadioItem>;
 }

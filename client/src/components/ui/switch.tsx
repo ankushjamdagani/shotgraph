@@ -9,7 +9,7 @@ export function Switch({
   return (
     <Primitive.Root
       className={cn(
-        'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-subtle bg-card outline-none transition-colors duration-fast focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-50 data-[state=checked]:bg-text-primary motion-reduce:transition-none',
+        'inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-control bg-card outline-none transition-colors duration-fast focus-visible:ring-1 focus-visible:ring-focus disabled:opacity-50 data-[state=checked]:bg-text-primary motion-reduce:transition-none',
         className,
       )}
       {...props}
@@ -25,7 +25,7 @@ export function Checkbox({
   return (
     <CheckboxPrimitive.Root
       className={cn(
-        'inline-flex size-4 shrink-0 items-center justify-center rounded-sm border border-focus bg-surface outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-50 data-[state=checked]:bg-text-primary data-[state=checked]:text-app',
+        'inline-flex size-4 shrink-0 items-center justify-center rounded-sm border border-focus bg-surface outline-none focus-visible:ring-1 focus-visible:ring-focus disabled:opacity-50 data-[state=checked]:bg-text-primary data-[state=checked]:text-app',
         className,
       )}
       {...props}

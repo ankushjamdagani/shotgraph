@@ -1,3 +1,4 @@
+import { toast } from '../../services/toastService';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, userEvent, within } from 'storybook/test';
 import { Button } from './button';
@@ -78,4 +79,13 @@ export const StandardDialog: Story = {
       </DialogContent>
     </Dialog>
   ),
+};
+
+export const ProjectNotifications: Story = {
+  render: () => <div className="flex flex-wrap gap-3">
+    <Button variant="secondary" borderTone="subtle" onClick={()=>toast.success('Summer film','Project renamed')}>Rename toast</Button>
+    <Button variant="secondary" borderTone="subtle" onClick={()=>toast.success('Summer film copy','Project copied',6500,{label:'Show',onClick:()=>{}})}>Copy toast</Button>
+    <Button variant="secondary" borderTone="subtle" onClick={()=>toast.success('Summer film','Moved to Trash',6500,{label:'Undo',onClick:()=>{toast.success('Summer film','Project restored');}})}>Delete toast</Button>
+    <Button variant="secondary" borderTone="subtle" onClick={()=>toast.error('The project could not be moved. Please try again.','Could not delete project')}>Error toast</Button>
+  </div>,
 };

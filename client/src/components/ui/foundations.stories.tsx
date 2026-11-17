@@ -1,102 +1,21 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Button, IconButton } from './button';
-import { Sun } from 'lucide-react';
-import { Separator } from './separator';
-import { toast } from '../../services/toastService';
-const meta = {
-  title: 'Foundations/Overview',
-  parameters: { layout: 'padded' },
-} satisfies Meta;
+import { Button } from './button';
+import { Input } from './input';
+import { getPageBackground } from './page-background';
+
+const meta = { title: 'Foundations/Approved system' } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+/** Semantic swatches resolve against Storybook's light/dark theme toolbar. */
 export const Tokens: Story = {
-  render: () => (
-    <div className="max-w-3xl space-y-8">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Shotgraph design system
-        </h1>
-        <p className="mt-3 text-sm leading-relaxed text-text-muted">
-          An evolving baseline from the approved Projects screen. Radix
-          behavior, Tailwind styles, shared tokens. Switch themes from the
-          Storybook toolbar.
-        </p>
-      </div>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {[
-          ['App', 'bg-app'],
-          ['Surface', 'bg-surface'],
-          ['Card', 'bg-card'],
-          ['Hover', 'bg-hover'],
-        ].map(([name, style]) => (
-          <div key={name}>
-            <div className={'h-20 rounded-lg border border-subtle ' + style} />
-            <p className="mt-2 text-sm">{name}</p>
-          </div>
-        ))}
-      </div>
-      <Separator />
-      <div className="space-y-3">
-        <h2 className="text-xl font-semibold">Type & controls</h2>
-        <p className="text-sm text-text-muted">
-          Plus Jakarta Sans for UI. JetBrains Mono for technical measurements.
-          Default controls are 34px; small 28px; large 40px.
-        </p>
-        <div className="flex items-center gap-3">
-          <Button>Primary action</Button>
-          <Button variant="secondary">Secondary</Button>
-          <IconButton label="Theme" variant="secondary">
-            <Sun />
-          </IconButton>
-        </div>
-      </div>
-      <Separator />
-      <div>
-        <h2 className="text-xl font-semibold">Motion</h2>
-        <p className="mt-2 text-sm text-text-muted">
-          150ms for hover; 240ms for reordering; 520ms for a new card.
-          Reduced-motion preferences disable nonessential movement. Notification
-          markers last six seconds.
-        </p>
-      </div>
-    </div>
-  ),
-};
-export const Notifications: Story = {
-  render: () => (
-    <div className="flex flex-wrap gap-3">
-      <Button
-        onClick={() =>
-          toast.success('Summer film', 'Project copied', 6500, {
-            label: 'Show',
-            onClick: () => {},
-          })
-        }
-      >
-        Copy toast
-      </Button>
-      <Button
-        variant="secondary"
-        onClick={() => toast.success('Summer film', 'Project renamed')}
-      >
-        Rename toast
-      </Button>
-      <Button
-        variant="secondary"
-        onClick={() => toast.success('Summer film', 'Moved to Trash')}
-      >
-        Delete toast
-      </Button>
-      <Button
-        variant="destructive"
-        onClick={() =>
-          toast.error(
-            'The folder could not be moved. Its files were preserved.',
-          )
-        }
-      >
-        Error toast
-      </Button>
-    </div>
-  ),
+  render: () => <div className="w-[min(760px,85vw)] space-y-8 p-6 text-text-primary" style={getPageBackground()}>
+    <div><h1 className="text-xl font-semibold">Warm Stock · neutral controls</h1><p className="mt-2 text-sm text-text-muted">Color supports feedback and artwork. Actions stay neutral.</p></div>
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">{[
+      ['App', 'var(--bg-app)'], ['Surface', 'var(--bg-surface)'], ['Card', 'var(--bg-card)'], ['Hover', 'var(--bg-hover)'],
+      ['Primary ink', 'var(--text-primary)'], ['Muted ink', 'var(--text-muted)'], ['Notification', 'var(--notification)'], ['Danger', 'var(--danger)'],
+    ].map(([label, color]) => <div key={label}><div className="h-16 rounded-md border border-subtle" style={{background:color}}/><p className="mt-2 text-xs">{label}</p></div>)}</div>
+    <div className="flex flex-wrap items-center gap-3"><Button size="sm">Small · 28</Button><Button>Standard · 34</Button><Button size="lg">Large · 40</Button><Button variant="secondary" borderTone="subtle">Secondary</Button><Button variant="ghost">Ghost</Button></div>
+    <div className="space-y-3"><Input borderTone="subtle" aria-label="Collection search" placeholder="Subtle collection boundary"/><Input aria-label="Form field" placeholder="Stronger form boundary"/><p className="text-xs text-text-muted">Tab through controls to inspect the 1px focus ring and 1px offset.</p></div>
+  </div>,
 };
