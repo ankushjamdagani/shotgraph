@@ -589,7 +589,7 @@ export class ProjectService {
   /**
    * Loads project state from disk.
    */
-  static async loadProject(projectRoot: string): Promise<FilmProject> {
+  static async loadProject(projectRoot: string, options: { trackOpened?: boolean } = {}): Promise<FilmProject> {
     const projectJsonPath = path.join(projectRoot, '.studio', 'project.json');
     try {
       const data = await fs.readFile(projectJsonPath, 'utf-8');
@@ -597,8 +597,8 @@ export class ProjectService {
       if (!raw || typeof raw.id !== 'string' || typeof raw.name !== 'string' || !raw.nodes || !Array.isArray(raw.scenes)) throw new Error('Invalid project state');
       const project = ProjectMigrationService.migrateProjectV2toV3(raw) as FilmProject;
       project.subjectAnchors = project.subjectAnchors || [];
-      // Register in central index as recently opened
-      await ProjectRegistry.registerProject(projectRoot, project, {
+      // Read-only operations such as copying must preserve the source recency.
+      if (options.trackOpened !== false) await ProjectRegistry.registerProject(projectRoot, project, {
         basePresetId: project.basePresetId,
         styleOverrides: project.styleOverrides,
         additionalConstraints: project.additionalConstraints,
@@ -640,7 +640,7 @@ export class ProjectService {
   /** Copy managed project content into a new sibling folder without sharing media. */
   static async duplicateProject(sourceRoot: string): Promise<FilmProject> {
     return serialized(sourceRoot, async () => {
-      const source = await this.loadProject(sourceRoot);
+      const source = await this.loadProject(sourceRoot, { trackOpened: false });
       const destination = await fs.mkdtemp(path.join(path.dirname(sourceRoot), `${path.basename(sourceRoot)}-copy-`));
       try {
         const copy: FilmProject = structuredClone(source);

@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
+import { ProjectRegistry } from '../../src/services/projectRegistry.js';
 import { ProjectService } from '../../src/services/projectService.js';
 
 describe('ProjectService DAG and Folder Management', () => {
@@ -20,7 +21,10 @@ describe('ProjectService DAG and Folder Management', () => {
     const source = await ProjectService.initProject(sourceRoot, 'Original', { initGit: false });
     await fs.writeFile(path.join(sourceRoot, 'assets', 'clip.mp4'), 'original footage');
     await fs.writeFile(path.join(sourceRoot, 'unrelated.txt'), 'not project content');
+    const before = (await ProjectRegistry.listRecentProjects()).find(p => p.id === source.id)!;
     const copy = await ProjectService.duplicateProject(sourceRoot);
+    const after = (await ProjectRegistry.listRecentProjects()).find(p => p.id === source.id)!;
+    expect(after.lastOpenedAt).toBe(before.lastOpenedAt);
     expect(copy.id).not.toBe(source.id);
     expect(copy.name).toBe('Original copy');
     expect(copy.projectRoot).not.toBe(sourceRoot);
