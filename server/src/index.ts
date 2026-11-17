@@ -195,6 +195,9 @@ server.get('/api/health', async () => {
 // 2. Project Manager & Multi-Project Hub
 // ==========================================
 
+const defaultProjectsRoot = path.resolve(process.env.HOME || process.env.USERPROFILE || '.', 'Movies', 'VS_Projects');
+server.get('/api/projects/default-location', async () => ({ path: defaultProjectsRoot, separator: path.sep }));
+
 // List recent projects
 server.get('/api/projects', async () => {
   return await ProjectRegistry.listRecentProjects();
@@ -242,12 +245,7 @@ server.post('/api/projects/create', async (req, reply) => {
 
   const projectName = (name && name.trim()) || 'Untitled Video Project';
   const sanitized = projectName.toLowerCase().replace(/[^a-z0-9_-]/g, '_') || 'untitled_project';
-  const defaultDir = path.join(
-    process.env.HOME || process.env.USERPROFILE || '.',
-    'Movies',
-    'VS_Projects',
-    sanitized
-  );
+  const defaultDir = path.join(defaultProjectsRoot, sanitized);
   const targetDir = dirPath && dirPath.trim() ? dirPath.trim() : defaultDir;
 
   try {
