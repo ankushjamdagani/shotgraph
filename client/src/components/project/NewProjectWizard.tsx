@@ -1,3 +1,5 @@
+import { SetupProgress } from '../ui/setup-progress';
+import { ProjectTitleField, type ProjectTitleVariant } from '../ui/project-title-field';
 import { SetupActions, type SetupActionVariant } from '../ui/setup-actions';
 import { Dialog as Primitive } from 'radix-ui';
 import { Button, IconButton, Input, Textarea, Label, Checkbox } from '../ui';
@@ -53,7 +55,8 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ isOpen, onCl
       return () => controller.abort();
     }, []);
     const [prompt, setPrompt] = useState('');
-    const title = prompt.trim().split('\n')[0].slice(0,60);
+    const [title,setTitle] = useState('');
+    const [titleVariant,setTitleVariant] = useState<ProjectTitleVariant>('Above idea');
     const defaultFolderName = (title || 'Untitled Video Project').toLowerCase().replace(/[^a-z0-9_-]/g, '_') || 'untitled_project';
     const [folderPath, setFolderPath] = useState('');
     const displayedLocation = folderPath || (defaultLocation ? defaultLocation.path + defaultLocation.separator + defaultFolderName : locationError ? 'Location unavailable — choose a folder' : 'Loading save location…');
@@ -406,20 +409,19 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ isOpen, onCl
         <AsciiArt appearance={getDefaultStartAppearance()} exclusionStyle="soft" />
         <header className="shrink-0 px-5 sm:px-10">
           <div data-art-exclusion className="mx-auto flex h-16 w-full max-w-[832px] px-4 sm:px-8 items-center justify-between gap-4">
-            <div className="flex items-center gap-3"><Film className="size-5"/><span className="text-sm font-semibold">Shotgraph</span></div>
+            <div className="flex items-center gap-3"><Film className="size-5"/><span className="text-sm font-semibold">Shotgraph</span></div>{titleVariant==='Header title' && <ProjectTitleField value={title} onChange={setTitle} variant={titleVariant}/>}
             <IconButton label="Close create project" disabled={isSubmitting} onClick={() => { generation.current?.abort(); onClose(); }}><X /></IconButton>
           </div>
         </header>
-        <div ref={dialogRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable_both-edges]">
-          <main className="flex flex-1 flex-col justify-center px-5 py-8 sm:px-10 sm:py-10">
-            <form className="mx-auto w-full max-w-[832px] px-4 sm:px-8" onSubmit={event => { event.preventDefault(); next(); }} onKeyDown={event => { if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); next(); } }}><fieldset disabled={isSubmitting} className="flex min-w-0 flex-col gap-8 border-0 p-0">
-              <nav data-art-exclusion aria-label="Project setup steps" className="space-y-3">
-                <div className="flex items-center justify-between text-xs"><span className="font-medium">Step {currentStep} of {stepNames.length} · {stepNames[currentStep-1]}</span><span className="text-text-muted">{currentStep===7?'Ready to create':`Next: ${stepNames[currentStep]}`}</span></div>
-                <ol className="grid grid-cols-7 gap-2">{stepNames.map((name,index)=><li key={name}><Button variant="quiet" disabled={index+1>furthestStep || isSubmitting || isAmbientGenerating} onClick={()=>advanceToStep(index+1)} aria-label={`Step ${index+1}: ${name}`} aria-current={currentStep===index+1?'step':undefined} className="h-auto w-full flex-col items-start gap-2 px-0 py-1 disabled:opacity-100"><span className={`h-0.5 w-full ${index+1<=currentStep?'bg-text-primary':'bg-subtle'}`}/><span className="hidden text-xs sm:inline">{name}</span></Button></li>)}</ol>
-              </nav>
-              <div data-art-exclusion className="-mb-4 pt-4"><Primitive.Title className="text-3xl font-semibold tracking-tight">{headings[currentStep - 1]}</Primitive.Title><Primitive.Description id="create-description" className={currentStep === 1 ? 'sr-only' : 'mt-3 text-sm leading-relaxed text-text-muted'}>{descriptions[currentStep - 1]}</Primitive.Description></div>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <main className="flex min-h-0 flex-1 flex-col justify-center px-5 py-4 sm:px-10 sm:py-8">
+            <form className="mx-auto flex min-h-0 w-full max-w-[832px] flex-1 flex-col px-4 sm:max-h-[800px] sm:px-8" onSubmit={event => { event.preventDefault(); next(); }} onKeyDown={event => { if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); next(); } }}><fieldset disabled={isSubmitting} className="flex min-h-0 min-w-0 flex-1 flex-col border-0 p-0">
+              <div data-art-exclusion><SetupProgress steps={stepNames} current={currentStep} furthest={furthestStep} disabled={isSubmitting || isAmbientGenerating} onSelect={advanceToStep}/></div>
+              <div ref={dialogRef} className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-1 pb-5 pt-4 [scrollbar-gutter:stable_both-edges]">
+              <div data-art-exclusion className="flex flex-wrap items-center justify-between gap-3"><Primitive.Title className="text-3xl font-semibold tracking-tight">{headings[currentStep - 1]}</Primitive.Title>{currentStep===1 && titleVariant==='Beside heading' && <ProjectTitleField value={title} onChange={setTitle} variant={titleVariant}/>}<Primitive.Description id="create-description" className={currentStep === 1 ? 'sr-only' : 'mt-3 text-sm leading-relaxed text-text-muted'}>{descriptions[currentStep - 1]}</Primitive.Description></div>
               {errorMsg && <div role="alert" className="rounded-md border border-danger p-4 break-words text-sm text-danger">{errorMsg}{currentStep === 5 && <Button variant="ghost" onClick={triggerAmbientGeneration} className="mt-3">Retry generation</Button>}</div>}
               {currentStep === 1 && <div className="space-y-6">
+                {titleVariant!=='Header title' && titleVariant!=='Beside heading' && <div data-art-exclusion><ProjectTitleField value={title} onChange={setTitle} variant={titleVariant}/></div>}
                 <div data-art-exclusion className="space-y-4"><Label htmlFor="project-idea" className="sr-only">Your idea</Label><Textarea variant="plain" id="project-idea" ref={promptInputRef} rows={5} className="min-h-48 text-xl leading-relaxed sm:min-h-56 sm:text-2xl" value={prompt} onChange={e => handleTextChangeWithUrlExtraction(1, e.target.value, setPrompt)} placeholder="A story, a scene, a character. What do you have in mind?" aria-describedby="idea-help"/><p id="idea-help" className="text-xs text-text-muted">Include reference links, or start with just a thought.</p></div>
                 {stepUrls[1]?.length > 0 && <ul className="space-y-2">{stepUrls[1].map(url => <li key={url} className="flex items-center justify-between gap-3 text-xs"><a className="truncate underline" href={url} target="_blank" rel="noreferrer">{formatUrlLabel(url)}</a><IconButton label={`Remove reference ${formatUrlLabel(url)}`} onClick={() => removeUrl(1, url)}><X /></IconButton></li>)}</ul>}
                 <div data-art-exclusion className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs"><FolderOpen className="size-4 shrink-0 text-text-muted"/><span className="text-text-muted">Save to</span><span className="min-w-0 max-w-full break-all sm:max-w-lg" title={displayedLocation}>{displayedLocation}</span><Button variant="soft" size="sm" loading={isPickingDir} onClick={handlePickDirectory}>Change folder</Button></div>
@@ -430,13 +432,14 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ isOpen, onCl
               {currentStep === 5 && <div data-art-exclusion className="space-y-6">{isAmbientGenerating ? <div role="status" className="space-y-4 py-10"><Loader2 className="size-6 animate-spin"/><p className="text-sm">{ambientStatus}</p><p className="text-xs text-text-muted">You can create a blank project while the engine is working.</p></div> : <>{allVariations.map(v => <section key={v.id} className="space-y-4 rounded-thumbnail border border-subtle p-5"><label className="flex cursor-pointer items-center gap-3 text-sm font-semibold"><Checkbox checked={selectedCards.has(v.id)} onCheckedChange={() => toggleCardPick(v.id)}/>{v.title}</label><p className="text-xs text-text-muted">{v.durationLabel}</p><dl className="space-y-3">{v.beats.map((beat, i) => <div key={i}><dt className="text-xs font-medium">{beat.label}</dt><dd className="mt-1 text-sm leading-relaxed text-text-muted">{beat.text}</dd></div>)}</dl></section>)}<div className="space-y-2"><Label htmlFor="custom-story">Add your own direction</Label><div className="flex gap-2"><Input variant="plain" id="custom-story" ref={refineInputRef} value={refinePrompt} onChange={e => handleTextChangeWithUrlExtraction(5, e.target.value, setRefinePrompt)} placeholder="Describe a story direction"/><Button variant="secondary" borderTone="subtle" disabled={!refinePrompt.trim()} onClick={addCustomVariation}><Plus />Add</Button></div></div></>}</div>}
               {currentStep === 6 && <div data-art-exclusion className="space-y-8">{Array.from(selectedCards).map((id, index) => <section key={id} className="space-y-4"><h2 className="text-sm font-semibold">{allVariations.find(v => v.id === id)?.title || `Direction ${index + 1}`}</h2><ChoiceGroup label={`Look for direction ${index + 1}`} className="sm:grid-cols-2" value={branchAesthetics[id] || 'Liquid Glass'} onChange={value => setBranchAesthetics(prev => ({ ...prev, [id]: value }))} options={looks.map(value => ({ value, label: value }))}/><div className="space-y-2"><Label htmlFor={`look-${id}`}>Custom look and references</Label><Input variant="plain" id={`look-${id}`} ref={index === 0 ? aestheticInputRef : undefined} value={customAesthetics[id] || ''} onChange={e => setCustomAesthetics(prev => ({ ...prev, [id]: e.target.value }))} placeholder="Lighting, texture, lenses or moodboard links"/></div></section>)}</div>}
               {currentStep === 7 && <div data-art-exclusion className="space-y-6"><dl className="divide-y divide-subtle">{[['Project', title.trim() || 'Untitled Video Project'], ['Location', displayedLocation], ['Format', `${selectedAspect} · ${selectedDuration} seconds`], ['Engine', selectedModel], ['Mood', customMood || selectedMood || 'Not specified']].map(([label, value]) => <div key={label} className="grid gap-2 py-3 sm:grid-cols-[100px_1fr]"><dt className="text-sm text-text-muted">{label}</dt><dd className="break-words text-sm">{value}</dd></div>)}</dl>{Array.from(selectedCards).map(id => <div key={id} className="border-t border-subtle pt-4"><h2 className="text-sm font-semibold">{allVariations.find(v => v.id === id)?.title}</h2><p className="mt-2 text-sm text-text-muted">{branchAesthetics[id] || 'Liquid Glass'}{customAesthetics[id] && ` · ${customAesthetics[id]}`}</p></div>)}</div>}
-              <div data-art-exclusion><SetupActions variant={actionVariant} back={currentStep > 1} blank={currentStep <= 5} disabled={!canContinue} loading={isSubmitting} onBack={goBack} onBlank={skipDirectToStudio} primary={currentStep===7?'Create project':currentStep===4?'Generate story directions':'Continue'} extra={currentStep===4 ? <Button variant="quiet" onClick={()=>advanceToStep(5)}>Write my own story</Button> : undefined}/></div>
+              </div>
+              <div data-art-exclusion className="flex h-44 shrink-0 flex-col justify-end overflow-y-auto sm:h-40"><SetupActions variant={actionVariant} back={currentStep > 1} blank={currentStep <= 5} disabled={!canContinue} loading={isSubmitting} onBack={goBack} onBlank={skipDirectToStudio} primary={currentStep===7?'Create project':currentStep===4?'Generate story directions':'Continue'} extra={currentStep===4 ? <Button variant="quiet" onClick={()=>advanceToStep(5)}>Write my own story</Button> : undefined}/></div>
 
             </fieldset></form>
           </main>
 
         </div>
-        {SetupDesignTools && <React.Suspense fallback={null}><SetupDesignTools onChange={setActionVariant}/></React.Suspense>}
+        {SetupDesignTools && <React.Suspense fallback={null}><SetupDesignTools onChange={setActionVariant} onTitleChange={setTitleVariant}/></React.Suspense>}
       </Primitive.Content>
     </Primitive.Portal>
   </Primitive.Root>;
