@@ -13,6 +13,7 @@ export const buttonVariants = cva(
         secondary:
           'border border-control bg-surface text-text-primary hover:bg-hover',
         ghost: 'text-text-primary hover:bg-hover',
+        soft: 'bg-card text-text-primary hover:bg-hover',
         quiet: 'text-text-muted hover:bg-hover hover:text-text-primary',
         destructive: 'bg-danger-solid text-white hover:bg-danger-hover',
       },

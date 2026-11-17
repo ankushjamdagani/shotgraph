@@ -83,3 +83,5 @@ export const States: Story = {
 };
 
 export const SubtleBorder: Story = { args: { variant: 'secondary', borderTone: 'subtle', children: 'Open folder' } };
+
+export const Soft: Story = { args: { variant: 'soft', children: 'Change folder' } };
