@@ -3,7 +3,8 @@ import { selectedCard } from './selection';
 import { Check } from 'lucide-react';
 import { Loader2, Sparkles } from 'lucide-react';
 import { Button } from './button';
-import { ChoiceGroup } from './choice-group';
+import { VisualChoiceList,type VisualListVariant } from './visual-choice-list';
+import { MoodThumbnail,moodVisuals } from './mood-visuals';
 export const presetMoods = [
   {value:'Calm & reflective',label:'Calm & reflective',description:'Gentle pacing, quiet moments and space to breathe.'},
   {value:'Warm & uplifting',label:'Warm & uplifting',description:'Hopeful, human and full of possibility.'},
@@ -12,27 +13,13 @@ export const presetMoods = [
   {value:'Playful & light',label:'Playful & light',description:'Curiosity, humor and unexpected little moments.'},
   {value:'Dreamlike & atmospheric',label:'Dreamlike & atmospheric',description:'Soft transitions, texture and a sense of wonder.'},
 ];
-const moodVisuals = [
-  {image:'editorial.jpg',grade:'saturate-50 brightness-90',pace:'Slow',light:'Soft daylight'},
-  {image:'editorial.jpg',grade:'sepia-[.55] saturate-150 brightness-110',pace:'Flowing',light:'Golden warmth'},
-  {image:'cyber-noir.jpg',grade:'saturate-150 contrast-125',pace:'Fast',light:'High contrast'},
-  {image:'cyber-noir.jpg',grade:'saturate-50 brightness-50 contrast-125',pace:'Suspenseful',light:'Deep shadows'},
-  {image:'editorial.jpg',grade:'saturate-200 brightness-125',pace:'Bouncy',light:'Bright color'},
-  {image:'editorial.jpg',grade:'hue-rotate-30 saturate-50 blur-[1px] brightness-110',pace:'Drifting',light:'Diffused glow'},
-];
-function MoodVisual({index}:{index:number}) {
-  const visual=moodVisuals[index];
-  return <div className="mb-4 space-y-2">
-    <div className="h-24 overflow-hidden rounded-md"><img src={`/look-previews/${visual.image}`} alt="" className={cn('size-full object-cover',visual.grade)} loading="lazy"/></div>
-    <div className="flex items-center justify-between gap-2 text-xs text-text-muted"><span>{visual.pace}</span><span>{visual.light}</span></div>
-  </div>;
-}
-export function MoodPicker({value,onChange,suggestion,loading,error,hasIdea,onRetry}:{value:string;onChange:(title:string,description:string)=>void;suggestion?:{title:string;desc:string};loading?:boolean;error?:boolean;hasIdea?:boolean;onRetry:()=>void}) {
+export function MoodPicker({value,onChange,suggestion,loading,error,hasIdea,onRetry,variant='Landscape cards'}:{value:string;onChange:(title:string,description:string)=>void;suggestion?:{title:string;desc:string};loading?:boolean;error?:boolean;hasIdea?:boolean;onRetry:()=>void;variant?:VisualListVariant}) {
   return <div className="space-y-5">
     <section aria-label="Suggested mood" className={cn("rounded-thumbnail border border-subtle p-4",suggestion && value===suggestion.title && selectedCard)}>
       <div className="mb-3 flex items-center gap-2 text-xs text-text-muted"><Sparkles className="size-3.5"/>Suggested for your idea{suggestion && value===suggestion.title && <span className="ml-auto flex items-center gap-1 font-medium text-text-primary"><Check className="size-3.5"/>Selected</span>}</div>
-      {loading ? <p role="status" className="flex items-center gap-2 text-sm"><Loader2 className="size-4 animate-spin motion-reduce:animate-none"/>Reading the mood of your idea…</p> : suggestion ? <><p className="text-sm font-semibold">{suggestion.title}</p><p className="mt-2 text-sm leading-relaxed text-text-muted">{suggestion.desc}</p><Button variant="soft" size="sm" className="mt-3" aria-pressed={value===suggestion.title} onClick={()=>onChange(suggestion.title,suggestion.desc)}>{value===suggestion.title?'Selected':'Use this mood'}</Button></> : <div role="status"><p className="text-sm text-text-muted">{error?'Suggestions are unavailable. Pick a mood below or describe your own.':hasIdea?'Find a mood that suits your idea, or choose one below.':'Add an idea in Brief for a suggestion. You can choose a mood below now.'}</p>{hasIdea && <Button variant="soft" size="sm" className="mt-3" onClick={onRetry}>{error?'Try again':'Suggest a mood'}</Button>}</div>}
+      {loading ? <p role="status" className="flex items-center gap-2 text-sm"><Loader2 className="size-4 animate-spin motion-reduce:animate-none"/>Reading the mood of your idea…</p> : suggestion ? <><MoodThumbnail title={suggestion.title} description={suggestion.desc} className="mb-4 h-32 w-full"/><p className="text-sm font-semibold">{suggestion.title}</p><p className="mt-2 text-sm leading-relaxed text-text-muted">{suggestion.desc}</p><Button variant="soft" size="sm" className="mt-3" aria-pressed={value===suggestion.title} onClick={()=>onChange(suggestion.title,suggestion.desc)}>{value===suggestion.title?'Selected':'Use this mood'}</Button></> : <div role="status"><p className="text-sm text-text-muted">{error?'Suggestions are unavailable. Pick a mood below or describe your own.':hasIdea?'Find a mood that suits your idea, or choose one below.':'Add an idea in Brief for a suggestion. You can choose a mood below now.'}</p>{hasIdea && <Button variant="soft" size="sm" className="mt-3" onClick={onRetry}>{error?'Try again':'Suggest a mood'}</Button>}</div>}
     </section>
-    <ChoiceGroup label="Mood" className="sm:grid-cols-2" value={value} onChange={title=>onChange(title,presetMoods.find(mood=>mood.value===title)?.description || '')} options={presetMoods.map((mood,index)=>({...mood,preview:<MoodVisual index={index}/>}))}/>
+    <VisualChoiceList label="Mood" value={value} variant={variant} onChange={title=>onChange(title,presetMoods.find(mood=>mood.value===title)?.description || '')} options={presetMoods.map((mood,index)=>({...mood,image:`/look-previews/${moodVisuals[index].image}`,grade:moodVisuals[index].grade,detail:`${moodVisuals[index].pace} · ${moodVisuals[index].light}`}))}/>
+
   </div>;
 }
