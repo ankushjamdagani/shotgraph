@@ -65,7 +65,7 @@ export function MoodPicker({
   // Build options array with:
   // 1. AI Suggested card (if suggestion exists or loading)
   // 2. Curated Presets
-  // 3. Custom Prompt card
+  // The custom prompt input remains below the preset list.
   const options: VisualChoice[] = [];
 
   // 1. AI Suggested Card
@@ -102,16 +102,6 @@ export function MoodPicker({
     });
   });
 
-  // 3. Custom Prompt Card
-  options.push({
-    value: 'custom',
-    label: 'Custom prompt',
-    description: customMood.trim()
-      ? customMood
-      : 'Write your own emotional direction, camera pacing, and references',
-    isCustom: true,
-  });
-
   const isCustomActive = value === 'custom' || value === 'Custom prompt';
 
   const handleChoiceChange = (selectedKey: string) => {
@@ -131,7 +121,7 @@ export function MoodPicker({
 
   const handleCustomTextChange = (text: string) => {
     onCustomMoodChange?.(text);
-    onChange('Custom prompt', text);
+    onChange(text.trim() ? 'Custom prompt' : '', text);
   };
 
   return (
@@ -163,21 +153,20 @@ export function MoodPicker({
       />
 
       {/* Custom Input Box at Bottom (only when Custom card is selected) */}
-      {isCustomActive && (
+      {(
         <div className="mx-auto max-w-[832px] px-2 sm:px-4">
           <div className="space-y-2 pt-2 animate-in fade-in slide-in-from-top-1 duration-200">
             <Label htmlFor="project-mood" className="text-xs font-medium text-text-primary">
-              Your custom mood prompt
+              Or describe your own mood
             </Label>
             <Textarea
               variant="plain"
               id="project-mood"
-              rows={3}
+              rows={2}
               value={customMood}
               onChange={(e) => handleCustomTextChange(e.target.value)}
               placeholder="Describe your emotional direction, lighting tone, pacing, or film references…"
-              className="text-xs"
-              autoFocus
+              className="text-sm"
             />
           </div>
         </div>

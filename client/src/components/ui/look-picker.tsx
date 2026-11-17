@@ -73,16 +73,6 @@ export function LookPicker({
     grade: look.value === 'Editorial 35mm' ? 'sepia-[.35] saturate-75' : undefined,
   }));
 
-  // Add Custom Look Card
-  options.push({
-    value: 'custom',
-    label: 'Custom look',
-    description: customLook.trim()
-      ? customLook
-      : 'Specify custom lighting, lenses, color palette, or references',
-    isCustom: true,
-  });
-
   const isCustomActive = value === 'custom' || value === 'Custom look';
 
   const handleChoiceChange = (selectedKey: string) => {
@@ -95,7 +85,7 @@ export function LookPicker({
 
   const handleCustomTextChange = (text: string) => {
     onCustomLookChange?.(text);
-    onChange('Custom look');
+    onChange(text.trim() ? 'Custom look' : 'Liquid Glass');
   };
 
   return (
@@ -110,11 +100,11 @@ export function LookPicker({
       />
 
       {/* Custom Look Input (only when Custom card is selected) */}
-      {isCustomActive && (
+      {(
         <div className="mx-auto max-w-[832px] px-2 sm:px-4">
           <div className="space-y-2 pt-2 animate-in fade-in slide-in-from-top-1 duration-200">
             <Label htmlFor={`look-custom-${label}`} className="text-xs font-medium text-text-primary">
-              Your custom visual look prompt
+              Or describe your own visual look
             </Label>
             <Input
               variant="plain"
@@ -122,8 +112,7 @@ export function LookPicker({
               value={customLook}
               onChange={(e) => handleCustomTextChange(e.target.value)}
               placeholder="e.g. Anamorphic lens flare, Kodak 500T grain, high-contrast cyan shadows…"
-              className="text-xs"
-              autoFocus
+              className="text-sm"
             />
           </div>
         </div>

@@ -4,7 +4,7 @@ import { MoodPicker } from './mood-picker';
 const meta={title:'Patterns/Mood picker',component:MoodPicker} satisfies Meta<typeof MoodPicker>;
 export default meta;
 type Story=StoryObj<typeof meta>;
-export const Presets:Story={args:{value:'',onChange:()=>{},onRetry:()=>{},hasIdea:false},render:function Example(args){const [value,setValue]=useState('');return <div className="w-[min(720px,85vw)]"><MoodPicker {...args} value={value} onChange={setValue}/></div>;}};
+export const Presets:Story={args:{value:'',onChange:()=>{},onRetry:()=>{},hasIdea:false},render:function Example(args){const [value,setValue]=useState('');const [custom,setCustom]=useState('');return <div className="w-[min(720px,85vw)]"><MoodPicker {...args} value={value} onChange={setValue} customMood={custom} onCustomMoodChange={setCustom}/></div>;}};
 export const Suggesting:Story={...Presets,args:{...Presets.args,hasIdea:true,loading:true}};
 export const Suggested:Story={...Presets,args:{...Presets.args,hasIdea:true,suggestion:{title:'Quiet wonder',desc:'Reflective pacing with small moments of discovery.'}}};
 export const Unavailable:Story={...Presets,args:{...Presets.args,hasIdea:true,error:true}};

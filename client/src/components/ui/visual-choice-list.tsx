@@ -106,7 +106,7 @@ export function VisualChoiceList({
 
   // Keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if ((e.target as HTMLElement).closest('input, textarea, [contenteditable=true]')) return;
+    if ((e.target as HTMLElement).closest('input, textarea, button, [contenteditable=true]')) return;
     if (e.key === 'ArrowLeft') {
       e.preventDefault();
       handlePrev();
@@ -137,16 +137,12 @@ export function VisualChoiceList({
       aria-label={label}
       role="region"
     >
-      {/* Infinite Carousel Stage with Left/Right Edge Fade Out */}
+      {/* Overscan leaves room for rotated cards and their shadows. */}
       <div
-        className="relative mx-auto flex h-[280px] w-full max-w-[1100px] items-center justify-center overflow-hidden sm:h-[320px]"
+        className="relative left-1/2 flex -translate-x-1/2 h-[300px] w-[min(1240px,var(--setup-rail-width,calc(100vw-32px)))] items-center justify-center overflow-hidden sm:h-[340px]"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Left & Right Edge Fade Out Overlays (pointer-events-none so cards remain directly clickable) */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-40 w-12 sm:w-16 bg-gradient-to-r from-app via-app/80 to-transparent" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-40 w-12 sm:w-16 bg-gradient-to-l from-app via-app/80 to-transparent" />
-
         {/* Subtle Ambient Back-Reflection Glow of Active Card */}
         <div
           className="pointer-events-none absolute left-1/2 top-1/2 h-[220px] w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-25 blur-3xl transition-colors duration-500"
@@ -187,7 +183,7 @@ export function VisualChoiceList({
 
             if (activeVariant === 'Arched fan') {
               translateX = offset * 160;
-              translateY = Math.min(absOffset * absOffset * 16, 80);
+              translateY = Math.min(absOffset * absOffset * 10, 40);
               rotateZ = Math.max(-24, Math.min(24, offset * 7.5));
               scale = Math.max(0.72, 1.05 - absOffset * 0.1);
               opacity = Math.max(0.35, 1 - absOffset * 0.22);
@@ -228,6 +224,7 @@ export function VisualChoiceList({
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
+                    e.stopPropagation();
                     handleSelectIndex(index);
                   }
                 }}
@@ -237,7 +234,7 @@ export function VisualChoiceList({
                   className={cn(
                     'relative h-[180px] w-[180px] sm:h-[210px] sm:w-[210px] aspect-square overflow-hidden rounded-[26px] sm:rounded-[30px] transition-all duration-300',
                     isCenter
-                      ? 'border-2 border-white/95 shadow-[0_25px_50px_rgba(0,0,0,0.7)] ring-4 ring-white/10'
+                      ? 'border-2 border-white/95 shadow-md ring-4 ring-white/10'
                       : 'border border-white/20 shadow-md hover:border-white/50 hover:brightness-105',
                     option.isCustom && 'bg-gradient-to-br from-surface to-card border-dashed',
                   )}
@@ -293,7 +290,7 @@ export function VisualChoiceList({
                   )}
 
                   {/* Checkmark badge on center card */}
-                  {isCenter && (
+                  {isCenter && value === option.value && (
                     <div className="absolute right-3.5 top-3.5 flex size-6 items-center justify-center rounded-full bg-text-primary text-app shadow-md animate-in fade-in zoom-in duration-200">
                       <Check className="size-3.5 stroke-[2.5]" />
                     </div>
@@ -313,20 +310,20 @@ export function VisualChoiceList({
             <button
               type="button"
               onClick={handlePrev}
-              className="flex size-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/80 hover:bg-white/15 hover:text-white hover:scale-105 active:scale-95 transition backdrop-blur-sm shadow-xs"
+              className="flex size-8 items-center justify-center rounded-full border border-subtle bg-card text-text-muted hover:bg-hover hover:text-text-primary hover:scale-105 active:scale-95 transition backdrop-blur-sm shadow-xs"
               aria-label="Previous option"
             >
               <ChevronLeft className="size-4" />
             </button>
 
-            <h3 className="text-xl sm:text-2xl font-normal tracking-tight text-white min-w-0">
+            <h3 className="text-xl sm:text-2xl font-normal tracking-tight text-text-primary min-w-0">
               {activeOption.label}
             </h3>
 
             <button
               type="button"
               onClick={handleNext}
-              className="flex size-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/80 hover:bg-white/15 hover:text-white hover:scale-105 active:scale-95 transition backdrop-blur-sm shadow-xs"
+              className="flex size-8 items-center justify-center rounded-full border border-subtle bg-card text-text-muted hover:bg-hover hover:text-text-primary hover:scale-105 active:scale-95 transition backdrop-blur-sm shadow-xs"
               aria-label="Next option"
             >
               <ChevronRight className="size-4" />
@@ -334,7 +331,7 @@ export function VisualChoiceList({
           </div>
 
           {/* Simplified Description */}
-          <p className="max-w-md text-xs sm:text-sm text-neutral-400 font-light leading-relaxed line-clamp-2 pt-0.5">
+          <p className="max-w-md text-xs sm:text-sm text-text-muted font-light leading-relaxed line-clamp-2 pt-0.5">
             {activeOption.description}
           </p>
         </div>
