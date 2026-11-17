@@ -7,3 +7,5 @@
 - Sonner owns notifications. Do not create a toast renderer or notification store.
 - New or changed shared components need Storybook examples for relevant states and both themes. Extend the system as screens are reviewed; do not redesign unreviewed screens incidentally.
 - Run `npm run check`, `npm run build`, and `npm run build-storybook` from the repository root for design-system changes. Verify affected interactions in the browser.
+- Use Leva for development-only visual tuning and comparison controls. Keep it lazily imported behind `import.meta.env.DEV`, use a scoped store, provide Reset, and do not persist experiments as production defaults. Promote approved settings into tokens/component variants.
+- Treat the approved Projects listing as the visual reference: Warm Stock ground, neutral actions, subtle shared borders, Preview Veil hover and Quiet rows. Keep DESIGN.md current rather than appending rejected experiment history. Add or update a Storybook pattern when a reviewed screen establishes reusable behavior.

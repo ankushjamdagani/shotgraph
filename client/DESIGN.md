@@ -1,53 +1,78 @@
-# Shotgraph UI system — incremental baseline
+# Shotgraph design system
 
-The approved Projects screen is the starting point. This is a small working system, not a complete specification. Expand it during screen reviews.
+The approved Projects listing is the visual reference for future screens. This is an incremental system: reuse its language, then extend it as each screen is reviewed. Do not restyle unreviewed editor screens incidentally.
 
-## Stack and locations
+## Source of truth
 
-- **Radix UI Primitives:** accessible interactions, focus, keyboard navigation and portals.
-- **Tailwind + CVA:** component styles and explicit variants.
-- **Sonner:** notifications, bottom right, close button inside the right edge.
-- **Lucide:** icons.
-- `src/components/ui/`: shared components and colocated stories. Import from its barrel or a component file.
-- `src/styles/tokens.css`: semantic theme values.
-- `tailwind.config.js`: token mappings, control sizes, named motion.
-- `.storybook/`: Storybook configuration and global light/dark toolbar.
+| Concern | Implementation |
+| --- | --- |
+| Theme, color, size, radius and motion tokens | `src/styles/tokens.css` |
+| Tailwind token mappings and named animations | `tailwind.config.js` |
+| Reusable controls and colocated stories | `src/components/ui/` |
+| Collection layout and hover recipes | `collection-appearance.ts`, `collection-hover.ts` |
+| Welcome composition and procedural artwork | `project-start-panel.tsx`, `ascii-art.tsx` |
+| Notifications | `toaster.tsx` (Sonner, shared by app and Storybook) |
+| Development tuning | `src/dev/ProjectDesignTools.tsx` (Leva) |
 
-Run `npm run storybook` from the repository root; open http://127.0.0.1:6006. Build the static catalogue with `npm run build-storybook`.
+Use Radix primitives for keyboard behavior, focus management, menus and dialogs. Style through Tailwind, CVA variants and semantic tokens; use `cn` to merge classes. Do not introduce another component framework, notification renderer or page-specific control override.
 
-## Visual baseline
+## Approved visual language
 
-Paper & Ink is white with charcoal text. Film Lab uses black and neutral dark surfaces. Theme colours are semantic: app, surface, card, hover, text-primary, text-muted, danger, notification, row-hover. Never use primary text as a notification colour.
+**Warm Stock** is the shared flat page/panel ground: the theme's app color mixed with 5% warm stock (#bda788). Paper & Ink uses charcoal text on white-derived surfaces; Film Lab uses light text on black-derived surfaces. Keep controls, branding, project creation tiles and typography neutral. Saturated color belongs to semantic feedback and the decorative **Cobalt Signal** ASCII gradient, not CTA fills or full-page washes.
 
-Plus Jakarta Sans is the UI font; JetBrains Mono is for measurements and technical data. Use a 4px spacing rhythm, with 2px adjustments inside compact controls. Default controls are 34px high, small controls 28px, large controls 40px. Icon buttons use the same sizes. Control radius is 6px, thumbnails 12px, dialogs 16px.
+Use Plus Jakarta Sans for UI and JetBrains Mono for technical data and ASCII. Use a 4px spacing rhythm with 2px adjustments inside compact controls. Standard UI text is 14px; supporting metadata and compact controls are 12px. The welcome heading scales from 30px to 48px. Important content must remain readable rather than shrinking to fit.
 
-Typography: page title 36px on desktop / 30px on narrow screens; section title 20px; normal UI text 14px; compact controls and supporting text 12px. Do not shrink important controls below these sizes to make a layout fit.
+| Element | Approved value |
+| --- | --- |
+| Small / standard / large controls | 28 / 34 / 40px, including icon buttons |
+| Control / thumbnail / dialog radius | 6 / 12 / 16px |
+| Gallery preview height | 200px |
+| Gallery column / row gap | 24 / 28px |
+| Quiet row padding | 16px horizontally and vertically |
+| Toolbar-to-results gap | 16px |
+| Focus ring | 1px with 1px offset |
 
-## Components
+Borders are 1px. Projects search, theme/design controls, view switch, secondary actions, thumbnails, panel frames and dialog Cancel use `border-subtle`; `Button` and `Input` expose `borderTone="subtle"`. General forms retain `border-control` where a stronger boundary is needed. Focus and error borders use their semantic tokens. Do not add local border colors to solve inconsistencies.
 
-- `Button`: primary, secondary, ghost, quiet, destructive; sizes sm/md/lg/icon/icon-sm. `asChild` uses Radix Slot. Loading disables interaction.
-- `IconButton`: requires an accessible `label`; use `Tooltip` for contextual explanation.
-- `Input`, `Textarea`, `Label`: pair visible labels with IDs; use `aria-invalid` and `aria-describedby` for errors.
-- `Checkbox`, `Switch`, `Select`: Radix interactions with Tailwind styling.
-- `SegmentedControl`: single selection for filters and view controls; Radix provides roving keyboard focus.
-- `Dialog`: focused tasks. `AlertDialog`: consequential confirmation, with Cancel first and focus restored when closed. Prevent automatic action-close while awaiting a server result.
-- `DropdownMenu`: actions with keyboard navigation; destructive items use the danger token.
-- `Badge`, `Separator`, `Thumbnail`, `Table*`: small compositional building blocks.
-- `InlineRename`: fixed-height title slot, Enter saves, Escape or blur cancels. Buttons stay in the same focus group; no layout shift.
-- `NewItemIndicator`: blue notification marker, card top-right / list thumbnail top-left. The parent removes it after six seconds; no storage.
+## Components and behavior
 
-## Interaction rules
+- **Button / IconButton:** primary, secondary, ghost, quiet and destructive variants. Use standard sizes; accessible labels are required for icon-only controls. Primary actions stay neutral. Loading prevents duplicate submission.
+- **Input / Textarea / Label:** connect labels and error descriptions. Search suppresses native appearance. Use `aria-invalid` for errors.
+- **Checkbox / Switch / Select / SegmentedControl:** Radix behavior; segmented controls provide roving keyboard focus. Grid/list controls use the same border family as search.
+- **DropdownMenu / CollectionSort:** accessible radio groups separate sort field (last opened, created, name) from direction. Compact trigger shows the current sort. Creation items remain pinned first.
+- **Dialog / AlertDialog:** use dialogs for focused tasks and alerts for consequential confirmation. Delete uses **Paper Veil**: 85% app-color overlay with 2px blur. Explain what will be moved to Trash and recovery limits. Cancel comes first; keep the dialog open while awaiting the result and restore focus on close.
+- **InlineRename:** edit in the existing fixed-height title slot. Enter saves; Escape or blur cancels. Editing must not shift adjacent content.
+- **Thumbnail / Table / ProjectNameCue:** transparent bordered previews, plain rows and a shared Preview Veil interaction. Keep names truncated and actions independent of the full-card/row opening target.
+- **NewItemIndicator:** notification-blue marker at card thumbnail top-right or list thumbnail top-left. Animate briefly and remove after six seconds; never persist it.
+- **Toaster:** Sonner at bottom right, close control inside the body on the right. Match surface, subtle border, dialog radius and compact typography; descriptions remain clearly readable. Report rename/copy/delete success only after completion; errors must be visible. Preserve Undo where supported.
 
-Thumbnail backgrounds start transparent with a subtle border; hover/focus adds the hover surface. Cards do not lift or scale on hover. Quick actions appear on hover or keyboard focus, and remain visible on touch. New Project remains the first item in both views; New Project and Open Folder also live in the header.
+## Collection composition
 
-Hover changes take 150ms. Reordering takes 240ms. A new card scales in over 520ms; a list row uses a smaller scale over 340ms. Deletion fades out before reflow, without horizontal translation. Respect prefers-reduced-motion. Keep rename stable and the scroll gutter reserved.
+The approved desktop composition is **Split · Framed welcome**: a broad framed left panel occupies 36% of width; the right pane owns search, compact sort and grid/list controls. No visible Projects heading, aspect filters, count, footer or sidebar. Narrow layouts retain creation actions above the collection.
 
-## Scope and CSS exceptions
+The left panel places branding and theme at the top. The introduction sits slightly above center, with New Project and Open Folder below it. Living Meadow is the default ASCII scene; frame-by-frame character motion and a changing Cobalt Signal gradient give the neutral page life. Keep artwork out of content bounds with 20px breathing room. Panel and page share the same base ground. Do not reintroduce body linework or page gradients.
 
-Projects and ThemeToggle use the shared components. Other editor screens are legacy and migrate as reviewed. Their existing CSS is not precedent for new components.
+Grid uses one column on small screens and two from medium widths. List uses **Quiet rows**: thumbnail/name/metadata plus hover actions, no column headings, surface fill, enclosing shadow or frame. Both views include a fully clickable New Project item first when matching results exist. With no results, show No matches found and retain creation actions outside the collection.
 
-Custom CSS remains for theme tokens, base/legacy editor styling, and Sonner's third-party close-button markup. Project graph geometry and collection FLIP animation require calculated coordinates; those are behavior-specific exceptions, not new control styles. Use named Tailwind keyframes for all reusable animation.
+## Interaction and motion
 
-## Growing the system
+**Preview Veil** is the only collection hover treatment: preview media recedes to 10% opacity, a plain Open/Create cue appears, the title gains subtle tracking and a small arrow, and metadata gains contrast. Apply it to existing projects and New Project in both views. Do not add thumbnail fills, contrasting action pills, lift, tilt, pan or zoom on hover. Keyboard focus provides the same cue; quick actions remain available on touch.
 
-Use an existing component first. Add a small variant for a repeated need, a new component when its interaction is reusable, and a Storybook example showing its states. Update this file when a design decision changes. Keep production data and API calls out of stories.
+Use shared durations: fast 150ms, normal 240ms. Collection reorder uses FLIP at 240ms. New cards zoom in over 520ms; rows use a smaller 340ms entrance. Deletion fades before reflow without horizontal translation or transient horizontal scroll. Reserve scroll gutter and fixed title height. Honor reduced motion for transitions and artwork; pause artwork while the document is hidden.
+
+## Storybook and verification
+
+Run `npm run storybook` (localhost:6006). Use the global Paper & Ink / Film Lab theme selector. Foundations shows current semantic tokens; Patterns/Collections covers the framed welcome, quiet rows, hover and inline editing. Navigation covers sorting; Overlays covers Paper Veil and real Sonner feedback with dummy data. Stories must not access production projects.
+
+For shared changes run `npm run check`, `npm run build`, and `npm run build-storybook`. Check relevant pointer, keyboard, empty, loading/error and long-title states in both themes. `node client/scripts/check-contrast.mjs` checks primary/muted text and strong control/focus boundaries against theme surfaces. Subtle decorative borders are intentionally quieter and are not a claim of 3:1 control-boundary contrast; controls also need clear labels and visible keyboard focus.
+
+## Extending the system
+
+1. Read this guide and find an existing component/story before adding UI.
+2. Reuse semantic tokens and approved recipes. Add a variant only for a real repeated need.
+3. Add stories for new shared behavior and relevant states in both themes.
+4. Record approved decisions here; remove rejected experiments instead of appending a review history.
+
+Leva is development-only, lazily imported behind `import.meta.env.DEV`, with a scoped store and Reset. Retained left-art comparisons are review tools, not additional production design directions. Approved defaults must work without the debugger. Do not persist experimental settings.
+
+Custom CSS is limited to semantic tokens, legacy editor styles, Sonner integration and effects not reasonably expressed by utilities. Procedural ASCII geometry/content exclusions and collection FLIP coordinates are behavior-specific exceptions. Keep reusable motion in named Tailwind animations. Existing legacy CSS is not precedent for new screens.

@@ -1,3 +1,8 @@
+import { CollectionSort, type CollectionSortValue } from '../ui/collection-sort';
+import { ProjectNameCue } from '../ui/collection';
+import { ProjectStartPanel } from '../ui/project-start-panel';
+import { getCollectionLayout, getCollectionListStyle, getCardHoverStyle } from '../ui/collection-appearance';
+import { getPageBackground, getDefaultStartAppearance, type ProjectBackgroundStyles } from '../ui/page-background';
 import { useDialog } from '../common/useDialog';
 import {
   Button,
@@ -8,7 +13,6 @@ import {
   Tooltip,
   Thumbnail,
   Table,
-  TableHead,
   TableCell,
   TableRow,
   InlineRename,
@@ -36,6 +40,7 @@ import {
   Pencil,
   Plus,
   Search,
+  ArrowRight,
   Trash2,
   CheckCircle2,
   X,
@@ -47,6 +52,10 @@ import {
 import { ProjectRegistryEntry, FilmProject } from '../../types';
 import { StudioTheme } from '../ui-ux/ThemeCustomizer';
 import { ThemeToggle } from '../ui-ux/ThemeToggle';
+
+const ProjectDesignTools = import.meta.env.DEV
+  ? React.lazy(() => import('../../dev/ProjectDesignTools'))
+  : null;
 
 const NewProjectWizard = React.lazy(() =>
   import('./NewProjectWizard').then((m) => ({ default: m.NewProjectWizard })),
@@ -63,7 +72,6 @@ interface ProjectHubModalProps {
 }
 
 type ViewMode = 'grid' | 'list';
-type AspectFilter = 'all' | '16:9' | '9:16' | '1:1';
 
 // Stage color-coding for the DAG visualizer
 const STAGE_COLORS: Record<string, string> = {
@@ -359,10 +367,14 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
   currentTheme = 'film-lab-mono',
   onThemeChange,
 }) => {
+  const [backgroundStyles, setBackgroundStyles] =
+    useState<ProjectBackgroundStyles>({ page: getPageBackground(), start: getDefaultStartAppearance(), panel: { borderBottomColor: 'transparent' } });
+  const look = getCollectionLayout();
+  const splitWorkspace = true;
   const [projects, setProjects] = useState<ProjectRegistryEntry[]>([]);
+  const [sortOrder, setSortOrder] = useState<CollectionSortValue>({by:'opened',direction:'desc'});
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [aspectFilter, setAspectFilter] = useState<AspectFilter>('all');
   const [isLoading, setIsLoading] = useState(false);
   const [isOpeningNativeFinder, setIsOpeningNativeFinder] = useState(false);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -415,7 +427,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
         { duration: 240, easing: 'cubic-bezier(.16,1,.3,1)' },
       );
     }
-  }, [projects, searchQuery, aspectFilter, viewMode, isOpen]);
+  }, [projects, searchQuery, sortOrder, viewMode, isOpen]);
   useEffect(() => {
     if (!copiedProjectId) return;
     copiedCard.current?.scrollIntoView({ block: 'nearest', behavior: 'auto' });
@@ -473,7 +485,6 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
       const sourceIndex = ordered.findIndex((entry) => entry.id === p.id);
       ordered.splice(sourceIndex + 1, 0, copiedEntry);
       setSearchQuery('');
-      setAspectFilter('all');
       setProjects(ordered);
       toast.success(copy.name, 'Project copied', 6500, {
         label: 'Show',
@@ -552,22 +563,16 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     setIsOpeningNativeFinder(true);
     setErrorMsg('');
     try {
-      const res = await apiFetch(
-        '/api/projects/pick-directory',
-        {
-          method: 'POST',
-        },
-      );
+      const res = await apiFetch('/api/projects/pick-directory', {
+        method: 'POST',
+      });
       const data = await res.json();
       if (data.path) {
-        const openRes = await apiFetch(
-          '/api/projects/open',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ path: data.path }),
-          },
-        );
+        const openRes = await apiFetch('/api/projects/open', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: data.path }),
+        });
         const openData = await openRes.json();
         if (openData.project) {
           onSelectProject(openData.project);
@@ -600,14 +605,11 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     setErrorMsg('');
 
     try {
-      const res = await apiFetch(
-        `/api/projects/${target.id}/remove`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ moveToTrash }),
-        },
-      );
+      const res = await apiFetch(`/api/projects/${target.id}/remove`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ moveToTrash }),
+      });
       const data = await res.json();
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Failed to remove project');
@@ -663,9 +665,13 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
       !q ||
       p.name.toLowerCase().includes(q) ||
       p.path.toLowerCase().includes(q);
-    const matchesAspect =
-      aspectFilter === 'all' || p.aspectRatio === aspectFilter;
-    return matchesSearch && matchesAspect;
+    return matchesSearch;
+  }).sort((a, b) => {
+    const comparison = sortOrder.by === 'name'
+      ? a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+      : sortOrder.by === 'created' ? (a.createdAt || 0) - (b.createdAt || 0)
+      : (a.lastOpenedAt || 0) - (b.lastOpenedAt || 0);
+    return sortOrder.direction === 'asc' ? comparison : -comparison;
   });
 
   const formatRelativeTime = (timestamp: number) => {
@@ -700,7 +706,11 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     const url = p.previewVideoUrl || p.previewThumbnailUrl;
     const video = !!url && /\.(mp4|webm|mov)(\?|$)/i.test(url);
     return (
-      <Thumbnail compact={compact}>
+      <Thumbnail
+        compact={compact}
+        data-list-thumb={compact || undefined}
+        className={compact ? look.compact : look.thumbnail}
+      >
         {url ? (
           video ? (
             <video
@@ -751,6 +761,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
       ) : (
         <Button
           variant="ghost"
+          data-project-name
           className="h-6 min-w-0 max-w-full justify-start px-0 text-sm font-semibold hover:bg-transparent"
           onClick={(e) => {
             e.stopPropagation();
@@ -760,6 +771,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
           <span className="truncate" title={p.name}>
             {p.name}
           </span>
+          <ProjectNameCue/>
         </Button>
       )}
     </div>
@@ -830,109 +842,129 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     <div
       ref={hubDialog}
       aria-label="Projects"
+      style={backgroundStyles?.page}
       className={cn(
         'flex flex-col overflow-hidden bg-app text-text-primary',
+        look.root,
         isStandalonePage
           ? 'h-screen w-screen'
           : 'relative h-[88vh] w-full max-w-6xl rounded-dialog border border-subtle shadow-dialog',
       )}
     >
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-4 bg-card px-5 pb-6 pt-7 sm:px-8 sm:pb-8 sm:pt-9">
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-          Projects
-        </h1>
-        <div className="flex items-center gap-2">
-          {onThemeChange && (
-            <ThemeToggle
-              currentTheme={currentTheme}
-              onThemeChange={onThemeChange}
-            />
+      {splitWorkspace && <ProjectStartPanel
+        onCreate={() => setIsWizardOpen(true)}
+        onOpenFolder={handleOpenFolderFromFinder}
+        opening={isOpeningNativeFinder}
+        style={backgroundStyles.start}
+        theme={onThemeChange && <ThemeToggle currentTheme={currentTheme} onThemeChange={onThemeChange}/>}
+      />}
+      <main className={cn("relative isolate flex min-h-0 min-w-0 flex-1 flex-col", look.main)}>
+      <div
+        className={cn('shrink-0 border-b border-subtle', look.panel)}
+        style={backgroundStyles?.panel}
+      >
+        <header
+          className={cn(
+            'flex shrink-0 flex-wrap items-center justify-between gap-4 px-5 pb-6 pt-7 sm:px-8 sm:pb-8 sm:pt-9',
+            look.header,
+            splitWorkspace && isStandalonePage && 'lg:contents',
           )}
-          <Button onClick={() => setIsWizardOpen(true)}>
-            <Plus />
-            New Project
-          </Button>
-          <Button
-            variant="ghost"
-            loading={isOpeningNativeFinder}
-            onClick={handleOpenFolderFromFinder}
+        >
+          <h1
+            className={cn(
+              'text-3xl font-semibold tracking-tight sm:text-4xl',
+              look.title,
+              splitWorkspace && 'sr-only',
+            )}
           >
-            {isOpeningNativeFinder ? 'Opening…' : 'Open Folder'}
-            <ArrowUpRight />
-          </Button>
-          {!isStandalonePage && onClose && (
-            <IconButton label="Close projects" onClick={onClose}>
-              <X />
-            </IconButton>
-          )}
-        </div>
-      </header>
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-subtle bg-card px-5 pb-5 sm:px-8">
-        <div className="flex w-full flex-wrap items-center gap-4 sm:w-auto sm:gap-7">
-          <div className="relative w-full sm:w-[340px]">
-            <Search className="pointer-events-none absolute left-3 top-3 size-4 text-text-muted" />
-            <Input
-              type="search"
-              aria-label="Search projects"
-              placeholder="Search projects…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-control-lg border-transparent pl-9 pr-9"
-            />
-            {searchQuery && (
-              <IconButton
-                label="Clear search"
-                size="icon-sm"
-                className="absolute right-1 top-1.5"
-                onClick={() => setSearchQuery('')}
-              >
+            Projects
+          </h1>
+          <div className={cn('flex items-center gap-2', look.actions, splitWorkspace && 'lg:hidden')}>
+            {onThemeChange && (
+              <ThemeToggle
+                currentTheme={currentTheme}
+                onThemeChange={onThemeChange}
+              />
+            )}
+            <Button onClick={() => setIsWizardOpen(true)}>
+              <Plus />
+              New Project
+            </Button>
+            <Button
+              variant="ghost"
+              loading={isOpeningNativeFinder}
+              onClick={handleOpenFolderFromFinder}
+            >
+              {isOpeningNativeFinder ? 'Opening…' : 'Open Folder'}
+              <ArrowUpRight />
+            </Button>
+            {!isStandalonePage && onClose && (
+              <IconButton label="Close projects" onClick={onClose}>
                 <X />
               </IconButton>
             )}
           </div>
-          <SegmentedControl
-            label="Aspect ratio"
-            value={aspectFilter}
-            onValueChange={(value) => setAspectFilter(value as AspectFilter)}
-            options={(['all', '16:9', '9:16'] as const).map((value) => ({
-              value,
-              label: value === 'all' ? 'All' : value,
-              content: (
-                <>
-                  {value === 'all' ? 'All' : value}
-                  <span className="text-[10px] text-text-muted">
-                    (
-                    {value === 'all'
-                      ? projects.length
-                      : projects.filter((p) => p.aspectRatio === value).length}
-                    )
-                  </span>
-                </>
-              ),
-            }))}
-            className="[&_[data-state=on]]:bg-surface"
-          />
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-text-muted">
-            {filteredProjects.length}{' '}
-            {filteredProjects.length === 1 ? 'project' : 'projects'}
-          </span>
-          <SegmentedControl
-            label="Project view"
-            value={viewMode}
-            onValueChange={(value) => setViewMode(value as ViewMode)}
-            options={[
-              { value: 'grid', label: 'Grid view', content: <LayoutGrid /> },
-              { value: 'list', label: 'List view', content: <List /> },
-            ]}
-            className="border border-subtle p-0.5 [&_button]:size-7 [&_button]:px-0 [&_[data-state=on]]:bg-surface"
-          />
+          {splitWorkspace && !isStandalonePage && onClose && (
+            <IconButton label="Close projects" className="hidden lg:inline-flex" onClick={onClose}><X/></IconButton>
+          )}
+        </header>
+        <div
+          className={cn(
+            'flex shrink-0 flex-nowrap items-center justify-between gap-3 px-5 pb-5 sm:px-8',
+            look.toolbar,
+            splitWorkspace && isStandalonePage && 'lg:pt-6',
+          )}
+        >
+          <div className={cn("flex min-w-0 flex-1 items-center", look.filters)}>
+            <div className={cn("relative w-full max-w-[340px]", look.search)}>
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-muted" />
+              <Input
+                type="search"
+                borderTone="subtle"
+                aria-label="Search projects"
+                placeholder="Search projects…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={cn("pl-9 pr-9", splitWorkspace ? "h-control" : "h-control-lg")}
+              />
+              {searchQuery && (
+                <IconButton
+                  label="Clear search"
+                  size="icon-sm"
+                  className="absolute right-1 top-1/2 -translate-y-1/2"
+                  onClick={() => setSearchQuery('')}
+                >
+                  <X />
+                </IconButton>
+              )}
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-3">
+            <CollectionSort value={sortOrder} onChange={setSortOrder}/>
+            <SegmentedControl
+              label="Project view"
+              value={viewMode}
+              onValueChange={(value) => setViewMode(value as ViewMode)}
+              options={[
+                { value: 'grid', label: 'Grid view', content: <LayoutGrid /> },
+                { value: 'list', label: 'List view', content: <List /> },
+              ]}
+              className="rounded-md border border-subtle p-0.5 [&_button]:size-7 [&_button]:px-0 [&_[data-state=on]]:bg-surface"
+            />
+          </div>
         </div>
       </div>
+      {ProjectDesignTools && (
+        <React.Suspense fallback={null}>
+          <ProjectDesignTools onChange={setBackgroundStyles} />
+        </React.Suspense>
+      )}
       <div
         ref={resultsRef}
-        className="flex-1 overflow-y-auto p-5 [scrollbar-gutter:stable] sm:p-8 sm:pt-6"
+        className={cn(
+          'flex-1 overflow-y-auto p-5 [scrollbar-gutter:stable] sm:p-8 sm:pt-6',
+          look.results,
+        )}
       >
         {errorMsg && !projectToDelete && (
           <p
@@ -950,24 +982,54 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
             <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
             Loading projects…
           </div>
+        ) : !filteredProjects.length ? (
+          <div
+            role="status"
+            className="flex min-h-72 flex-col items-center justify-center gap-3 px-6 text-center"
+          >
+            <Search className="mb-2 size-7 text-text-muted" aria-hidden />
+            <h2 className="text-lg font-semibold">No matches found</h2>
+            <p className="max-w-sm text-sm text-text-muted">
+              {projects.length
+                ? 'Try a different search or choose another format.'
+                : 'Your projects will appear here once you create or open one.'}
+            </p>
+            {searchQuery && (
+              <Button
+                variant="secondary"
+                borderTone="subtle"
+                className="mt-2"
+                onClick={() => {
+                  setSearchQuery('');
+                            }}
+              >
+                Clear filters
+              </Button>
+            )}
+          </div>
         ) : viewMode === 'grid' ? (
           <div key="grid" className="animate-enter motion-reduce:animate-none">
-            <div className="grid grid-cols-1 gap-x-6 gap-y-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              <article className="group min-w-0">
+            <div className={cn('grid', look.grid)}>
+              <article className={cn('group min-w-0', look.card, getCardHoverStyle())}>
                 <button
                   className="block w-full rounded-thumbnail text-left"
                   onClick={() => setIsWizardOpen(true)}
                 >
-                  <Thumbnail>
+                  <Thumbnail intent="create" className={look.thumbnail}>
                     <Plus className="size-7 stroke-[1.5] text-text-muted" />
                   </Thumbnail>
-                  <span className="mt-4 flex h-6 items-center text-sm font-semibold">
-                    New Project
+                  <span
+                    data-project-name
+                    className={cn(
+                      'mt-4 flex h-6 items-center gap-2 text-sm font-semibold',
+                    )}
+                  >
+                    New Project <ProjectNameCue/>
+                  </span>
+                  <span data-card-meta className="mt-2 block text-xs text-text-muted">
+                    Start with a brief
                   </span>
                 </button>
-                <p className="mt-2 text-xs text-text-muted">
-                  Start with a brief
-                </p>
               </article>
               {filteredProjects.map((p) => (
                 <article
@@ -976,8 +1038,13 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
                   id={`project-card-${p.id}`}
                   ref={p.id === copiedProjectId ? copiedCard : undefined}
                   aria-busy={busyAction === p.id}
+                  onClick={(event) => {
+                    if (!(event.target as HTMLElement).closest('button, input, [role="group"]')) void handleOpenProject(p.id);
+                  }}
                   className={cn(
-                    'group relative min-w-0',
+                    'group relative min-w-0 cursor-pointer',
+                    look.card,
+                    getCardHoverStyle(),
                     p.id === copiedProjectId &&
                       'animate-copy-arrive motion-reduce:animate-none',
                   )}
@@ -991,9 +1058,15 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
                   >
                     {thumb(p)}
                   </button>
-                  <div className="pt-4">
+                  <div className={look.details}>
                     {name(p)}
-                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs tabular-nums text-text-muted">
+                    <div
+                      data-card-meta
+                      className={cn(
+                        'mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs tabular-nums text-text-muted',
+                        look.metadata,
+                      )}
+                    >
                       <span>{p.aspectRatio}</span>
                       <span>{formatCutDuration(p.targetDurationSec)}</span>
                       <span>{p.fps || 30} FPS</span>
@@ -1009,60 +1082,32 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
                 </article>
               ))}
             </div>
-            {!filteredProjects.length &&
-              (searchQuery || aspectFilter !== 'all') && (
-                <p className="mt-6 text-sm text-text-muted">
-                  No projects match your search or filter.
-                </p>
-              )}
           </div>
         ) : (
           <div
             key="list"
-            className="animate-enter overflow-x-auto rounded-md border border-subtle motion-reduce:animate-none"
+            className={cn(
+              'animate-enter overflow-x-clip motion-reduce:animate-none',
+              look.list,
+              getCollectionListStyle(),
+            )}
           >
-            <Table>
-              <thead>
-                <tr>
-                  <TableHead>Project</TableHead>
-                  <TableHead>Format</TableHead>
-                  <TableHead>Last opened</TableHead>
-                  <TableHead>
-                    <span className="sr-only">Actions</span>
-                  </TableHead>
-                </tr>
-              </thead>
+            <Table className="table-fixed">
               <tbody>
-                <TableRow>
-                  <TableCell>
+                <TableRow onClick={(event) => { if (!(event.target as HTMLElement).closest("button")) setIsWizardOpen(true); }} className="cursor-pointer">
+                  <TableCell colSpan={2} className="p-0">
                     <button
-                      className="flex items-center gap-2 text-left"
+                      data-list-content
+                      className="flex w-full items-center gap-2 text-left"
                       onClick={() => setIsWizardOpen(true)}
                     >
-                      <Thumbnail compact>
+                      <Thumbnail compact intent="create" data-list-thumb className={look.compact}>
                         <Plus className="size-4 text-text-muted" />
                       </Thumbnail>
-                      <span className="flex h-6 w-[clamp(200px,33vw,520px)] items-center text-sm font-semibold">
-                        New Project
-                      </span>
+                      <span data-list-text className="min-w-0"><span data-project-name className="flex items-center gap-2 text-sm font-semibold">New Project<ProjectNameCue/></span><span data-list-meta className="mt-1 block text-xs text-text-muted">Start with a brief</span></span><span className="ml-auto flex items-center gap-2 text-xs text-text-muted opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">Create<ArrowRight className="size-3.5"/></span>
                     </button>
                   </TableCell>
-                  <TableCell className="text-text-muted">
-                    Start with a brief
-                  </TableCell>
-                  <TableCell className="text-text-muted">—</TableCell>
-                  <TableCell />
                 </TableRow>
-                {!filteredProjects.length && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={4}
-                      className="p-6 text-center text-sm text-text-muted"
-                    >
-                      No projects match your search or filter.
-                    </TableCell>
-                  </TableRow>
-                )}
                 {filteredProjects.map((p) => (
                   <TableRow
                     key={p.id}
@@ -1078,28 +1123,23 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
                     )}
                   >
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div data-list-content className="flex items-center gap-2">
                         {thumb(p, true)}
                         <div
-                          className="w-[clamp(200px,33vw,520px)] min-w-0"
+                          data-list-text
+                          className="min-w-0 flex-1"
                           title={`${p.path}${p.dagNodes ? ` · ${p.dagNodes.length} nodes` : ''}`}
                         >
                           {name(p)}
-                          {p.id === currentProjectId && <Badge>Active</Badge>}
+                          <div data-list-meta className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted">
+                            <span className="tabular-nums">{p.aspectRatio} · {formatCutDuration(p.targetDurationSec)} · {p.fps || 30} fps</span>
+                            <span>{formatRelativeTime(p.lastOpenedAt)}</span>
+                            {p.id === currentProjectId && <Badge>Active</Badge>}
+                          </div>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="whitespace-nowrap tabular-nums text-text-muted">
-                      {p.aspectRatio}
-                      <span className="mx-2">·</span>
-                      {formatCutDuration(p.targetDurationSec)}
-                      <span className="mx-2">·</span>
-                      {p.fps || 30} fps
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap text-text-muted">
-                      {formatRelativeTime(p.lastOpenedAt)}
-                    </TableCell>
-                    <TableCell>{actions(p, true)}</TableCell>
+                    <TableCell className="w-44">{actions(p, true)}</TableCell>
                   </TableRow>
                 ))}
               </tbody>
@@ -1107,6 +1147,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
           </div>
         )}
       </div>
+      </main>
     </div>
   );
   return (
