@@ -10,7 +10,7 @@ export const Input = React.forwardRef<
     className={cn(
       'appearance-none h-control w-full min-w-0 rounded-md border border-control bg-surface px-3 text-sm text-text-primary outline-none placeholder:text-text-muted focus-visible:ring-1 focus-visible:ring-focus focus-visible:ring-offset-1 focus-visible:ring-offset-app disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-danger aria-[invalid=true]:ring-danger',
       borderTone === 'subtle' && 'border-subtle',
-      variant === 'plain' && 'focus-visible:outline-none rounded-none border-0 bg-transparent px-3 shadow-none focus-visible:ring-0 focus-visible:underline focus-visible:decoration-focus focus-visible:underline-offset-4',
+      variant === 'plain' && 'focus-visible:outline-none rounded-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 focus-visible:underline focus-visible:decoration-focus focus-visible:underline-offset-4',
       className,
     )}
     {...props}
@@ -25,7 +25,7 @@ export const Textarea = React.forwardRef<
     ref={ref}
     className={cn(
       'min-h-24 w-full rounded-md border border-control bg-surface p-3 text-sm text-text-primary outline-none placeholder:text-text-muted focus-visible:ring-1 focus-visible:ring-focus disabled:opacity-50 aria-[invalid=true]:border-danger',
-      variant === 'plain' && 'focus-visible:outline-none resize-none rounded-none border-0 bg-transparent px-3 py-2 shadow-none focus-visible:ring-0',
+      variant === 'plain' && 'focus-visible:outline-none resize-none rounded-none border-0 bg-transparent px-0 py-2 shadow-none focus-visible:ring-0',
       className,
     )}
     {...props}
