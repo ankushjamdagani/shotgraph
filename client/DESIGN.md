@@ -90,3 +90,9 @@ Creation art uses feathered SVG exclusion masks around individual content groups
 Creation progress and footer occupy stable positions across steps. Only the middle content region scrolls; the compact action region reserves 64px on desktop and 112px on narrow screens, avoiding a blank spacer above the buttons. SetupProgress uses a text/stroke hover without a filled tile and preserves keyboard focus. Title and footer comparison controls are removed after approval.
 
 Plain inputs retain 12px horizontal padding; plain textareas add 8px vertical padding. Step descriptions stack below their titles; Brief and Format omit visible descriptions. Format uses a multiline Creative notes field with examples. MoodPicker provides six immediate presets and a separate idea-based suggestion card with loading, retry and unavailable states. Suggestions never overwrite a chosen mood or notes and require an explicit Use this mood action.
+
+Selection uses a primary-ink border plus 1px ring, card fill and a checkmark without changing geometry. Mood suggestions, preset radios, story cards and visual looks share this treatment. Engine setup only selects a runner; directing prompt input is removed.
+
+StoryDeck presents the initially selected/recommended direction in front, with alternate cards fanned behind. Previous/next and named preview controls expose every direction; previewing does not change selection. Each direction retains its independent checkbox. LookPicker uses local style reference images with clear titles and descriptions; these are illustrative references, not generated project frames. Image sources live beside the assets.
+
+SetupProgress retains Named track in production. Development-only Leva controls compare Named track, Numbered stops, Compact chapters and Progress ribbon in the same fixed-height panel. Reset restores Named track. Stories cover all choices in both themes.

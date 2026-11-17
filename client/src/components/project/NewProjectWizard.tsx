@@ -1,9 +1,11 @@
+import { StoryDeck } from '../ui/story-deck';
+import { LookPicker } from '../ui/look-picker';
 import { MoodPicker } from '../ui/mood-picker';
-import { SetupProgress } from '../ui/setup-progress';
+import { SetupProgress, type ProgressVariant } from '../ui/setup-progress';
 import { ProjectTitleField } from '../ui/project-title-field';
 import { SetupActions } from '../ui/setup-actions';
 import { Dialog as Primitive } from 'radix-ui';
-import { Button, IconButton, Input, Textarea, Label, Checkbox } from '../ui';
+import { Button, IconButton, Input, Textarea, Label } from '../ui';
 import { ChoiceGroup } from '../ui/choice-group';
 import { AsciiArt } from '../ui/ascii-art';
 import { getDefaultStartAppearance } from '../ui/page-background';
@@ -14,6 +16,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, FolderOpen, Plus, Loader2 } from 'lucide-react';
 import { FilmProject, ModelEngine } from '../../types';
 
+const SetupProgressTools = import.meta.env.DEV ? React.lazy(() => import('../../dev/SetupProgressTools')) : null;
 interface NewProjectWizardProps {
     isOpen: boolean;
     onClose: () => void;
@@ -39,6 +42,7 @@ interface AIMoodOption {
 }
 export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ isOpen, onClose, onProjectCreated, }) => {
     // Navigation
+    const [progressVariant,setProgressVariant] = useState<ProgressVariant>('Named track');
     const [currentStep, setCurrentStep] = useState<number>(1);
     const [furthestStep, setFurthestStep] = useState(1);
     const [isExiting, setIsExiting] = useState(false);
@@ -71,7 +75,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ isOpen, onCl
     const [aiMoodError, setAiMoodError] = useState<string | null>(null);
     // Step 4: AI Model Engine & Directives
     const [selectedModel, setSelectedModel] = useState<ModelEngine>('antigravity-cli');
-    const [customDirective, setCustomDirective] = useState('');
+    const customDirective = '';
     // Step 5: Story Directions & Ambient Loading
     const [isAmbientGenerating, setIsAmbientGenerating] = useState(false);
     const [ambientStatus, setAmbientStatus] = useState('Directing camera optics...');
@@ -100,7 +104,6 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ isOpen, onCl
     const promptInputRef = useRef<HTMLTextAreaElement | null>(null);
     const specsInputRef = useRef<HTMLTextAreaElement | null>(null);
     const moodInputRef = useRef<HTMLTextAreaElement | null>(null);
-    const directiveInputRef = useRef<HTMLInputElement | null>(null);
     const refineInputRef = useRef<HTMLInputElement | null>(null);
     const aestheticInputRef = useRef<HTMLInputElement | null>(null);
     // Initial Storyboard Variations
@@ -151,7 +154,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ isOpen, onCl
             else if (currentStep === 3)
                 moodInputRef.current?.focus();
             else if (currentStep === 4)
-                directiveInputRef.current?.focus();
+                dialogRef.current?.querySelector<HTMLElement>('[role="radio"]')?.focus();
             else if (currentStep === 5)
                 refineInputRef.current?.focus();
             else if (currentStep === 6)
@@ -392,7 +395,6 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ isOpen, onCl
         else
             advanceToStep(currentStep + 1);
     };
-    const looks = ['Liquid Glass', 'Editorial 35mm', 'Pop Kinetic', 'Cyber Noir'];
     return <Primitive.Root open={isOpen} onOpenChange={open => { if (!open && !isSubmitting) {
         generation.current?.abort();
         onClose();
@@ -410,7 +412,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ isOpen, onCl
         <div className="flex min-h-0 flex-1 flex-col">
           <main className="flex min-h-0 flex-1 flex-col justify-center px-5 py-4 sm:px-10 sm:py-8">
             <form className="mx-auto flex min-h-0 w-full max-w-[832px] flex-1 flex-col px-4 sm:max-h-[800px] sm:px-8" onSubmit={event => { event.preventDefault(); next(); }} onKeyDown={event => { if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); next(); } }}><fieldset disabled={isSubmitting} className="flex min-h-0 min-w-0 flex-1 flex-col border-0 p-0">
-              <div data-art-exclusion><SetupProgress steps={stepNames} current={currentStep} furthest={furthestStep} disabled={isSubmitting || isAmbientGenerating} onSelect={advanceToStep}/></div>
+              <div data-art-exclusion><SetupProgress variant={progressVariant} steps={stepNames} current={currentStep} furthest={furthestStep} disabled={isSubmitting || isAmbientGenerating} onSelect={advanceToStep}/></div>
               <div ref={dialogRef} className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-1 pb-5 pt-4 [scrollbar-gutter:stable_both-edges]">
               <div data-art-exclusion className="space-y-3"><Primitive.Title className="text-3xl font-semibold tracking-tight">{headings[currentStep - 1]}</Primitive.Title><Primitive.Description id="create-description" className={currentStep <= 2 ? 'sr-only' : 'mt-3 text-sm leading-relaxed text-text-muted'}>{descriptions[currentStep - 1]}</Primitive.Description></div>
               {errorMsg && <div role="alert" className="rounded-md border border-danger p-4 break-words text-sm text-danger">{errorMsg}{currentStep === 5 && <Button variant="ghost" onClick={triggerAmbientGeneration} className="mt-3">Retry generation</Button>}</div>}
@@ -425,9 +427,9 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ isOpen, onCl
                 <MoodPicker value={selectedMood} onChange={(title,description)=>{setSelectedMood(title);setCustomMood(description);}} suggestion={aiMoods.find(mood=>mood.isRecommended)||aiMoods[0]} loading={isAiAnalyzingMood} error={!!aiMoodError} hasIdea={!!prompt.trim()} onRetry={()=>triggerAiMoodAnalysis(prompt)}/>
                 <div className="space-y-2"><Label htmlFor="project-mood">Mood notes and references</Label><Textarea variant="plain" id="project-mood" ref={moodInputRef} value={customMood} onChange={e=>handleTextChangeWithUrlExtraction(3,e.target.value,setCustomMood)} placeholder="Add a detail about pacing, sound, lighting or camera energy."/></div>
               </div>}
-              {currentStep === 4 && <div data-art-exclusion className="space-y-6"><ChoiceGroup label="AI engine" value={selectedModel} onChange={v => setSelectedModel(v as ModelEngine)} options={[{ value: 'antigravity-cli', label: 'Antigravity', description: 'Local CLI runner' }, { value: 'claude-cli', label: 'Claude Code', description: 'Configured Claude runner' }, { value: 'ollama', label: 'Ollama', description: 'Local model runner' }]}/><p className="text-xs text-text-muted">The selected engine must be configured on your machine.</p><div className="space-y-2"><Label htmlFor="project-directive">Directing guidance</Label><Input variant="plain" id="project-directive" ref={directiveInputRef} value={customDirective} onChange={e => handleTextChangeWithUrlExtraction(4, e.target.value, setCustomDirective)} placeholder="What should the engine pay special attention to?"/></div></div>}
-              {currentStep === 5 && <div data-art-exclusion className="space-y-6">{isAmbientGenerating ? <div role="status" className="space-y-4 py-10"><Loader2 className="size-6 animate-spin"/><p className="text-sm">{ambientStatus}</p><p className="text-xs text-text-muted">You can create a blank project while the engine is working.</p></div> : <>{allVariations.map(v => <section key={v.id} className="space-y-4 rounded-thumbnail border border-subtle p-5"><label className="flex cursor-pointer items-center gap-3 text-sm font-semibold"><Checkbox checked={selectedCards.has(v.id)} onCheckedChange={() => toggleCardPick(v.id)}/>{v.title}</label><p className="text-xs text-text-muted">{v.durationLabel}</p><dl className="space-y-3">{v.beats.map((beat, i) => <div key={i}><dt className="text-xs font-medium">{beat.label}</dt><dd className="mt-1 text-sm leading-relaxed text-text-muted">{beat.text}</dd></div>)}</dl></section>)}<div className="space-y-2"><Label htmlFor="custom-story">Add your own direction</Label><div className="flex gap-2"><Input variant="plain" id="custom-story" ref={refineInputRef} value={refinePrompt} onChange={e => handleTextChangeWithUrlExtraction(5, e.target.value, setRefinePrompt)} placeholder="Describe a story direction"/><Button variant="secondary" borderTone="subtle" disabled={!refinePrompt.trim()} onClick={addCustomVariation}><Plus />Add</Button></div></div></>}</div>}
-              {currentStep === 6 && <div data-art-exclusion className="space-y-8">{Array.from(selectedCards).map((id, index) => <section key={id} className="space-y-4"><h2 className="text-sm font-semibold">{allVariations.find(v => v.id === id)?.title || `Direction ${index + 1}`}</h2><ChoiceGroup label={`Look for direction ${index + 1}`} className="sm:grid-cols-2" value={branchAesthetics[id] || 'Liquid Glass'} onChange={value => setBranchAesthetics(prev => ({ ...prev, [id]: value }))} options={looks.map(value => ({ value, label: value }))}/><div className="space-y-2"><Label htmlFor={`look-${id}`}>Custom look and references</Label><Input variant="plain" id={`look-${id}`} ref={index === 0 ? aestheticInputRef : undefined} value={customAesthetics[id] || ''} onChange={e => setCustomAesthetics(prev => ({ ...prev, [id]: e.target.value }))} placeholder="Lighting, texture, lenses or moodboard links"/></div></section>)}</div>}
+              {currentStep === 4 && <div data-art-exclusion className="space-y-6"><ChoiceGroup label="AI engine" value={selectedModel} onChange={v => setSelectedModel(v as ModelEngine)} options={[{ value: 'antigravity-cli', label: 'Antigravity', description: 'Local CLI runner' }, { value: 'claude-cli', label: 'Claude Code', description: 'Configured Claude runner' }, { value: 'ollama', label: 'Ollama', description: 'Local model runner' }]}/><p className="text-xs text-text-muted">The selected engine must be configured on your machine.</p></div>}
+              {currentStep === 5 && <div data-art-exclusion className="space-y-6">{isAmbientGenerating ? <div role="status" className="space-y-4 py-10"><Loader2 className="size-6 animate-spin"/><p className="text-sm">{ambientStatus}</p><p className="text-xs text-text-muted">You can create a blank project while the engine is working.</p></div> : <><StoryDeck directions={allVariations} selected={selectedCards} onToggle={toggleCardPick}/><div className="space-y-2"><Label htmlFor="custom-story">Add your own direction</Label><div className="flex gap-2"><Input variant="plain" id="custom-story" ref={refineInputRef} value={refinePrompt} onChange={e => handleTextChangeWithUrlExtraction(5, e.target.value, setRefinePrompt)} placeholder="Describe a story direction"/><Button variant="secondary" borderTone="subtle" disabled={!refinePrompt.trim()} onClick={addCustomVariation}><Plus />Add</Button></div></div></>}</div>}
+              {currentStep === 6 && <div data-art-exclusion className="space-y-8">{Array.from(selectedCards).map((id, index) => <section key={id} className="space-y-4"><h2 className="text-sm font-semibold">{allVariations.find(v => v.id === id)?.title || `Direction ${index + 1}`}</h2><LookPicker label={`Look for direction ${index + 1}`} value={branchAesthetics[id] || 'Liquid Glass'} onChange={value => setBranchAesthetics(prev => ({ ...prev, [id]: value }))}/><div className="space-y-2"><Label htmlFor={`look-${id}`}>Custom look and references</Label><Input variant="plain" id={`look-${id}`} ref={index === 0 ? aestheticInputRef : undefined} value={customAesthetics[id] || ''} onChange={e => setCustomAesthetics(prev => ({ ...prev, [id]: e.target.value }))} placeholder="Lighting, texture, lenses or moodboard links"/></div></section>)}</div>}
               {currentStep === 7 && <div data-art-exclusion className="space-y-6"><dl className="divide-y divide-subtle">{[['Project', title.trim() || 'Untitled Video Project'], ['Location', displayedLocation], ['Format', `${selectedAspect} · ${selectedDuration} seconds`], ['Engine', selectedModel], ['Mood', customMood || selectedMood || 'Not specified']].map(([label, value]) => <div key={label} className="grid gap-2 py-3 sm:grid-cols-[100px_1fr]"><dt className="text-sm text-text-muted">{label}</dt><dd className="break-words text-sm">{value}</dd></div>)}</dl>{Array.from(selectedCards).map(id => <div key={id} className="border-t border-subtle pt-4"><h2 className="text-sm font-semibold">{allVariations.find(v => v.id === id)?.title}</h2><p className="mt-2 text-sm text-text-muted">{branchAesthetics[id] || 'Liquid Glass'}{customAesthetics[id] && ` · ${customAesthetics[id]}`}</p></div>)}</div>}
               </div>
               <div data-art-exclusion className="flex h-28 shrink-0 flex-col justify-end overflow-y-auto sm:h-16"><SetupActions back={currentStep > 1} blank={currentStep <= 5} disabled={!canContinue} loading={isSubmitting} onBack={goBack} onBlank={skipDirectToStudio} primary={currentStep===7?'Create project':currentStep===4?'Generate story directions':'Continue'}/></div>
@@ -436,6 +438,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ isOpen, onCl
           </main>
 
         </div>
+        {SetupProgressTools && <React.Suspense fallback={null}><SetupProgressTools onChange={setProgressVariant}/></React.Suspense>}
       </Primitive.Content>
     </Primitive.Portal>
   </Primitive.Root>;
