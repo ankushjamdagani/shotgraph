@@ -87,4 +87,6 @@ Creation begins with a large, borderless idea editor. Project title is independe
 
 Creation art uses feathered SVG exclusion masks around individual content groups instead of cutting a rectangular hole around the full form. The listing retains its original hard content protection. The first-step description is visually hidden because the editor placeholder provides the visible guidance.
 
-Creation progress and footer occupy stable positions across steps. Only the middle content region scrolls; the action region reserves a fixed height for each breakpoint. SetupProgress uses a text/stroke hover without a filled tile and preserves keyboard focus. Title and footer comparison controls are removed after approval.
+Creation progress and footer occupy stable positions across steps. Only the middle content region scrolls; the compact action region reserves 64px on desktop and 112px on narrow screens, avoiding a blank spacer above the buttons. SetupProgress uses a text/stroke hover without a filled tile and preserves keyboard focus. Title and footer comparison controls are removed after approval.
+
+Plain inputs retain 12px horizontal padding; plain textareas add 8px vertical padding. Step descriptions stack below their titles; Brief and Format omit visible descriptions. Format uses a multiline Creative notes field with examples. MoodPicker provides six immediate presets and a separate idea-based suggestion card with loading, retry and unavailable states. Suggestions never overwrite a chosen mood or notes and require an explicit Use this mood action.
