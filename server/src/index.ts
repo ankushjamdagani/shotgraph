@@ -1,3 +1,4 @@
+import { testModelConnection } from './services/modelConnection.js';
 import { importMedia, probeMedia } from './services/mediaService.js';
 import { z } from 'zod';
 import { randomBytes } from 'node:crypto';
@@ -272,6 +273,16 @@ server.post('/api/projects/create', async (req, reply) => {
 });
 
 // Real AI Mood & Tone Analysis for Genesis Flow
+server.post('/api/ai/test-connection', async (req, reply) => {
+  const {modelEngine}=z.object({modelEngine:z.enum(['antigravity-cli','claude-cli','ollama'])}).strict().parse(req.body);
+  const controller=new AbortController();
+  const cancel=()=>{if(!reply.raw.writableEnded)controller.abort();};
+  reply.raw.on('close',cancel);
+  try {return {success:true,...await testModelConnection(modelEngine,controller.signal)};}
+  catch(error:any) {return reply.code(502).send({success:false,error:error.message || 'Connection test failed. Check engine installation and sign-in.'});}
+  finally {reply.raw.off('close',cancel);}
+});
+
 server.post('/api/ai/suggest-moods', async (req, reply) => {
   const { prompt, modelEngine = 'antigravity-cli' } = (req.body as any) || {};
 
