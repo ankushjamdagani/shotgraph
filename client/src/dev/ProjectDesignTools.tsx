@@ -1,3 +1,4 @@
+import { projectsEmptyVariants, type ProjectsEmptyVariant } from '../components/ui/projects-empty';
 import { getPageBackground } from '../components/ui/page-background';
 import { startPanelBackgrounds, getStartPanelBackground } from './start-panel-backgrounds';
 import { useEffect, useState, type CSSProperties } from 'react';
@@ -10,7 +11,9 @@ import {
 
 export default function ProjectDesignTools({
   onChange,
+  onEmptyChange,
 }: {
+  onEmptyChange?: (variant: ProjectsEmptyVariant) => void;
   onChange: (styles: ProjectBackgroundStyles) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -18,6 +21,7 @@ export default function ProjectDesignTools({
   const [values, set] = useControls(
     'Projects · appearance',
     () => ({
+      emptyView: { value: 'invitation', options: [...projectsEmptyVariants], label: 'Empty list' },
       leftBackground: { value: '36 · ASCII living meadow' as string, options: [...startPanelBackgrounds], label: 'Left panel' },
       leftMotion: { value: true, label: 'ASCII motion' },
       leftDepth: { value: 34, min: 8, max: 40, step: 1, label: 'Art intensity' },
@@ -25,6 +29,7 @@ export default function ProjectDesignTools({
       divider: { value: false, label: 'Header divider' },
       Reset: button(() =>
         set({
+          emptyView: 'invitation',
           leftBackground: '36 · ASCII living meadow',
           leftDepth: 34,
           colorSpeed: 3,
@@ -54,6 +59,7 @@ export default function ProjectDesignTools({
     values.divider,
     onChange,
   ]);
+  useEffect(() => { onEmptyChange?.(values.emptyView as ProjectsEmptyVariant); }, [values.emptyView, onEmptyChange]);
   return (
     <>
       <div className="fixed bottom-5 left-5 z-50 lg:left-10">

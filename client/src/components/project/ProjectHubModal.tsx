@@ -1,3 +1,4 @@
+import { ProjectsEmpty, type ProjectsEmptyVariant } from '../ui/projects-empty';
 import { CollectionSort, type CollectionSortValue } from '../ui/collection-sort';
 import { ProjectNameCue } from '../ui/collection';
 import { ProjectStartPanel } from '../ui/project-start-panel';
@@ -370,6 +371,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
     useState<ProjectBackgroundStyles>({ page: getPageBackground(), start: getDefaultStartAppearance(), panel: { borderBottomColor: 'transparent' } });
   const look = getCollectionLayout();
   const splitWorkspace = true;
+  const [emptyVariant, setEmptyVariant] = useState<ProjectsEmptyVariant>('invitation');
   const [projects, setProjects] = useState<ProjectRegistryEntry[]>([]);
   const [sortOrder, setSortOrder] = useState<CollectionSortValue>({by:'opened',direction:'desc'});
   const [searchQuery, setSearchQuery] = useState('');
@@ -961,7 +963,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
       </div>
       {ProjectDesignTools && (
         <React.Suspense fallback={null}>
-          <ProjectDesignTools onChange={setBackgroundStyles} />
+          <ProjectDesignTools onChange={setBackgroundStyles} onEmptyChange={setEmptyVariant} />
         </React.Suspense>
       )}
       <div
@@ -987,6 +989,8 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
             <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
             Loading projects…
           </div>
+        ) : !projects.length && !searchQuery ? (
+          <ProjectsEmpty variant={emptyVariant} onCreate={handleOpenWizard} onOpen={handleOpenFolderFromFinder} />
         ) : !filteredProjects.length ? (
           <div
             role="status"
@@ -996,7 +1000,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
             <h2 className="text-lg font-semibold">No matches found</h2>
             <p className="max-w-sm text-sm text-text-muted">
               {projects.length
-                ? 'Try a different search or choose another format.'
+                ? 'Try a different project name.'
                 : 'Your projects will appear here once you create or open one.'}
             </p>
             {searchQuery && (
