@@ -76,3 +76,9 @@ For shared changes run `npm run check`, `npm run build`, and `npm run build-stor
 Leva is development-only, lazily imported behind `import.meta.env.DEV`, with a scoped store and Reset. Retained left-art comparisons are review tools, not additional production design directions. Approved defaults must work without the debugger. Do not persist experimental settings.
 
 Custom CSS is limited to semantic tokens, legacy editor styles, Sonner integration and effects not reasonably expressed by utilities. Procedural ASCII geometry/content exclusions and collection FLIP coordinates are behavior-specific exceptions. Keep reusable motion in named Tailwind animations. Existing legacy CSS is not precedent for new screens.
+
+## Project creation
+
+Creation uses a full-screen Radix dialog on Warm Stock, a compact brand/close header, and named setup steps (Brief, Format, Mood, Engine, Story, Look, Review). Desktop steps sit in a narrow left rail; small screens use a horizontally scrollable step list. Completed steps are revisitable. Keep the primary form at a readable width and use neutral shared controls throughout.
+
+ChoiceGroup is the shared Radix radio-card pattern for format, duration, engine, mood and look. Selected choices use a 1px focus-color border and checkmark without layout shift. Every field has an explicit label. Blank creation remains available through setup and generation; AI failures offer retry and manual input. Review presents actual selected settings. Disable duplicate creation and closing during submission; retain inline errors and user input on failure.

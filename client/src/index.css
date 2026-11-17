@@ -65,23 +65,6 @@ code, .font-mono {
   border-bottom-color: color-mix(in srgb, var(--border-subtle) 35%, transparent) !important;
 }
 
-/* Genesis unboxed inputs */
-.unboxed-input {
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  resize: none;
-}
-
-/* Genesis ambient loading breathing pulse */
-@keyframes ambientBreathe {
-  0%, 100% { opacity: 0.35; transform: scale(0.99); }
-  50% { opacity: 0.95; transform: scale(1.01); }
-}
-.animate-ambient-breathe {
-  animation: ambientBreathe 2.4s infinite ease-in-out;
-}
-
 /* Genesis audio waveform bounce */
 @keyframes barBounce {
   0%, 100% { height: 3px; }
@@ -173,13 +156,6 @@ input, textarea { caret-color: var(--accent-primary); }
 .studio-inspector button { min-height: 28px; }
 .studio-dock { max-height: 55vh; overflow-y: auto; }
 .studio-transport { flex-wrap: wrap; row-gap: 8px; }
-.studio-wizard { background: var(--bg-app) !important; color: var(--text-primary); }
-.studio-wizard .text-white, .studio-wizard .text-neutral-200, .studio-wizard .text-neutral-300 { color: var(--text-primary); }
-.studio-wizard .text-neutral-400, .studio-wizard .text-neutral-500 { color: var(--text-muted); }
-.studio-wizard [class*="bg-[#"] { background-color: var(--bg-card); border-color: var(--border-subtle); }
-.studio-wizard input, .studio-wizard textarea { color: var(--text-primary); }
-.studio-wizard .bg-white { background: var(--text-primary); color: var(--bg-app); }
-.studio-wizard .border-white { border-color: var(--text-primary); }
 @media (max-width: 767px) {
   .studio-main { display: none !important; }
   .studio-header { height: auto !important; min-height: 48px; padding: 8px; flex-wrap: wrap; gap: 8px; }
@@ -188,8 +164,8 @@ input, textarea { caret-color: var(--accent-primary); }
   [role="dialog"] > div { max-width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .animate-pulse, .animate-spin, .animate-ambient-breathe { animation: none !important; }
-  .studio-wizard, .studio-inspector, button { transition-duration: 0s !important; }
+  .animate-pulse, .animate-spin { animation: none !important; }
+  .studio-inspector, button { transition-duration: 0s !important; }
 }
 
 .theme-paper-ink .studio-inspector .text-amber-300,
