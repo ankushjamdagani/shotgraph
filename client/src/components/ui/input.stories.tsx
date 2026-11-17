@@ -92,3 +92,7 @@ export const Choices: Story = {
 export const CollectionSearch: Story = {
   args: { type: 'search', borderTone: 'subtle', placeholder: 'Search projects…', 'aria-label': 'Search projects' },
 };
+
+export const PlainWriting: Story = {
+  render: () => <div className="w-[min(640px,85vw)] space-y-5"><Label htmlFor="plain-idea">Your idea</Label><Textarea id="plain-idea" variant="plain" className="min-h-48 text-2xl leading-relaxed" placeholder="A story, a scene, a character…"/><Input variant="plain" aria-label="Folder path" placeholder="Enter a folder path"/></div>,
+};
