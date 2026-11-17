@@ -1,7 +1,7 @@
 import { StoryDeck } from '../ui/story-deck';
 import { LookPicker } from '../ui/look-picker';
 import { MoodPicker } from '../ui/mood-picker';
-import { SetupProgress, type ProgressVariant } from '../ui/setup-progress';
+import { SetupProgress } from '../ui/setup-progress';
 import { ProjectTitleField } from '../ui/project-title-field';
 import { SetupActions } from '../ui/setup-actions';
 import { Dialog as Primitive } from 'radix-ui';
@@ -16,7 +16,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, FolderOpen, Plus, Loader2 } from 'lucide-react';
 import { FilmProject, ModelEngine } from '../../types';
 
-const SetupProgressTools = import.meta.env.DEV ? React.lazy(() => import('../../dev/SetupProgressTools')) : null;
 interface NewProjectWizardProps {
     isOpen: boolean;
     onClose: () => void;
@@ -42,7 +41,6 @@ interface AIMoodOption {
 }
 export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ isOpen, onClose, onProjectCreated, }) => {
     // Navigation
-    const [progressVariant,setProgressVariant] = useState<ProgressVariant>('Named track');
     const [currentStep, setCurrentStep] = useState<number>(1);
     const [furthestStep, setFurthestStep] = useState(1);
     const [isExiting, setIsExiting] = useState(false);
@@ -75,6 +73,11 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ isOpen, onCl
     const [aiMoodError, setAiMoodError] = useState<string | null>(null);
     // Step 4: AI Model Engine & Directives
     const [selectedModel, setSelectedModel] = useState<ModelEngine>('antigravity-cli');
+    const [verifiedModel,setVerifiedModel] = useState<ModelEngine | null>(null);
+    const [testingEngine,setTestingEngine] = useState(false);
+    const [engineError,setEngineError] = useState('');
+    const engineTest = useRef<AbortController | null>(null);
+    useEffect(()=>()=>engineTest.current?.abort(),[]);
     const customDirective = '';
     // Step 5: Story Directions & Ambient Loading
     const [isAmbientGenerating, setIsAmbientGenerating] = useState(false);
@@ -149,11 +152,11 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ isOpen, onCl
         const timer = setTimeout(() => {
             if (currentStep === 1)
                 promptInputRef.current?.focus();
-            else if (currentStep === 2)
-                specsInputRef.current?.focus();
             else if (currentStep === 3)
-                moodInputRef.current?.focus();
+                specsInputRef.current?.focus();
             else if (currentStep === 4)
+                moodInputRef.current?.focus();
+            else if (currentStep === 2)
                 dialogRef.current?.querySelector<HTMLElement>('[role="radio"]')?.focus();
             else if (currentStep === 5)
                 refineInputRef.current?.focus();
@@ -166,6 +169,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ isOpen, onCl
     const opener = useRef(document.activeElement as HTMLElement | null);
     // Real AI Mood Call (Asynchronous prefetch on Step 1 submit)
     const triggerAiMoodAnalysis = async (premisePrompt: string) => {
+        if (verifiedModel !== selectedModel) return;
         const textToAnalyze = premisePrompt.trim() || 'A high-impact cinematic film concept';
         moodGeneration.current?.abort();
         const controller = new AbortController();
@@ -203,17 +207,13 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ isOpen, onCl
         }
     };
     // Step 1: Submit & trigger real AI mood model
-    const submitStep1AndTriggerAiMood = () => {
-        if (prompt.trim())
-            void triggerAiMoodAnalysis(prompt);
-        advanceToStep(2);
-    };
     // Step 4: Skip AI generation direct to Studio
     const skipDirectToStudio = () => {
         handleStartProduction(true);
     };
     // Step 5: Ambient breathing generation
     const triggerAmbientGeneration = async () => {
+        if (verifiedModel !== selectedModel) return;
         advanceToStep(5);
         setIsAmbientGenerating(true);
         setAmbientStatus('Generating story directions…');
@@ -298,6 +298,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ isOpen, onCl
     };
     // Navigation handlers
     const advanceToStep = (step: number) => {
+        if (step > 2 && verifiedModel !== selectedModel) return;
         setCurrentStep(step);
         setFurthestStep(previous => Math.max(previous, step));
         setErrorMsg('');
@@ -378,16 +379,38 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ isOpen, onCl
             setIsSubmitting(false);
         }
     };
-    const stepNames = ['Brief', 'Format', 'Mood', 'Engine', 'Story', 'Look', 'Review'];
-    const headings = ['Start with an idea.', 'Give your film a format.', 'Set the mood.', 'Choose your creative engine.', 'Find your story direction.', 'Define the visual language.', 'Ready for the studio.'];
-    const descriptions = ['Describe what you want to make. The details can follow.', 'Choose a canvas and target length. You can refine these in the studio.', 'Use a suggested direction or describe the feeling in your own words.', 'Choose a configured engine for story generation, or start with a blank canvas.', 'Select one or more directions, or write your own.', 'Choose a look for each selected story direction.', 'Review your setup before creating the project.'];
-    const canContinue = !isSubmitting && !isAmbientGenerating && (currentStep !== 5 || allVariations.some(v => selectedCards.has(v.id)));
+    const changeEngine = (model:ModelEngine) => {
+      engineTest.current?.abort(); moodGeneration.current?.abort(); generation.current?.abort();
+      setSelectedModel(model); setVerifiedModel(null); setTestingEngine(false); setEngineError('');
+      setAiMoods([]); setAiMoodError(null); setIsAiAnalyzingMood(false); setIsAmbientGenerating(false);
+      setInitialVariations([]); setSelectedCards(new Set(customVariations.map(item=>item.id)));
+      setFurthestStep(2);
+    };
+    const testEngine = async () => {
+      engineTest.current?.abort();
+      const controller=new AbortController(); engineTest.current=controller;
+      setTestingEngine(true); setVerifiedModel(null); setEngineError(''); setFurthestStep(2);
+      try {
+        const response=await apiFetch('/api/ai/test-connection',{method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({modelEngine:selectedModel})});
+        const data=await response.json();
+        if(controller.signal.aborted) return;
+        if(!response.ok || !data.success || data.engine!==selectedModel) throw new Error(data.error || 'Connection test failed.');
+        setVerifiedModel(selectedModel);
+      } catch(error) {if(!controller.signal.aborted)setEngineError((error as Error).message);}
+      finally {if(!controller.signal.aborted)setTestingEngine(false);}
+    };
+    const stepNames = ['Brief', 'Engine', 'Format', 'Mood', 'Story', 'Look', 'Review'];
+    const headings = ['Start with an idea.', 'Choose your creative engine.', 'Give your film a format.', 'Set the mood.', 'Find your story direction.', 'Define the visual language.', 'Ready for the studio.'];
+    const descriptions = ['Describe what you want to make. The details can follow.', 'Test your selected engine before using AI assistance.', 'Choose a canvas and target length.', 'Use a suggested direction or describe the feeling in your own words.', 'Select one or more directions, or write your own.', 'Choose a look for each selected story direction.', 'Review your setup before creating the project.'];
+    const canContinue = !isSubmitting && !isAmbientGenerating && !testingEngine && (currentStep!==2 || verifiedModel===selectedModel) && (currentStep !== 5 || allVariations.some(v => selectedCards.has(v.id)));
     const next = () => {
         if (!canContinue)
             return;
         setErrorMsg('');
-        if (currentStep === 1)
-            submitStep1AndTriggerAiMood();
+        if (currentStep === 2) {
+            if(prompt.trim()) void triggerAiMoodAnalysis(prompt);
+            advanceToStep(3);
+        }
         else if (currentStep === 4)
             void triggerAmbientGeneration();
         else if (currentStep === 7)
@@ -412,9 +435,9 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ isOpen, onCl
         <div className="flex min-h-0 flex-1 flex-col">
           <main className="flex min-h-0 flex-1 flex-col justify-center px-5 py-4 sm:px-10 sm:py-8">
             <form className="mx-auto flex min-h-0 w-full max-w-[832px] flex-1 flex-col px-4 sm:max-h-[800px] sm:px-8" onSubmit={event => { event.preventDefault(); next(); }} onKeyDown={event => { if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); next(); } }}><fieldset disabled={isSubmitting} className="flex min-h-0 min-w-0 flex-1 flex-col border-0 p-0">
-              <div data-art-exclusion><SetupProgress variant={progressVariant} steps={stepNames} current={currentStep} furthest={furthestStep} disabled={isSubmitting || isAmbientGenerating} onSelect={advanceToStep}/></div>
+              <div data-art-exclusion><SetupProgress steps={stepNames} current={currentStep} furthest={furthestStep} disabled={isSubmitting || isAmbientGenerating || testingEngine} onSelect={advanceToStep}/></div>
               <div ref={dialogRef} className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-1 pb-5 pt-4 [scrollbar-gutter:stable_both-edges]">
-              <div data-art-exclusion className="space-y-3"><Primitive.Title className="text-3xl font-semibold tracking-tight">{headings[currentStep - 1]}</Primitive.Title><Primitive.Description id="create-description" className={currentStep <= 2 ? 'sr-only' : 'mt-3 text-sm leading-relaxed text-text-muted'}>{descriptions[currentStep - 1]}</Primitive.Description></div>
+              <div data-art-exclusion className="space-y-3"><Primitive.Title className="text-3xl font-semibold tracking-tight">{headings[currentStep - 1]}</Primitive.Title><Primitive.Description id="create-description" className={currentStep===1 || currentStep===3 ? 'sr-only' : 'mt-3 text-sm leading-relaxed text-text-muted'}>{descriptions[currentStep - 1]}</Primitive.Description></div>
               {errorMsg && <div role="alert" className="rounded-md border border-danger p-4 break-words text-sm text-danger">{errorMsg}{currentStep === 5 && <Button variant="ghost" onClick={triggerAmbientGeneration} className="mt-3">Retry generation</Button>}</div>}
               {currentStep === 1 && <div className="space-y-6">
                 <div data-art-exclusion><ProjectTitleField value={title} onChange={setTitle}/></div>
@@ -422,12 +445,12 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ isOpen, onCl
                 {stepUrls[1]?.length > 0 && <ul className="space-y-2">{stepUrls[1].map(url => <li key={url} className="flex items-center justify-between gap-3 text-xs"><a className="truncate underline" href={url} target="_blank" rel="noreferrer">{formatUrlLabel(url)}</a><IconButton label={`Remove reference ${formatUrlLabel(url)}`} onClick={() => removeUrl(1, url)}><X /></IconButton></li>)}</ul>}
                 <div data-art-exclusion className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs"><FolderOpen className="size-4 shrink-0 text-text-muted"/><span className="text-text-muted">Save to</span><span className="min-w-0 max-w-full break-all sm:max-w-lg" title={displayedLocation}>{displayedLocation}</span><Button variant="soft" size="sm" loading={isPickingDir} onClick={handlePickDirectory}>Change folder</Button></div>
               </div>}
-              {currentStep === 2 && <div data-art-exclusion className="space-y-7"><section className="space-y-3"><h2 className="text-sm font-medium">Aspect ratio</h2><ChoiceGroup label="Aspect ratio" value={selectedAspect} onChange={v => setSelectedAspect(v as typeof selectedAspect)} options={[{ value: '9:16', label: 'Portrait · 9:16', description: '1080 × 1920' }, { value: '16:9', label: 'Landscape · 16:9', description: '1920 × 1080' }, { value: '1:1', label: 'Square · 1:1', description: '1080 × 1080' }]}/></section><section className="space-y-3"><h2 className="text-sm font-medium">Target duration</h2><ChoiceGroup label="Target duration" value={String(selectedDuration)} onChange={v => setSelectedDuration(Number(v))} options={[15, 30, 60].map(n => ({ value: String(n), label: `${n} seconds` }))}/></section><div className="space-y-2"><Label htmlFor="project-specs">Creative notes <span className="font-normal text-text-muted">(optional)</span></Label><Textarea variant="plain" id="project-specs" ref={specsInputRef} value={customSpecs} onChange={e => handleTextChangeWithUrlExtraction(2, e.target.value, setCustomSpecs)} rows={3} placeholder="For example: a slow opening, quick cuts at the end, or a reference film to follow." aria-describedby="format-notes-help"/><p id="format-notes-help" className="text-xs text-text-muted">These notes guide the story. Canvas and duration use the choices above.</p></div></div>}
-              {currentStep === 3 && <div data-art-exclusion className="space-y-6">
+              {currentStep === 3 && <div data-art-exclusion className="space-y-7"><section className="space-y-3"><h2 className="text-sm font-medium">Aspect ratio</h2><ChoiceGroup label="Aspect ratio" value={selectedAspect} onChange={v => setSelectedAspect(v as typeof selectedAspect)} options={[{ value: '9:16', label: 'Portrait · 9:16', description: '1080 × 1920' }, { value: '16:9', label: 'Landscape · 16:9', description: '1920 × 1080' }, { value: '1:1', label: 'Square · 1:1', description: '1080 × 1080' }]}/></section><section className="space-y-3"><h2 className="text-sm font-medium">Target duration</h2><ChoiceGroup label="Target duration" value={String(selectedDuration)} onChange={v => setSelectedDuration(Number(v))} options={[15, 30, 60].map(n => ({ value: String(n), label: `${n} seconds` }))}/></section><div className="space-y-2"><Label htmlFor="project-specs">Creative notes <span className="font-normal text-text-muted">(optional)</span></Label><Textarea variant="plain" id="project-specs" ref={specsInputRef} value={customSpecs} onChange={e => handleTextChangeWithUrlExtraction(2, e.target.value, setCustomSpecs)} rows={3} placeholder="For example: a slow opening, quick cuts at the end, or a reference film to follow." aria-describedby="format-notes-help"/><p id="format-notes-help" className="text-xs text-text-muted">These notes guide the story. Canvas and duration use the choices above.</p></div></div>}
+              {currentStep === 4 && <div data-art-exclusion className="space-y-6">
                 <MoodPicker value={selectedMood} onChange={(title,description)=>{setSelectedMood(title);setCustomMood(description);}} suggestion={aiMoods.find(mood=>mood.isRecommended)||aiMoods[0]} loading={isAiAnalyzingMood} error={!!aiMoodError} hasIdea={!!prompt.trim()} onRetry={()=>triggerAiMoodAnalysis(prompt)}/>
                 <div className="space-y-2"><Label htmlFor="project-mood">Mood notes and references</Label><Textarea variant="plain" id="project-mood" ref={moodInputRef} value={customMood} onChange={e=>handleTextChangeWithUrlExtraction(3,e.target.value,setCustomMood)} placeholder="Add a detail about pacing, sound, lighting or camera energy."/></div>
               </div>}
-              {currentStep === 4 && <div data-art-exclusion className="space-y-6"><ChoiceGroup label="AI engine" value={selectedModel} onChange={v => setSelectedModel(v as ModelEngine)} options={[{ value: 'antigravity-cli', label: 'Antigravity', description: 'Local CLI runner' }, { value: 'claude-cli', label: 'Claude Code', description: 'Configured Claude runner' }, { value: 'ollama', label: 'Ollama', description: 'Local model runner' }]}/><p className="text-xs text-text-muted">The selected engine must be configured on your machine.</p></div>}
+              {currentStep === 2 && <div data-art-exclusion className="space-y-6"><ChoiceGroup label="AI engine" value={selectedModel} onChange={v => changeEngine(v as ModelEngine)} options={[{ value: 'antigravity-cli', label: 'Antigravity', description: 'Local CLI runner' }, { value: 'claude-cli', label: 'Claude Code', description: 'Configured Claude runner' }, { value: 'ollama', label: 'Ollama', description: 'Local model runner' }]}/><div className="space-y-3"><p className="text-sm text-text-muted">The engine must be installed and signed in. This test requests a small response from the selected model.</p><Button variant="soft" loading={testingEngine} disabled={isSubmitting} onClick={testEngine}>{verifiedModel===selectedModel?'Test again':'Test connection'}</Button>{verifiedModel===selectedModel && <p role="status" className="text-sm">Connection verified. AI assistance is ready.</p>}{engineError && <p role="alert" className="break-words text-sm text-danger">{engineError}</p>}</div></div>}
               {currentStep === 5 && <div data-art-exclusion className="space-y-6">{isAmbientGenerating ? <div role="status" className="space-y-4 py-10"><Loader2 className="size-6 animate-spin"/><p className="text-sm">{ambientStatus}</p><p className="text-xs text-text-muted">You can create a blank project while the engine is working.</p></div> : <><StoryDeck directions={allVariations} selected={selectedCards} onToggle={toggleCardPick}/><div className="space-y-2"><Label htmlFor="custom-story">Add your own direction</Label><div className="flex gap-2"><Input variant="plain" id="custom-story" ref={refineInputRef} value={refinePrompt} onChange={e => handleTextChangeWithUrlExtraction(5, e.target.value, setRefinePrompt)} placeholder="Describe a story direction"/><Button variant="secondary" borderTone="subtle" disabled={!refinePrompt.trim()} onClick={addCustomVariation}><Plus />Add</Button></div></div></>}</div>}
               {currentStep === 6 && <div data-art-exclusion className="space-y-8">{Array.from(selectedCards).map((id, index) => <section key={id} className="space-y-4"><h2 className="text-sm font-semibold">{allVariations.find(v => v.id === id)?.title || `Direction ${index + 1}`}</h2><LookPicker label={`Look for direction ${index + 1}`} value={branchAesthetics[id] || 'Liquid Glass'} onChange={value => setBranchAesthetics(prev => ({ ...prev, [id]: value }))}/><div className="space-y-2"><Label htmlFor={`look-${id}`}>Custom look and references</Label><Input variant="plain" id={`look-${id}`} ref={index === 0 ? aestheticInputRef : undefined} value={customAesthetics[id] || ''} onChange={e => setCustomAesthetics(prev => ({ ...prev, [id]: e.target.value }))} placeholder="Lighting, texture, lenses or moodboard links"/></div></section>)}</div>}
               {currentStep === 7 && <div data-art-exclusion className="space-y-6"><dl className="divide-y divide-subtle">{[['Project', title.trim() || 'Untitled Video Project'], ['Location', displayedLocation], ['Format', `${selectedAspect} · ${selectedDuration} seconds`], ['Engine', selectedModel], ['Mood', customMood || selectedMood || 'Not specified']].map(([label, value]) => <div key={label} className="grid gap-2 py-3 sm:grid-cols-[100px_1fr]"><dt className="text-sm text-text-muted">{label}</dt><dd className="break-words text-sm">{value}</dd></div>)}</dl>{Array.from(selectedCards).map(id => <div key={id} className="border-t border-subtle pt-4"><h2 className="text-sm font-semibold">{allVariations.find(v => v.id === id)?.title}</h2><p className="mt-2 text-sm text-text-muted">{branchAesthetics[id] || 'Liquid Glass'}{customAesthetics[id] && ` · ${customAesthetics[id]}`}</p></div>)}</div>}
@@ -438,7 +461,6 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({ isOpen, onCl
           </main>
 
         </div>
-        {SetupProgressTools && <React.Suspense fallback={null}><SetupProgressTools onChange={setProgressVariant}/></React.Suspense>}
       </Primitive.Content>
     </Primitive.Portal>
   </Primitive.Root>;

@@ -79,7 +79,7 @@ Custom CSS is limited to semantic tokens, legacy editor styles, Sonner integrati
 
 ## Project creation
 
-Creation uses a full-screen Radix dialog on Warm Stock, a compact brand/close header, and named setup steps (Brief, Format, Mood, Engine, Story, Look, Review). The form is centered within a single readable column, with a matching header alignment and a named seven-step progress track above the form. There is no left rail. The shared Cobalt Signal meadow artwork lives around the content; header and form have protected exclusion zones. Completed steps are revisitable. Keep the primary form at a readable width and use neutral shared controls throughout.
+Creation uses a full-screen Radix dialog on Warm Stock, a compact brand/close header, and named setup steps (Brief, Engine, Format, Mood, Story, Look, Review). The form is centered within a single readable column, with a matching header alignment and a named seven-step progress track above the form. There is no left rail. The shared Cobalt Signal meadow artwork lives around the content; header and form have protected exclusion zones. Completed steps are revisitable. Keep the primary form at a readable width and use neutral shared controls throughout.
 
 ChoiceGroup is the shared Radix radio-card pattern for format, duration, engine, mood and look. Selected choices use a 1px focus-color border and checkmark without layout shift. Every field has an explicit label. Blank creation remains available through setup and generation; AI failures offer retry and manual input. Review presents actual selected settings. Disable duplicate creation and closing during submission; retain inline errors and user input on failure.
 
@@ -89,10 +89,14 @@ Creation art uses feathered SVG exclusion masks around individual content groups
 
 Creation progress and footer occupy stable positions across steps. Only the middle content region scrolls; the compact action region reserves 64px on desktop and 112px on narrow screens, avoiding a blank spacer above the buttons. SetupProgress uses a text/stroke hover without a filled tile and preserves keyboard focus. Title and footer comparison controls are removed after approval.
 
-Plain inputs retain 12px horizontal padding; plain textareas add 8px vertical padding. Step descriptions stack below their titles; Brief and Format omit visible descriptions. Format uses a multiline Creative notes field with examples. MoodPicker provides six immediate presets and a separate idea-based suggestion card with loading, retry and unavailable states. Suggestions never overwrite a chosen mood or notes and require an explicit Use this mood action.
+Bordered inputs retain 12px horizontal padding. Plain inputs and textareas have no horizontal padding; plain textareas retain 8px vertical padding. Step descriptions stack below their titles; Brief and Format omit visible descriptions. Format uses a multiline Creative notes field with examples. MoodPicker provides six immediate presets and a separate idea-based suggestion card with loading, retry and unavailable states. Suggestions never overwrite a chosen mood or notes and require an explicit Use this mood action.
 
 Selection uses a primary-ink border plus 1px ring, card fill and a checkmark without changing geometry. Mood suggestions, preset radios, story cards and visual looks share this treatment. Engine setup only selects a runner; directing prompt input is removed.
 
 StoryDeck presents the initially selected/recommended direction in front, with alternate cards fanned behind. Previous/next and named preview controls expose every direction; previewing does not change selection. Each direction retains its independent checkbox. LookPicker uses local style reference images with clear titles and descriptions; these are illustrative references, not generated project frames. Image sources live beside the assets.
 
-SetupProgress retains Named track in production. Development-only Leva controls compare Named track, Numbered stops, Compact chapters and Progress ribbon in the same fixed-height panel. Reset restores Named track. Stories cover all choices in both themes.
+Progress ribbon is the approved setup progress panel. Other progress variants and the comparison debugger have been removed.
+
+Setup order is Brief → Engine → Format → Mood → Story → Look → Review. Engine must pass a real structured-response round trip before assisted steps become available. Switching the engine cancels pending requests, resets verification and clears generated suggestions. No AI request runs while leaving Brief; mood analysis starts only after a verified Engine step. Blank creation stays available without AI assistance.
+
+Preset mood cards include cinematic thumbnails with pace and light cues. These are illustrative mood treatments, not generated footage. Model suggestions remain optional and require explicit selection.
