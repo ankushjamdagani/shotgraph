@@ -1,4 +1,4 @@
-export type ModelEngine = 'antigravity-cli' | 'claude-cli' | 'ollama' | 'hyperframes' | 'external';
+export type ModelEngine = 'antigravity-cli' | 'claude-cli' | 'ollama' | 'hyperframes' | 'external' | 'chatgpt';
 
 export interface SubjectVariant {
   id: string;

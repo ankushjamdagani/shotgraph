@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { RunOptions } from '../../runners/base.js';
 
-export type ModelEngine = 'antigravity-cli' | 'claude-cli' | 'ollama' | 'hyperframes' | 'ffmpeg' | 'external';
+export type ModelEngine = 'antigravity-cli' | 'claude-cli' | 'ollama' | 'hyperframes' | 'ffmpeg' | 'external' | 'chatgpt';
 
 export interface SkillExecutionContext extends RunOptions {
   modelEngine?: ModelEngine;

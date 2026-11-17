@@ -25,6 +25,10 @@ describe('model connection verification',()=>{
   vi.mocked(runOllama).mockResolvedValue({text:'```json\n{"ready":true}\n```'} as any);
   expect((await testModelConnection('ollama')).engine).toBe('ollama');
  });
+ it('rejects an unconfigured ChatGPT engine without claiming readiness',async()=>{
+  await expect(testModelConnection('chatgpt')).rejects.toThrow('not configured');
+  expect(runAntigravityCLIJson).not.toHaveBeenCalled();
+ });
  it('does not accept a result after cancellation',async()=>{
   vi.mocked(runClaudeCLIJson).mockResolvedValue({data:{ready:true}} as any);
   const controller=new AbortController(); controller.abort();

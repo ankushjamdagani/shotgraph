@@ -8,6 +8,8 @@ export async function runModelJson<T>(prompt: string, engine: string | undefined
     const fenced = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
     try { return JSON.parse(fenced?.[1] || text); } catch { throw new Error('Ollama returned invalid JSON. Retry or choose another engine.'); }
   }
-  if (engine && engine !== 'antigravity-cli') throw new Error('Select a language model engine to generate text.');
-  return (await runAntigravityCLIJson<T>(prompt,options)).data;
+  if (engine === 'antigravity-cli' || !engine) {
+    return (await runAntigravityCLIJson<T>(prompt, options)).data;
+  }
+  throw new Error('Select a language model engine to generate text.');
 }

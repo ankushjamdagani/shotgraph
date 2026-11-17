@@ -273,8 +273,16 @@ server.post('/api/projects/create', async (req, reply) => {
 });
 
 // Real AI Mood & Tone Analysis for Genesis Flow
+interface AICacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+const aiMoodCache = new Map<string, AICacheEntry<any>>();
+const aiStoryCache = new Map<string, AICacheEntry<any>>();
+const AI_CACHE_TTL_MS = 1000 * 60 * 60; // 1 hour
+
 server.post('/api/ai/test-connection', async (req, reply) => {
-  const {modelEngine}=z.object({modelEngine:z.enum(['antigravity-cli','claude-cli','ollama'])}).strict().parse(req.body);
+  const {modelEngine}=z.object({modelEngine:z.enum(['antigravity-cli','claude-cli','ollama','chatgpt'])}).strict().parse(req.body);
   const controller=new AbortController();
   const cancel=()=>{if(!reply.raw.writableEnded)controller.abort();};
   reply.raw.on('close',cancel);
@@ -289,6 +297,12 @@ server.post('/api/ai/suggest-moods', async (req, reply) => {
   if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
     reply.status(400);
     return { success: false, error: 'A film premise prompt is required to analyze moods.' };
+  }
+
+  const cacheKey = `${modelEngine}:${prompt.trim().toLowerCase()}`;
+  const cached = aiMoodCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < AI_CACHE_TTL_MS) {
+    return { success: true, ...cached.data, cached: true };
   }
 
   const aiPrompt = `You are an award-winning cinematic director and film composer.
@@ -334,10 +348,15 @@ Return valid JSON with the exact structure:
       throw new Error('AI runner returned invalid mood structure.');
     }
 
-    return {
-      success: true,
+    const outputData = {
       moods: resultData.moods,
       reasoning: resultData.reasoning || '',
+    };
+    aiMoodCache.set(cacheKey, { data: outputData, timestamp: Date.now() });
+
+    return {
+      success: true,
+      ...outputData,
     };
   } catch (err: any) {
     reply.status(502);
@@ -349,16 +368,70 @@ Return valid JSON with the exact structure:
 });
 
 server.post('/api/ai/story-directions', async (req, reply) => {
- const input=z.object({prompt:z.string().trim().min(1),duration:z.number().positive(),modelEngine:z.enum(['antigravity-cli','claude-cli','ollama']),mood:z.string().optional(),directive:z.string().optional()}).parse(req.body);
- const controller=new AbortController(); const cancel=()=>{if(!reply.raw.writableEnded)controller.abort();}; reply.raw.on('close',cancel);
- const prompt=`Create three distinct film directions for this brief: ${JSON.stringify(input)}. Each must fit the requested duration and brief. Return JSON {"directions":[{"title":"title","beats":[{"label":"beat with timing","text":"visual action and dialogue"}]}]}.`;
- try {
-  const opts={timeoutMs:60000,signal:controller.signal};
-  const raw=input.modelEngine==='claude-cli'?(await runClaudeCLIJson<any>(prompt,opts)).data:input.modelEngine==='ollama'?JSON.parse((await runOllama(prompt,opts)).text.replace(/```(?:json)?|```/g,'')):(await runAntigravityCLIJson<any>(prompt,opts)).data;
-  const parsed=z.object({directions:z.array(z.object({title:z.string().min(1),beats:z.array(z.object({label:z.string(),text:z.string()})).min(1)})).min(1).max(5)}).parse(raw);
-  return {success:true,directions:parsed.directions};
- } catch(error:any) {return reply.code(502).send({success:false,error:error.message || 'Generation failed. Retry or create a blank project.'});}
- finally{reply.raw.off('close',cancel);}
+  const input = z.object({
+    prompt: z.string().trim().min(1),
+    duration: z.number().positive(),
+    modelEngine: z.enum(['antigravity-cli', 'claude-cli', 'ollama']),
+    mood: z.string().optional(),
+    directive: z.string().optional(),
+  }).parse(req.body);
+
+  const cacheKey = `${input.modelEngine}:${input.duration}:${input.prompt.toLowerCase()}:${(input.mood || '').toLowerCase()}:${(input.directive || '').toLowerCase()}`;
+  const cached = aiStoryCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < AI_CACHE_TTL_MS) {
+    return { success: true, directions: cached.data, cached: true };
+  }
+
+  const controller = new AbortController();
+  const cancel = () => { if (!reply.raw.writableEnded) controller.abort(); };
+  reply.raw.on('close', cancel);
+
+  const prompt = `Create three distinct film directions for this brief: ${JSON.stringify(input)}. Each must fit the requested duration and brief.
+Return JSON with the exact structure:
+{
+  "directions": [
+    {
+      "title": "compelling short title",
+      "summary": "crisp 1-line summary capturing the core premise and narrative hook (under 120 chars)",
+      "story": "compelling full story narrative describing the scene progression, character motivation, and visual climax",
+      "beats": [
+        {"label": "beat with timing", "text": "visual action and dialogue"}
+      ]
+    }
+  ]
+}`;
+
+  try {
+    const opts = { timeoutMs: 60000, signal: controller.signal };
+    const raw = input.modelEngine === 'claude-cli'
+      ? (await runClaudeCLIJson<any>(prompt, opts)).data
+      : input.modelEngine === 'ollama'
+        ? JSON.parse((await runOllama(prompt, opts)).text.replace(/```(?:json)?|```/g, ''))
+        : (await runAntigravityCLIJson<any>(prompt, opts)).data;
+
+    const parsed = z.object({
+      directions: z.array(z.object({
+        title: z.string().min(1),
+        summary: z.string().optional().default(''),
+        story: z.string().optional().default(''),
+        beats: z.array(z.object({ label: z.string(), text: z.string() })).min(1),
+      })).min(1).max(5),
+    }).parse(raw);
+
+    const normalized = parsed.directions.map((d) => ({
+      title: d.title,
+      summary: d.summary || d.beats[0]?.text?.slice(0, 120) || 'A cinematic narrative journey.',
+      story: d.story || d.beats.map((b) => `${b.label}: ${b.text}`).join('\n\n'),
+      beats: d.beats,
+    }));
+
+    aiStoryCache.set(cacheKey, { data: normalized, timestamp: Date.now() });
+    return { success: true, directions: normalized };
+  } catch (error: any) {
+    return reply.code(502).send({ success: false, error: error.message || 'Generation failed. Retry or create a blank project.' });
+  } finally {
+    reply.raw.off('close', cancel);
+  }
 });
 
 // Get specific project by ID or path

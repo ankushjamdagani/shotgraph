@@ -61,7 +61,7 @@ export interface VersionNode {
   stage: ProductionStage;
   stageOrder?: number; // 1 to 8 for horizontal layout
   title: string;
-  modelEngine: 'antigravity-cli' | 'claude-cli' | 'ollama' | 'hyperframes' | 'external';
+  modelEngine: 'antigravity-cli' | 'claude-cli' | 'ollama' | 'hyperframes' | 'external' | 'chatgpt';
   modelName?: string;
   prompt: string;
   boundSubjectAnchorIds?: string[];
@@ -154,7 +154,7 @@ export interface GenesisBranchConfig {
   beats?: Array<{ label: string; text: string }>;
 }
 
-export type ModelEngineType = 'antigravity-cli' | 'claude-cli' | 'ollama' | 'hyperframes' | 'external';
+export type ModelEngineType = 'antigravity-cli' | 'claude-cli' | 'ollama' | 'hyperframes' | 'external' | 'chatgpt';
 
 export interface GenesisProjectConfig {
   mood?: string;
