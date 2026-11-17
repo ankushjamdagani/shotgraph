@@ -4,6 +4,12 @@ import { toast } from './services/toastService';
 import { apiFetch, sessionToken } from './services/api';
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { FilmProject, AgentPresence } from './types.js';
+import {
+  isCreateProjectRoute,
+  navigateToCreateProject,
+  navigateToProjectsHub,
+  navigateToProject,
+} from './utils/routes';
 import { SpatialDirectorCanvas } from './components/canvas/SpatialDirectorCanvas.js';
 import { BottomPlaybackDock } from './components/canvas/BottomPlaybackDock.js';
 import { CommandPalette } from './components/palette/CommandPalette.js';
@@ -52,7 +58,7 @@ function App() {
 
   // Modals
   const [isProjectHubOpen, setIsProjectHubOpen] = useState(false);
-  const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
+  const [isNewProjectOpen, setIsNewProjectOpen] = useState(() => isCreateProjectRoute());
   const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
   const [isTasteMixerOpen, setIsTasteMixerOpen] = useState(false);
   const [isSubjectManagerOpen, setIsSubjectManagerOpen] = useState(false);
@@ -131,14 +137,16 @@ function App() {
     }
   }, []);
 
-  // Mount logic: check if ?projectId= is provided
+  // Mount logic: check if ?projectId= or create route is provided
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const initialProjectId = urlParams.get('projectId');
-    if (initialProjectId) {
+    if (isCreateProjectRoute()) {
+      setIsNewProjectOpen(true);
+    } else if (initialProjectId) {
       loadProjectById(initialProjectId);
     }
-    // If no initialProjectId, stay on root Projects Hub page (project = null)
+    // If no initialProjectId or create route, stay on root Projects Hub page (project = null)
   }, [loadProjectById]);
 
   // Support browser Back/Forward navigation
@@ -146,23 +154,50 @@ function App() {
     const handlePopState = () => {
       const urlParams = new URLSearchParams(window.location.search);
       const pid = urlParams.get('projectId');
-      if (pid) {
-        loadProjectById(pid);
+      if (isCreateProjectRoute()) {
+        setIsNewProjectOpen(true);
       } else {
-        ++loadSequence.current;setSelectedNodeId(null);setProject(null);
+        setIsNewProjectOpen(false);
+        if (pid) {
+          loadProjectById(pid);
+        } else {
+          ++loadSequence.current;
+          setSelectedNodeId(null);
+          setProject(null);
+        }
       }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [loadProjectById]);
 
-  // Global Keyboard Shortcuts (Cmd+O for Project Hub, Cmd+K for Command Palette, Cmd+, for Settings, Cmd+E for DaVinci Export)
+  // Custom route change events (e.g. from studio navigation)
+  useEffect(() => {
+    const handleRouteChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.route === 'create') {
+        setIsNewProjectOpen(true);
+      } else if (detail?.route === 'hub') {
+        setIsNewProjectOpen(false);
+        setProject(null);
+        setSelectedNodeId(null);
+      } else if (detail?.route === 'editor' && detail?.projectId) {
+        setIsNewProjectOpen(false);
+        loadProjectById(detail.projectId);
+      }
+    };
+    window.addEventListener('studio:route-change', handleRouteChange);
+    return () => window.removeEventListener('studio:route-change', handleRouteChange);
+  }, [loadProjectById]);
+
+  // Global Keyboard Shortcuts (Cmd+N for New Project, Cmd+O for Project Hub, Cmd+K for Command Palette, Cmd+, for Settings, Cmd+E for DaVinci Export)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.defaultPrevented || document.querySelector('[aria-modal=true]')) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'n') {
         e.preventDefault();
-        if (!project) window.dispatchEvent(new Event('studio:new-project')); else setIsNewProjectOpen(true);
+        navigateToCreateProject();
+        setIsNewProjectOpen(true);
       }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'o') {
         e.preventDefault();
@@ -235,19 +270,25 @@ function App() {
     setProject(newProject);
     const firstNode = Object.keys(newProject.nodes)[0] || null;
     setSelectedNodeId(firstNode);
-
-    const newUrl = new URL(window.location.href);
-    newUrl.searchParams.set('projectId', newProject.id);
-    window.history.pushState({}, '', newUrl.toString());
+    setIsNewProjectOpen(false);
+    navigateToProject(newProject.id);
   };
 
   const handleExitToProjects = () => {
     ++loadSequence.current;
     setSelectedNodeId(null);
     setProject(null);
-    const newUrl = new URL(window.location.href);
-    newUrl.searchParams.delete('projectId');
-    window.history.pushState({}, '', newUrl.pathname);
+    setIsNewProjectOpen(false);
+    navigateToProjectsHub();
+  };
+
+  const handleCloseNewProject = () => {
+    setIsNewProjectOpen(false);
+    if (project?.id) {
+      navigateToProject(project.id);
+    } else {
+      navigateToProjectsHub();
+    }
   };
 
   const handleBranchNode = async (parentNodeId: string) => {
@@ -333,16 +374,30 @@ function App() {
     }
   };
 
-  // Root view: When on root (no project loaded), show Projects Page directly!
+  // Root view: When on root (no project loaded), show Projects Page or Genesis Wizard directly!
   if (!project) {
     return (
-      <> <ProjectHubModal
-        isOpen={true}
-        isStandalonePage={true}
-        onSelectProject={handleSelectProject}
-        currentTheme={theme}
-        onThemeChange={setTheme}
-      /></>
+      <>
+        <ProjectHubModal
+          isOpen={!isNewProjectOpen}
+          isStandalonePage={true}
+          onSelectProject={handleSelectProject}
+          currentTheme={theme}
+          onThemeChange={setTheme}
+        />
+        {isNewProjectOpen && (
+          <Suspense fallback={null}>
+            <NewProjectWizard
+              isOpen={isNewProjectOpen}
+              onClose={handleCloseNewProject}
+              onProjectCreated={(newProj) => {
+                handleSelectProject(newProj);
+                setIsNewProjectOpen(false);
+              }}
+            />
+          </Suspense>
+        )}
+      </>
     );
   }
 
@@ -392,7 +447,10 @@ function App() {
             onOpenDaVinciExport={() => setIsDaVinciExportOpen(true)}
             onOpenProjectsHub={() => setIsProjectHubOpen(true)}
             onDeleteProject={() => setIsDeleteModalOpen(true)}
-            onOpenNewProject={() => setIsNewProjectOpen(true)}
+            onOpenNewProject={() => {
+              navigateToCreateProject();
+              setIsNewProjectOpen(true);
+            }}
           />
         </div>
 
@@ -508,7 +566,7 @@ function App() {
         {isNewProjectOpen && (
           <NewProjectWizard
             isOpen={isNewProjectOpen}
-            onClose={() => setIsNewProjectOpen(false)}
+            onClose={handleCloseNewProject}
             onProjectCreated={(newProj) => {
               handleSelectProject(newProj);
               setIsNewProjectOpen(false);

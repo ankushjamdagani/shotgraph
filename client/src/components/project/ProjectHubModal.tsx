@@ -4,6 +4,7 @@ import { ProjectStartPanel } from '../ui/project-start-panel';
 import { getCollectionLayout, getCollectionListStyle, getCardHoverStyle } from '../ui/collection-appearance';
 import { getPageBackground, getDefaultStartAppearance, type ProjectBackgroundStyles } from '../ui/page-background';
 import { useDialog } from '../common/useDialog';
+import { navigateToCreateProject } from '../../utils/routes';
 import {
   Button,
   IconButton,
@@ -57,9 +58,7 @@ const ProjectDesignTools = import.meta.env.DEV
   ? React.lazy(() => import('../../dev/ProjectDesignTools'))
   : null;
 
-const NewProjectWizard = React.lazy(() =>
-  import('./NewProjectWizard').then((m) => ({ default: m.NewProjectWizard })),
-);
+
 
 interface ProjectHubModalProps {
   isOpen: boolean;
@@ -377,7 +376,6 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [isLoading, setIsLoading] = useState(false);
   const [isOpeningNativeFinder, setIsOpeningNativeFinder] = useState(false);
-  const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] =
     useState<ProjectRegistryEntry | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -457,10 +455,17 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
   }, [isOpen]);
 
   const hubDialog = useDialog(isOpen && !isStandalonePage, () => onClose?.());
+
+  const handleOpenWizard = () => {
+    navigateToCreateProject();
+  };
+
   useEffect(() => {
-    const open = () => setIsWizardOpen(true);
+    const open = () => handleOpenWizard();
     window.addEventListener('studio:new-project', open);
-    return () => window.removeEventListener('studio:new-project', open);
+    return () => {
+      window.removeEventListener('studio:new-project', open);
+    };
   }, []);
   if (!isOpen) return null;
 
@@ -852,7 +857,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
       )}
     >
       {splitWorkspace && <ProjectStartPanel
-        onCreate={() => setIsWizardOpen(true)}
+        onCreate={handleOpenWizard}
         onOpenFolder={handleOpenFolderFromFinder}
         opening={isOpeningNativeFinder}
         style={backgroundStyles.start}
@@ -886,7 +891,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
                 onThemeChange={onThemeChange}
               />
             )}
-            <Button onClick={() => setIsWizardOpen(true)}>
+            <Button onClick={handleOpenWizard}>
               <Plus />
               New Project
             </Button>
@@ -1013,7 +1018,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
               <article className={cn('group min-w-0', look.card, getCardHoverStyle())}>
                 <button
                   className="block w-full rounded-thumbnail text-left"
-                  onClick={() => setIsWizardOpen(true)}
+                  onClick={handleOpenWizard}
                 >
                   <Thumbnail intent="create" className={look.thumbnail}>
                     <Plus className="size-7 stroke-[1.5] text-text-muted" />
@@ -1094,12 +1099,12 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
           >
             <Table className="table-fixed">
               <tbody>
-                <TableRow onClick={(event) => { if (!(event.target as HTMLElement).closest("button")) setIsWizardOpen(true); }} className="cursor-pointer">
+                <TableRow onClick={(event) => { if (!(event.target as HTMLElement).closest("button")) handleOpenWizard(); }} className="cursor-pointer">
                   <TableCell colSpan={2} className="p-0">
                     <button
                       data-list-content
                       className="flex w-full items-center gap-2 text-left"
-                      onClick={() => setIsWizardOpen(true)}
+                      onClick={handleOpenWizard}
                     >
                       <Thumbnail compact intent="create" data-list-thumb className={look.compact}>
                         <Plus className="size-4 text-text-muted" />
@@ -1159,18 +1164,7 @@ export const ProjectHubModal: React.FC<ProjectHubModalProps> = ({
           {content}
         </div>
       )}
-      {isWizardOpen && (
-        <React.Suspense fallback={null}>
-          <NewProjectWizard
-            isOpen={isWizardOpen}
-            onClose={() => setIsWizardOpen(false)}
-            onProjectCreated={(project) => {
-              onSelectProject(project);
-              onClose?.();
-            }}
-          />
-        </React.Suspense>
-      )}
+
       <AlertDialog
         open={!!projectToDelete}
         onOpenChange={(open) => {
