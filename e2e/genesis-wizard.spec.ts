@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Genesis Wizard Project Creation Flow', () => {
-  test('navigates to /projects/new, preserves state, features infinite arched cards carousel with title-wrapped arrows, custom prompt card, and AI card', async ({
+  test('navigates to /projects/new, preserves state, supports one story and custom direction, and shows AI moods', async ({
     page,
     project,
   }) => {
@@ -63,13 +63,13 @@ test.describe('Genesis Wizard Project Creation Flow', () => {
     const levaTrigger = page.getByLabel(/Wizard debug controls/i);
     await expect(levaTrigger).toBeVisible();
 
-    // Verify footer bar has step indicator instead of bulky top progress bar
+    // Approved composition keeps progress hidden.
     const stepDots = page.getByLabel('Project setup progress');
-    await expect(stepDots).toBeVisible();
+    await expect(stepDots).toHaveCount(0);
 
-    const titleInput = page.getByLabel(/Project title/i);
     const testTitle = `Test Film ${Date.now()}`;
-    await titleInput.fill(testTitle);
+    await expect(page.getByLabel('Project title', { exact: true })).toHaveCount(0);
+    await expect(page.getByLabel('Project folder', { exact: true })).toHaveCount(0);
 
     const promptTextarea = page.getByPlaceholder(/A story, a scene, a character/i);
     await promptTextarea.fill('Cinematic cyberpunk chase sequence through neon rain in Neo-Tokyo.');
@@ -80,38 +80,26 @@ test.describe('Genesis Wizard Project Creation Flow', () => {
     await expect(page.getByRole('heading', { name: /Start with an idea/i })).toBeVisible();
 
     // Verify state was preserved on reload
-    await expect(page.getByLabel(/Project title/i)).toHaveValue(testTitle);
     await expect(page.getByPlaceholder(/A story, a scene, a character/i)).toHaveValue(
       'Cinematic cyberpunk chase sequence through neon rain in Neo-Tokyo.',
     );
 
-    await page.getByRole('button', { name: /Continue/i }).click();
-    await expect(page.getByText(/Give your film a format/i)).toBeVisible();
-
-    // Continue to Step 4 (Story Directions)
     await page.getByRole('button', { name: /Generate story directions/i }).click();
     await expect(page.getByText(/Find your story direction/i)).toBeVisible({ timeout: 10000 });
 
-    // Verify Story Deck is rendered as the arched carousel with flanking navigation arrows
-    const storyCarousel = page.locator('[role="region"][aria-label="Story directions"]');
-    await expect(storyCarousel).toBeVisible();
-    await expect(storyCarousel.getByLabel('Previous story direction')).toBeVisible();
-    await expect(storyCarousel.getByLabel('Next story direction')).toBeVisible();
+    const storyChoices = page.getByRole('radiogroup', { name: 'Story directions' });
+    await expect(storyChoices).toBeVisible();
+    await expect(storyChoices.getByRole('radio', { checked: true })).toHaveCount(1);
 
-    // Verify Custom Direction card is present in the list
-    await expect(storyCarousel.getByRole('button', { name: /Custom story direction/i })).toBeVisible();
-
-    // Verify complete story narrative is rendered directly on the cards
-    await expect(storyCarousel.getByText(/beats/i).first()).toBeVisible();
-
-    await storyCarousel.getByRole('button', { name: /Custom story direction/i }).click();
+    await page.getByRole('button', { name: 'Or write your own direction' }).click();
     const customStory = page.locator('#custom-story-direction');
     await customStory.pressSequentially('A quiet arrival');
     await expect(customStory).toHaveValue('A quiet arrival');
     await customStory.press('ArrowLeft');
     await customStory.press('X');
     await expect(customStory).toHaveValue('A quiet arrivaXl');
-    await storyCarousel.getByRole('button', { name: 'Add direction', exact: true }).click();
+    await page.getByRole('button', { name: 'Use my direction', exact: true }).click();
+    await expect(storyChoices.getByRole('radio', { checked: true })).toHaveCount(1);
 
     // Select story direction and continue to Step 5 (Mood)
     await page.getByRole('button', { name: /Continue/i }).click();
@@ -125,7 +113,8 @@ test.describe('Genesis Wizard Project Creation Flow', () => {
     await expect(carousel.getByRole('button', { name: /Bold & energetic/i })).toBeVisible();
 
     // Verify Custom Prompt card is present in the list
-    await expect(carousel.getByRole('button', { name: /Custom prompt/i })).toBeVisible();
+    await expect(carousel.getByRole('button', { name: /Custom prompt/i })).toHaveCount(0);
+    await expect(page.locator('#project-mood')).toBeVisible();
 
     // Verify Previous and Next arrow buttons wrap the option title
     const prevBtn = carousel.getByLabel('Previous option');
@@ -147,10 +136,6 @@ test.describe('Genesis Wizard Project Creation Flow', () => {
     // Click previous arrow button
     await prevBtn.click();
 
-    // Select the Custom Prompt card to verify alternate prompt functionality
-    const customCard = carousel.getByRole('button', { name: /Custom prompt/i });
-    await customCard.click();
-
     // Alternate prompt textarea appears for custom prompt notes
     const moodNotesTextarea = page.locator('#project-mood');
     await expect(moodNotesTextarea).toBeVisible();
@@ -171,11 +156,15 @@ test.describe('Genesis Wizard Project Creation Flow', () => {
     // Verify Look step also has the horizontal list as hero with custom look card
     const lookCarousel = page.locator('[role="region"]').first();
     await expect(lookCarousel).toBeVisible();
-    await expect(lookCarousel.getByRole('button', { name: /Custom look/i })).toBeVisible();
+    await expect(lookCarousel.getByRole('button', { name: /Custom look/i })).toHaveCount(0);
+    await expect(page.getByLabel('Or describe your own visual look')).toBeVisible();
 
     // Continue to Step 7 (Review)
     await page.getByRole('button', { name: /Continue/i }).click();
     await expect(page.getByText(/Ready for the studio/i)).toBeVisible();
+
+    await expect(page.getByLabel('Project title', { exact: true })).toHaveValue('A quiet arrivaXl');
+    await page.getByLabel('Project title', { exact: true }).fill(testTitle);
 
     // Create project
     await page.getByRole('button', { name: 'Create project', exact: true }).click();
@@ -188,7 +177,7 @@ test.describe('Genesis Wizard Project Creation Flow', () => {
   });
 });
 
-test('waits for the background engine after Format and allows retry', async ({page}) => {
+test('waits for the background engine after Brief and allows retry', async ({page}) => {
   let finishTest!: () => void;
   const gate = new Promise<void>(resolve => { finishTest = resolve; });
   let calls = 0;
@@ -202,8 +191,6 @@ test('waits for the background engine after Format and allows retry', async ({pa
     await route.fulfill({json:{success:true,directions:[{title:'A quiet arrival',beats:[{label:'Opening',text:'A train arrives.'}]}]}});
   });
   await page.goto('/projects/new');
-  await page.getByRole('button',{name:'Continue',exact:true}).click();
-  await expect(page.getByRole('heading',{name:'Give your film a format.'})).toBeVisible();
   await page.getByRole('button',{name:'Generate story directions',exact:true}).click();
   await expect(page.getByRole('status').filter({hasText:'Checking the creative engine'})).toBeVisible();
   finishTest();
@@ -211,57 +198,50 @@ test('waits for the background engine after Format and allows retry', async ({pa
   await page.getByRole('button',{name:'Retry connection'}).click();
   await expect(page.getByRole('alert')).toHaveCount(0);
   await page.getByRole('button',{name:'Generate story directions',exact:true}).click();
-  await expect(page.getByRole('region',{name:'Story directions'})).toBeVisible();
+  await expect(page.getByRole('radiogroup',{name:'Story directions'})).toBeVisible();
   await expect(page.getByRole('button',{name:'Continue',exact:true})).toBeEnabled();
 });
 
 test('direct reload keeps creation visible and exposes compact footer variants', async ({page}) => {
   await page.route('**/api/ai/test-connection', route => route.fulfill({json:{success:true,engine:'antigravity-cli'}}));
   await page.goto('/projects/new');
-  await page.getByLabel('Project title', {exact:true}).fill('Reference study');
   await page.getByPlaceholder(/A story, a scene, a character/).fill('Study https://vimeo.com/123456');
   await expect(page.getByRole('list',{name:'Reference links'})).toContainText('vimeo.com');
   for (let i=0;i<3;i++) {
     await page.reload();
     await expect(page.getByRole('heading',{name:'Start with an idea.'})).toBeVisible();
-    await expect(page.getByLabel('Project title',{exact:true})).toHaveValue('Reference study');
+    await expect(page.getByLabel('Project title',{exact:true})).toHaveCount(0);
+    await expect(page.getByPlaceholder(/A story, a scene, a character/)).toHaveValue('Study https://vimeo.com/123456');
     await expect(page.getByRole('button',{name:'New Project',exact:true})).toHaveCount(0);
   }
-  await page.getByRole('button',{name:'More setup actions'}).click();
-  await page.getByRole('menuitem',{name:'Reset setup'}).click();
-  await expect(page.getByRole('alertdialog')).toBeVisible();
-  await page.getByRole('button',{name:'Reset setup',exact:true}).click();
-  await expect(page.getByLabel('Project title',{exact:true})).toHaveValue('');
-  await page.screenshot({path:'audits/2026-11-17-creation-desktop.png'});
+  await expect(page.getByRole('button', {name:'Reset setup'})).toHaveCount(0);
+  await expect(page.getByRole('button', {name:/Create empty project/})).toBeVisible();
   await page.setViewportSize({width:390,height:844});
-  await page.screenshot({path:'audits/2026-11-17-creation-mobile.png'});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
   await page.evaluate(()=>localStorage.setItem('studio_theme','paper-ink'));
   await page.reload();
   await expect(page.getByRole('heading',{name:'Start with an idea.'})).toBeVisible();
   await page.getByPlaceholder(/A story, a scene, a character/).fill('Lighting study https://vimeo.com/123456');
-  await page.screenshot({path:'audits/2026-11-17-creation-mobile-light.png'});
 });
 
 
 test('closing discards the creation draft and reopening starts fresh', async ({page}) => {
   await page.route('**/api/ai/test-connection', route => route.fulfill({json:{success:true,engine:'antigravity-cli'}}));
   await page.goto('/projects/new');
-  await page.getByLabel('Project title',{exact:true}).fill('Discard this draft');
   await page.getByPlaceholder(/A story, a scene, a character/).fill('Discard https://example.com/reference');
-  await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await page.getByRole('button',{name:'Generate story directions',exact:true}).click();
   await page.getByRole('button',{name:'Close create project'}).click();
   await expect(page).toHaveURL('/');
   expect(await page.evaluate(()=>localStorage.getItem('shotgraph_create_project_draft_v1'))).toBeNull();
   await page.getByRole('button',{name:'New Project',exact:true}).first().click();
   await expect(page.getByRole('heading',{name:'Start with an idea.'})).toBeVisible();
-  await expect(page.getByLabel('Project title',{exact:true})).toHaveValue('');
+  await expect(page.getByLabel('Project title',{exact:true})).toHaveCount(0);
   await expect(page.getByPlaceholder(/A story, a scene, a character/)).toHaveValue('');
   await expect(page.getByRole('list',{name:'Reference links'})).toHaveCount(0);
-  await page.getByLabel('Project title',{exact:true}).fill('Escape this draft');
+  await page.getByPlaceholder(/A story, a scene, a character/).fill('Escape this draft');
   await page.keyboard.press('Escape');
   await expect(page).toHaveURL('/');
   expect(await page.evaluate(()=>localStorage.getItem('shotgraph_create_project_draft_v1'))).toBeNull();
   await page.goto('/projects/new');
-  await expect(page.getByLabel('Project title',{exact:true})).toHaveValue('');
+  await expect(page.getByLabel('Project title',{exact:true})).toHaveCount(0);
 });

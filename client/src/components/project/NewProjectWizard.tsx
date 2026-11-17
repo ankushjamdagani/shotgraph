@@ -1,22 +1,29 @@
+import { ProjectIdeaInput, type ProjectIdeaInputVariant } from '../ui/project-idea-input';
+import { EmptyProjectAction } from '../ui/empty-project-action';
+import { setupDefaults } from '../ui/setup-defaults';
+import { toast } from '../../services/toastService';
+import { SetupFlow, isSideSetupFlow, isSplitSetupFlow, type SetupFlowVariant } from '../ui/setup-flow';
+import type { StoryConcept, StoryContentVariant } from '../ui/story-content';
+import { SetupHeader, type SetupHeaderVariant } from '../ui/setup-header';
+import { Input, SetupInputContext, type SetupInputVariant } from '../ui/input';
 import { ReferenceLinks } from '../ui/reference-links';
 import { SetupReview } from '../ui/setup-review';
 import type { VisualListVariant } from '../ui/visual-choice-list';
-import { StoryDeck } from '../ui/story-deck';
+import { StoryDeck, type StoryPresentationVariant } from '../ui/story-deck';
 import { LookPicker } from '../ui/look-picker';
 import { MoodPicker } from '../ui/mood-picker';
 import { ProjectTitleField } from '../ui/project-title-field';
 import { SetupActions, type SetupActionsVariant } from '../ui/setup-actions';
 import { StepIndicator, type StepIndicatorVariant } from '../ui/step-indicator';
 import { Dialog as Primitive } from 'radix-ui';
-import { Button, IconButton, Textarea, Label } from '../ui';
-import { ChoiceGroup } from '../ui/choice-group';
+import { Button, Label } from '../ui';
+import { ProjectSettingsFields } from '../ui/project-settings-fields';
 import { AsciiArt } from '../ui/ascii-art';
 import { getDefaultStartAppearance } from '../ui/page-background';
 import { getPageBackground } from '../ui/page-background';
-import { Film } from 'lucide-react';
 import { apiFetch } from '../../services/api';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, FolderOpen, Loader2 } from 'lucide-react';
+import { FolderOpen, Loader2 } from 'lucide-react';
 import { cn } from '../ui/cn';
 import { FilmProject, ModelEngine } from '../../types';
 
@@ -69,15 +76,13 @@ interface StoryBeat {
   text: string;
 }
 
-interface StoryVariation {
+interface StoryVariation extends StoryConcept {
   id: number;
   title: string;
   summary?: string;
   story?: string;
   durationLabel: string;
   beats: StoryBeat[];
-  audioFreq: number;
-  audioType: OscillatorType;
 }
 
 interface AIMoodOption {
@@ -109,7 +114,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
 
   // Navigation & Variant
   const [visualListVariant, setVisualListVariant] = useState<VisualListVariant>(
-    () => initialDraft?.visualListVariant || 'Arched fan',
+    setupDefaults.cardLayout,
   );
   const [currentStep, setCurrentStep] = useState<number>(() => {
     if (
@@ -118,7 +123,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
       initialDraft.currentStep >= 1 &&
       initialDraft.currentStep <= 7
     ) {
-      return initialDraft.currentStep === 2 ? 3 : initialDraft.currentStep;
+      return [2, 3].includes(initialDraft.currentStep) ? 1 : initialDraft.currentStep;
     }
     return 1;
   });
@@ -155,20 +160,8 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
 
   const [prompt, setPrompt] = useState<string>(() => initialDraft?.prompt || '');
   const [title, setTitle] = useState<string>(() => initialDraft?.title || '');
-  const defaultFolderName =
-    (title || 'Untitled Video Project')
-      .toLowerCase()
-      .replace(/[^a-z0-9_-]/g, '_') || 'untitled_project';
-  const [folderPath, setFolderPath] = useState<string>(
-    () => initialDraft?.folderPath || '',
-  );
-  const displayedLocation =
-    folderPath ||
-    (defaultLocation
-      ? defaultLocation.path + defaultLocation.separator + defaultFolderName
-      : locationError
-        ? 'Location unavailable — choose a folder'
-        : 'Loading save location…');
+  const [titleEdited, setTitleEdited] = useState<boolean>(() => initialDraft?.titleEdited ?? Boolean(initialDraft?.title));
+  const [folderPath, setFolderPath] = useState<string>(() => initialDraft?.folderPath || '');
   const [isPickingDir, setIsPickingDir] = useState(false);
 
   // Background engine verification
@@ -202,7 +195,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
       Array.isArray(initialDraft?.selectedCards) &&
       initialDraft.selectedCards.length > 0
     ) {
-      return new Set(initialDraft.selectedCards);
+      return new Set<number>(initialDraft.selectedCards.slice(0, 1));
     }
     return new Set();
   });
@@ -255,14 +248,20 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
   );
 
   // Form Width state (compact: 832px, balanced: 1024px, wide: 1240px, full: 1440px)
-  const [wizardWidth, setWizardWidth] = useState<WizardWidth>('compact');
+  const [wizardWidth, setWizardWidth] = useState<WizardWidth>(setupDefaults.formWidth);
 
   const activeWidthClass = WIZARD_WIDTH_CLASSES[wizardWidth];
 
   // Steps indicator variant state (dots, numbered, segments, pills)
-  const [stepIndicatorVariant, setStepIndicatorVariant] = useState<StepIndicatorVariant>('counter');
+  const [stepIndicatorVariant, setStepIndicatorVariant] = useState<StepIndicatorVariant>(setupDefaults.stepIndicator);
 
-  const [footerVariant, setFooterVariant] = useState<SetupActionsVariant>('split');
+  const [storyContent, setStoryContent] = useState<StoryContentVariant>(setupDefaults.storyContent);
+  const [storyPresentation, setStoryPresentation] = useState<StoryPresentationVariant>(setupDefaults.storyPresentation);
+  const [headerVariant, setHeaderVariant] = useState<SetupHeaderVariant>(setupDefaults.headerLayout);
+  const [inputVariant, setInputVariant] = useState<SetupInputVariant>(setupDefaults.inputStyle);
+  const [ideaInputVariant, setIdeaInputVariant] = useState<ProjectIdeaInputVariant>(setupDefaults.ideaInput);
+  const [flowVariant, setFlowVariant] = useState<SetupFlowVariant>(setupDefaults.flowLayout);
+  const [footerVariant, setFooterVariant] = useState<SetupActionsVariant>(setupDefaults.footerLayout);
   const [waitingForEngine, setWaitingForEngine] = useState(false);
   const navigationRun = useRef(0);
   const enginePromise = useRef<Promise<boolean> | null>(null);
@@ -273,9 +272,6 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
 
   // Input Refs for Auto-Focus
   const promptInputRef = useRef<HTMLTextAreaElement | null>(null);
-  const specsInputRef = useRef<HTMLTextAreaElement | null>(null);
-  const moodInputRef = useRef<HTMLTextAreaElement | null>(null);
-  const aestheticInputRef = useRef<HTMLInputElement | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const opener = useRef(document.activeElement as HTMLElement | null);
 
@@ -291,6 +287,14 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
   );
 
   const allVariations = [...initialVariations, ...customVariations];
+  const chosenStory = allVariations.find(item => selectedCards.has(item.id));
+  const chosenStoryIds = chosenStory ? [chosenStory.id] : [];
+  const projectTitle = titleEdited ? title : chosenStory?.title || '';
+  const defaultFolderName = (projectTitle.trim() || 'Untitled Video Project').toLowerCase().replace(/[^a-z0-9_-]/g, '_') || 'untitled_project';
+  const displayedLocation = folderPath.trim() || (defaultLocation
+    ? defaultLocation.path + defaultLocation.separator + defaultFolderName
+    : locationError ? 'Location unavailable — choose a folder' : 'Loading save location…');
+
 
   // Persist while editing; closing must not let late responses recreate the draft.
   useEffect(() => {
@@ -300,13 +304,13 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
         currentStep,
         furthestStep,
         title,
+        titleEdited,
         prompt,
         folderPath,
         selectedAspect,
         selectedDuration,
         customSpecs,
         selectedModel,
-        verifiedModel,
         selectedCards: Array.from(selectedCards),
         customVariations,
         initialVariations,
@@ -316,9 +320,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
         branchAesthetics,
         customAesthetics,
         stepUrls,
-        visualListVariant,
         refinePrompt,
-        wizardWidth,
         updatedAt: Date.now(),
       };
       localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
@@ -327,13 +329,13 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
     currentStep,
     furthestStep,
     title,
+    titleEdited,
     prompt,
     folderPath,
     selectedAspect,
     selectedDuration,
     customSpecs,
     selectedModel,
-    verifiedModel,
     selectedCards,
     customVariations,
     initialVariations,
@@ -343,9 +345,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
     branchAesthetics,
     customAesthetics,
     stepUrls,
-    visualListVariant,
     refinePrompt,
-    wizardWidth,
   ]);
 
   const closeAndDiscard = () => {
@@ -359,38 +359,6 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
     try { sessionStorage.removeItem(AI_CLIENT_CACHE_KEY); } catch {}
     onClose();
   };
-
-  // Clear/Reset draft helper
-  const handleResetDraft = useCallback(() => {
-    ++navigationRun.current;
-    setWaitingForEngine(false);
-    try {
-      localStorage.removeItem(DRAFT_STORAGE_KEY);
-    } catch {}
-    setCurrentStep(1);
-    setFurthestStep(1);
-    setTitle('');
-    setPrompt('');
-    setFolderPath('');
-    setSelectedAspect('9:16');
-    setSelectedDuration(30);
-    setCustomSpecs('');
-    generation.current?.abort();
-    moodGeneration.current?.abort();
-    setIsAmbientGenerating(false);
-    setIsAiAnalyzingMood(false);
-    setSelectedCards(new Set());
-    setCustomVariations([]);
-    setInitialVariations([]);
-    setSelectedMood('');
-    setCustomMood('');
-    setAiMoods([]);
-    setBranchAesthetics({ 1: 'Liquid Glass', 2: 'Editorial 35mm', 3: 'Pop Kinetic' });
-    setCustomAesthetics({});
-    setStepUrls({ 1: [], 2: [], 3: [], 4: [], 5: [] });
-    setRefinePrompt('');
-    setErrorMsg('');
-  }, []);
 
   // Helper: Extract URLs from text
   const extractUrls = (text: string) => {
@@ -423,11 +391,6 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
     if (!isOpen) return;
     const timer = setTimeout(() => {
       if (currentStep === 1) promptInputRef.current?.focus();
-      else if (currentStep === 3) specsInputRef.current?.focus();
-      else if (currentStep === 5) moodInputRef.current?.focus();
-      else if (currentStep === 2)
-        dialogRef.current?.querySelector<HTMLElement>('[role="radio"]')?.focus();
-      else if (currentStep === 6) aestheticInputRef.current?.focus();
     }, 100);
     return () => clearTimeout(timer);
   }, [currentStep, isOpen]);
@@ -455,6 +418,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
     setAiMoodError(null);
     try {
       const res = await apiFetch('/api/ai/suggest-moods', {
+        errorToast: false,
         signal: controller.signal,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -492,12 +456,12 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
     ): Promise<StoryVariation[]> => {
       const engine = engineOverride || selectedModel;
       const textBrief = prompt.trim() || title.trim() || 'A cinematic film concept';
-      const cacheKey = `story:${engine}:${selectedDuration}:${textBrief.toLowerCase()}:${(customMood || selectedMood || '').toLowerCase()}`;
+      const cacheKey = `story-concept-v3:${engine}:${selectedDuration}:${textBrief.toLowerCase()}:${(customMood || selectedMood || '').toLowerCase()}`;
 
       const cached = getCachedAIResponse<StoryVariation[]>(cacheKey);
       if (cached && cached.length > 0) {
         setInitialVariations(cached);
-        setSelectedCards((prev) => (prev.size === 0 ? new Set([cached[0].id]) : prev));
+        setSelectedCards((prev) => new Set([cached.find(item => prev.has(item.id))?.id ?? cached[0].id]));
         if (isUserExplicit) setIsAmbientGenerating(false);
         return cached;
       }
@@ -514,6 +478,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
       const promise = (async () => {
         try {
           const response = await apiFetch('/api/ai/story-directions', {
+        errorToast: false,
             method: 'POST',
             signal: controller.signal,
             headers: { 'Content-Type': 'application/json' },
@@ -547,16 +512,15 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
                 'A cinematic narrative journey.',
               story:
                 item.story ||
-                item.beats?.map((b: any) => `${b.label}: ${b.text}`).join('\n\n') ||
+                item.beats?.map((b: any) => b.text).join(' ') ||
                 '',
-              durationLabel: `${selectedDuration}s • ${item.beats?.length || 3} beats`,
-              audioFreq: 0,
-              audioType: 'sine',
+              durationLabel: 'Story concept',
+              beats: [],
             }),
           );
           setInitialVariations(directions);
           setCachedAIResponse(cacheKey, directions);
-          setSelectedCards((prev) => (prev.size === 0 ? new Set([directions[0].id]) : prev));
+          setSelectedCards((prev) => new Set([directions.find(item => prev.has(item.id))?.id ?? directions[0].id]));
           return directions;
         } catch (error: any) {
           if (!controller.signal.aborted && isUserExplicit) {
@@ -591,15 +555,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
   };
 
   const toggleCardPick = (id: number) => {
-    setSelectedCards((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        if (next.size > 1) next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
+    setSelectedCards(new Set([id]));
   };
 
   const addCustomVariation = () => {
@@ -609,18 +565,13 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
       id: newId,
       title:
         refinePrompt.slice(0, 32) + (refinePrompt.length > 32 ? '…' : ''),
-      durationLabel: `${selectedDuration}s • Custom Beat`,
-      audioFreq: 300,
-      audioType: 'sine',
-      beats: [
-        {
-          label: 'Custom Direction',
-          text: refinePrompt.trim(),
-        },
-      ],
+      durationLabel: 'Your story',
+      story: refinePrompt.trim(),
+      summary: refinePrompt.trim().slice(0, 120),
+      beats: [],
     };
     setCustomVariations((prev) => [...prev, newVar]);
-    setSelectedCards((prev) => new Set([...prev, newId]));
+    setSelectedCards(new Set([newId]));
     setBranchAesthetics((prev) => ({ ...prev, [newId]: 'Liquid Glass' }));
     setRefinePrompt('');
   };
@@ -630,6 +581,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
     setErrorMsg('');
     try {
       const res = await apiFetch('/api/projects/pick-directory', {
+        errorToast: false,
         method: 'POST',
       });
       const data = await res.json();
@@ -638,7 +590,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
         setFolderPath(data.path);
       }
     } catch {
-      setErrorMsg(
+      toast.error(
         'Could not open the folder picker. Enter a location manually or try again.',
       );
     } finally {
@@ -657,21 +609,26 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
     ++navigationRun.current;
     setWaitingForEngine(false);
     if (currentStep > 1) {
-      setCurrentStep(currentStep === 3 ? 1 : currentStep - 1);
+      setCurrentStep(currentStep === 4 ? 1 : currentStep - 1);
       dialogRef.current?.scrollTo({ top: 0, behavior: 'instant' });
     }
   };
 
   const handleStartProduction = async (emptyDAG = false) => {
     if (isSubmitting) return;
+    if (!emptyDAG && !chosenStory) {
+      setCurrentStep(4);
+      setErrorMsg('Choose one story direction before creating your project.');
+      return;
+    }
     ++navigationRun.current;
     setWaitingForEngine(false);
     generation.current?.abort();
     setIsSubmitting(true);
     setErrorMsg('');
-    const projectName = title.trim() || 'Untitled Video Project';
+    const projectName = projectTitle.trim() || chosenStory?.title || 'Untitled Video Project';
     const primaryAesthetic =
-      branchAesthetics[Array.from(selectedCards)[0]] || 'Liquid Glass';
+      branchAesthetics[chosenStory?.id ?? 0] || 'Liquid Glass';
     const presetMap: Record<string, string> = {
       'Liquid Glass': 'liquid_glass',
       'Editorial 35mm': 'editorial_grain',
@@ -679,25 +636,27 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
       'Cyber Noir': 'liquid_glass',
     };
 
-    const branchesData = Array.from(selectedCards).map((cardId) => {
+    const branchesData = chosenStoryIds.map((cardId) => {
       const v = allVariations.find((item) => item.id === cardId);
       return {
         id: cardId,
         title: v?.title || `Track #${cardId}`,
         aesthetic: branchAesthetics[cardId] || 'Liquid Glass',
-        customLook: customAesthetics[cardId] || '',
-        beats: v?.beats || [],
+        customLook: branchAesthetics[cardId] === 'Custom look' ? customAesthetics[cardId] || '' : '',
+        summary: v?.summary || '',
+        story: v?.story || v?.summary || '',
       };
     });
     const allUrls = Object.values(stepUrls).flat();
 
     try {
       const res = await apiFetch('/api/projects/create', {
+        errorToast: false,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: projectName,
-          path: folderPath ? folderPath.trim() : undefined,
+          path: folderPath.trim() || undefined,
           aspectRatio: selectedAspect,
           targetDurationSec: selectedDuration,
           basePresetId: presetMap[primaryAesthetic] || 'liquid_glass',
@@ -705,7 +664,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
           emptyDAG,
           genesisConfig: {
             mood: selectedMood,
-            customMood,
+            customMood: selectedMood === 'Custom prompt' ? customMood : '',
             modelEngine: selectedModel,
             directorDirective: customDirective,
             branches: emptyDAG ? [] : branchesData,
@@ -727,11 +686,11 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
           onProjectCreated(data.project);
         }, 320);
       } else {
-        setErrorMsg(data.error || 'Failed to create project.');
+        toast.error(data.error || 'Failed to create project.');
         setIsSubmitting(false);
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Server connection error.');
+      toast.error(err.message || 'Server connection error.');
       setIsSubmitting(false);
     }
   };
@@ -744,6 +703,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
     setEngineError('');
     try {
       const response = await apiFetch('/api/ai/test-connection', {
+        errorToast: false,
         method: 'POST',
         signal: controller.signal,
         headers: { 'Content-Type': 'application/json' },
@@ -765,13 +725,13 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
     prompt,
     ...allVariations
       .filter((item) => selectedCards.has(item.id))
-      .map((item) => item.title + ': ' + item.beats.map((beat) => beat.text).join(' ')),
+      .map((item) => item.title + ': ' + (item.story || item.summary || '')),
   ]
     .filter(Boolean)
     .join('\n');
 
-  const visibleSteps = [1, 3, 4, 5, 6, 7];
-  const stepNames = ['Brief', 'Format', 'Story', 'Mood', 'Look', 'Review'];
+  const visibleSteps = [1, 4, 5, 6, 7];
+  const stepNames = ['Brief', 'Story', 'Mood', 'Look', 'Review'];
   const headings = [
     'Start with an idea.',
     'Choose your creative engine.',
@@ -785,9 +745,9 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
     'Describe what you want to make. The details can follow.',
     'Test your selected engine before using AI assistance.',
     'Choose a canvas and target length.',
-    'Select one or more directions, or write your own.',
+    'Choose one direction, or write your own.',
     'Choose a mood for the selected story direction.',
-    'Choose a look for each selected story direction.',
+    'Choose a look for your story.',
     'Review your setup before creating the project.',
   ];
 
@@ -795,13 +755,12 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
     !isSubmitting &&
     !isAmbientGenerating &&
     !waitingForEngine &&
-    (currentStep !== 4 || allVariations.some((v) => selectedCards.has(v.id)));
+    (currentStep < 4 || Boolean(chosenStory));
 
   const next = () => {
     if (!canContinue) return;
     setErrorMsg('');
-    if (currentStep === 1) advanceToStep(3);
-    else if (currentStep === 3) void triggerAmbientGeneration();
+    if (currentStep === 1) void triggerAmbientGeneration();
     else if (currentStep === 4) {
       if (moodContext.trim()) void triggerAiMoodAnalysis(moodContext);
       advanceToStep(5);
@@ -809,16 +768,23 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
     else advanceToStep(currentStep + 1);
   };
 
-  const hasDraftContent = Boolean(
-    title.trim() || prompt.trim() || currentStep > 1 || selectedMood,
-  );
-
   useEffect(() => {
     enginePromise.current = testEngine();
   }, []);
 
+  const stepIntroduction = (
+    <div data-art-exclusion className={cn('mx-auto w-full shrink-0 space-y-1.5 px-2 pb-3 pt-1 sm:px-4', activeWidthClass, flowVariant === 'Quiet focus' && 'text-center')}>
+      <Primitive.Title className="text-2xl font-semibold tracking-tight sm:text-3xl">
+        {headings[currentStep - 1]}
+      </Primitive.Title>
+      <Primitive.Description id="create-description" className={currentStep === 1 ? 'sr-only' : 'text-xs leading-relaxed text-text-muted sm:text-sm'}>
+        {descriptions[currentStep - 1]}
+      </Primitive.Description>
+    </div>
+  );
+
   return (
-    <Primitive.Root
+    <SetupInputContext.Provider value={inputVariant}><Primitive.Root
       open={isOpen}
       onOpenChange={(open) => {
         if (!open && !isSubmitting) {
@@ -841,51 +807,13 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
           onEscapeKeyDown={(event) => {
             if (isSubmitting) event.preventDefault();
           }}
-          className={`fixed inset-0 z-50 isolate flex flex-col overflow-hidden text-text-primary outline-none transition-opacity duration-normal motion-reduce:transition-none ${
+          className={`fixed inset-0 z-50 isolate flex flex-col overflow-clip text-text-primary outline-none transition-opacity duration-normal motion-reduce:transition-none ${
             isExiting ? 'pointer-events-none opacity-0' : ''
           }`}
           style={getPageBackground()}
         >
-          <AsciiArt appearance={getDefaultStartAppearance()} exclusionStyle="soft" />
 
-          {/* Top Header */}
-          <header className="shrink-0 px-4 sm:px-8">
-            <div
-              data-art-exclusion
-              className={cn(
-                'mx-auto flex h-16 w-full items-center justify-between gap-4 px-2 sm:px-4 transition-[max-width] duration-300',
-                activeWidthClass,
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <Film className="size-5" />
-                <span className="text-sm font-semibold tracking-tight">Shotgraph</span>
-                <span className="rounded bg-card/60 px-2 py-0.5 text-[10px] font-mono uppercase text-text-muted border border-subtle">
-                  Genesis
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <IconButton
-                  label="Close create project"
-                  disabled={isSubmitting}
-                  onClick={closeAndDiscard}
-                >
-                  <X />
-                </IconButton>
-              </div>
-            </div>
-          </header>
-
-          {/* Main Content Area */}
-          <div className="flex min-h-0 flex-1 flex-col">
-            <main className="flex min-h-0 flex-1 flex-col justify-center px-2 py-3 sm:px-6 sm:py-6">
-              {/* Form container dynamically adjusts with wizard width controls and stays constant across all steps */}
-              <form
-                className={cn(
-                  'mx-auto flex min-h-0 w-full flex-1 flex-col px-2 sm:max-h-[840px] sm:px-4 transition-[max-width] duration-300',
-                  activeWidthClass,
-                )}
+          <form className="flex min-h-0 flex-1 flex-col"
                 onSubmit={(event) => {
                   event.preventDefault();
                   next();
@@ -897,32 +825,50 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
                   }
                 }}
               >
-                <fieldset
+                <SetupFlow
+                  variant={flowVariant}
+                  background={<AsciiArt appearance={getDefaultStartAppearance()} exclusionStyle="soft" />}
+                  columnClassName={activeWidthClass}
                   disabled={isSubmitting}
-                  className="flex min-h-0 min-w-0 flex-1 flex-col border-0 p-0"
-                >
-                  {/* Fixed Step Title & Description Header (Never scrolls away) */}
+                  header={<SetupHeader showProjectLabel={flowVariant !== 'Quiet focus'} variant={headerVariant} step={stepNames[visibleSteps.indexOf(currentStep)]} position={visibleSteps.indexOf(currentStep) + 1} total={visibleSteps.length} disabled={isSubmitting} onClose={closeAndDiscard} className={['Original', 'Aligned bands', 'Quiet focus'].includes(flowVariant) ? activeWidthClass : undefined}/>}
+                  progress={<StepIndicator steps={stepNames} currentStep={visibleSteps.indexOf(currentStep) + 1} furthestStep={visibleSteps.filter(step => step <= furthestStep).length} variant={isSideSetupFlow(flowVariant) ? 'chapters' : stepIndicatorVariant} disabled={isSubmitting || isAmbientGenerating || waitingForEngine} onStepClick={step => advanceToStep(visibleSteps[step - 1])} vertical={isSideSetupFlow(flowVariant)} appearance={['Split sidebar', 'Split workspace'].includes(flowVariant) ? 'rows' : 'plain'}/>}
+                  introduction={isSplitSetupFlow(flowVariant) ? stepIntroduction : null}
+                  actions={
                   <div
                     data-art-exclusion
-                    className="w-full mx-auto px-2 sm:px-4 pb-3 pt-1 shrink-0 space-y-1.5 select-none"
+                    className={cn("w-full mx-auto px-2 sm:px-4 shrink-0 pt-3", activeWidthClass)}
                   >
-                    <Primitive.Title className="text-2xl sm:text-3xl font-semibold tracking-tight">
-                      {headings[currentStep - 1]}
-                    </Primitive.Title>
-                    <Primitive.Description
-                      id="create-description"
-                      className={
-                        currentStep === 1 || currentStep === 3
-                          ? 'sr-only'
-                          : 'text-xs sm:text-sm leading-relaxed text-text-muted'
-                      }
-                    >
-                      {descriptions[currentStep - 1]}
-                    </Primitive.Description>
-                  </div>
+                    <SetupActions
+                      back={currentStep > 1}
 
+                      variant={footerVariant}
+                      vertical={flowVariant === 'Action rail'}
+                      disabled={!canContinue}
+                      loading={isSubmitting}
+                      onBack={goBack}
+                      middle={flowVariant === 'Original' &&
+                        <StepIndicator
+                          steps={stepNames}
+                          currentStep={visibleSteps.indexOf(currentStep) + 1}
+                          furthestStep={visibleSteps.filter((step) => step <= furthestStep).length}
+                          variant={stepIndicatorVariant}
+                          disabled={isSubmitting || isAmbientGenerating || waitingForEngine}
+                          onStepClick={(step) => advanceToStep(visibleSteps[step - 1])}
+                        />
+                      }
+                      primary={
+                        currentStep === 7
+                          ? 'Create project'
+                          : currentStep === 1
+                            ? 'Generate story directions'
+                            : 'Continue'
+                      }
+                    />
+                  </div>
+                  }
+                >
                   {waitingForEngine && <p role="status" className="flex items-center gap-2 px-4 py-3 text-sm text-text-muted"><Loader2 className="size-4 animate-spin" />Checking the creative engine…</p>}
-                  {engineError && currentStep >= 3 && <div role="alert" className="px-4 py-3 text-sm text-danger">{engineError}<Button variant="quiet" onClick={() => { enginePromise.current = testEngine(); }}>Retry connection</Button></div>}
+                  {engineError && <div role="alert" className="px-4 py-3 text-sm text-danger">{engineError}<Button variant="quiet" onClick={() => { enginePromise.current = testEngine(); }}>Retry connection</Button></div>}
                   {/* Error Alert Box */}
                   {errorMsg && (
                     <div
@@ -947,139 +893,19 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
                   {/* Scrollable Stage Area (Only the step content scrolls) */}
                   <div
                     ref={dialogRef}
-                    className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-1 pb-5 pt-2 [scrollbar-gutter:stable_both-edges]"
+                    className="min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable_both-edges]"
                   >
-                    {/* Step 1: Brief & Location */}
+                    <div className={cn('flex min-h-full flex-col px-1 py-4', currentStep === 7 && 'pb-28')}>
+                    <div data-step-content className="my-auto w-full shrink-0 space-y-6">
+                    {!isSplitSetupFlow(flowVariant) && stepIntroduction}
+                    {/* Step 1: Creative brief */}
                     {currentStep === 1 && (
                       <div
                         data-art-exclusion
-                        className="w-full mx-auto px-2 sm:px-4 space-y-6"
+                        className={cn("w-full mx-auto px-2 sm:px-4 space-y-6", activeWidthClass)}
                       >
-                        <div>
-                          <ProjectTitleField value={title} onChange={setTitle} />
-                        </div>
-                        <div className="space-y-4">
-                          <Label
-                            htmlFor="project-idea"
-                            className="block text-xs text-text-muted"
-                          >
-                            Description
-                          </Label>
-                          <Textarea
-                            variant="plain"
-                            id="project-idea"
-                            ref={promptInputRef}
-                            rows={5}
-                            className="min-h-48 text-xl leading-relaxed sm:min-h-56 sm:text-2xl"
-                            value={prompt}
-                            onChange={(e) =>
-                              handleTextChangeWithUrlExtraction(
-                                1,
-                                e.target.value,
-                                setPrompt,
-                              )
-                            }
-                            placeholder="A story, a scene, a character. What do you have in mind?"
-                            aria-describedby="idea-help"
-                          />
-                          <p id="idea-help" className="text-xs text-text-muted">
-                            Include reference links, or start with just a thought.
-                          </p>
-                        </div>
+                        <ProjectIdeaInput ref={promptInputRef} variant={ideaInputVariant} value={prompt} onChange={value => handleTextChangeWithUrlExtraction(1, value, setPrompt)} />
                         <ReferenceLinks urls={stepUrls[1] || []} onRemove={(url) => removeUrl(1, url)} />
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
-                          <FolderOpen className="size-4 shrink-0 text-text-muted" />
-                          <span className="text-text-muted">Save to</span>
-                          <span
-                            className="min-w-0 max-w-full break-all sm:max-w-lg"
-                            title={displayedLocation}
-                          >
-                            {displayedLocation}
-                          </span>
-                          <Button
-                            variant="soft"
-                            size="sm"
-                            loading={isPickingDir}
-                            onClick={handlePickDirectory}
-                          >
-                            Change folder
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Step 3: Format & Specs */}
-                    {currentStep === 3 && (
-                      <div
-                        data-art-exclusion
-                        className="w-full mx-auto px-2 sm:px-4 space-y-7"
-                      >
-                        <section className="space-y-3">
-                          <h2 className="text-sm font-medium">Aspect ratio</h2>
-                          <ChoiceGroup
-                            label="Aspect ratio"
-                            value={selectedAspect}
-                            onChange={(v) => setSelectedAspect(v as typeof selectedAspect)}
-                            options={[
-                              {
-                                value: '9:16',
-                                label: 'Portrait · 9:16',
-                                description: '1080 × 1920',
-                              },
-                              {
-                                value: '16:9',
-                                label: 'Landscape · 16:9',
-                                description: '1920 × 1080',
-                              },
-                              {
-                                value: '1:1',
-                                label: 'Square · 1:1',
-                                description: '1080 × 1080',
-                              },
-                            ]}
-                          />
-                        </section>
-                        <section className="space-y-3">
-                          <h2 className="text-sm font-medium">Target duration</h2>
-                          <ChoiceGroup
-                            label="Target duration"
-                            value={String(selectedDuration)}
-                            onChange={(v) => setSelectedDuration(Number(v))}
-                            options={[15, 30, 60].map((n) => ({
-                              value: String(n),
-                              label: `${n} seconds`,
-                            }))}
-                          />
-                        </section>
-                        <div className="space-y-2">
-                          <Label htmlFor="project-specs">
-                            Creative notes{' '}
-                            <span className="font-normal text-text-muted">
-                              (optional)
-                            </span>
-                          </Label>
-                          <Textarea
-                            variant="plain"
-                            id="project-specs"
-                            ref={specsInputRef}
-                            value={customSpecs}
-                            onChange={(e) =>
-                              handleTextChangeWithUrlExtraction(
-                                2,
-                                e.target.value,
-                                setCustomSpecs,
-                              )
-                            }
-                            rows={3}
-                            placeholder="For example: a slow opening, quick cuts at the end, or a reference film to follow."
-                            aria-describedby="format-notes-help"
-                          />
-                          <ReferenceLinks urls={stepUrls[2] || []} onRemove={(url) => removeUrl(2, url)} />
-                          <p id="format-notes-help" className="text-xs text-text-muted">
-                            These notes guide the story. Canvas and duration use the
-                            choices above.
-                          </p>
-                        </div>
                       </div>
                     )}
 
@@ -1097,7 +923,7 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
                             <div className="space-y-1.5 max-w-sm">
                               <p className="text-base font-semibold text-text-primary">{ambientStatus}</p>
                               <p className="text-xs text-text-muted leading-relaxed">
-                                Weaving narrative beats, cinematic treatments, and character hooks.
+                                Exploring premises, characters, and distinct story directions.
                               </p>
                               <p className="text-[11px] text-text-muted/60 pt-1">
                                 You can create a blank project anytime while the engine is working.
@@ -1110,7 +936,8 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
                               directions={allVariations}
                               selected={selectedCards}
                               onToggle={toggleCardPick}
-                              variant={visualListVariant}
+                              presentation={storyPresentation}
+                              contentVariant={storyContent}
                               customPrompt={refinePrompt}
                               onCustomPromptChange={(val) =>
                                 handleTextChangeWithUrlExtraction(
@@ -1157,21 +984,13 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
                     {/* Step 6: Visual Looks - Cards carousel is the main focus, with custom look integrated as card */}
                     {currentStep === 6 && (
                       <div data-art-exclusion className="space-y-8">
-                        {Array.from(selectedCards).map((id, index) => (
+                        {chosenStoryIds.map((id) => (
                           <section key={id} className="space-y-4">
-                            {/* Heading */}
-                            <div className="w-full mx-auto px-2 sm:px-4">
-                              <h2 className="text-sm font-semibold">
-                                {allVariations.find((v) => v.id === id)?.title ||
-                                  `Direction ${index + 1}`}
-                              </h2>
-                            </div>
-
                             {/* Cards Visual List */}
                             <div className="w-full mx-auto px-2">
                               <LookPicker
                                 variant={visualListVariant}
-                                label={`Look for direction ${index + 1}`}
+                                label="Visual look"
                                 value={branchAesthetics[id] || 'Liquid Glass'}
                                 customLook={customAesthetics[id] || ''}
                                 onChange={(value) =>
@@ -1197,74 +1016,68 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
                     {currentStep === 7 && (
                       <div
                         data-art-exclusion
-                        className="w-full mx-auto px-2 sm:px-4"
+                        className={cn("w-full mx-auto px-2 sm:px-4", activeWidthClass)}
                       >
+                        <div className="mb-8 space-y-5 border-b border-subtle pb-6">
+                          <ProjectTitleField value={projectTitle} onChange={value => { setTitle(value); setTitleEdited(true); }} />
+                          <div className="space-y-2">
+                            <Label htmlFor="project-folder" className="text-xs text-text-muted">Project folder</Label>
+                            <div className="flex flex-wrap gap-2 sm:flex-nowrap">
+                              <Input id="project-folder" value={folderPath} onChange={event => setFolderPath(event.target.value)} placeholder={displayedLocation} aria-describedby="project-folder-help" />
+                              <Button variant="secondary" borderTone="subtle" loading={isPickingDir} onClick={handlePickDirectory}><FolderOpen />Choose folder</Button>
+                            </div>
+                            <p id="project-folder-help" className="break-all text-xs text-text-muted">Save to: {displayedLocation}</p>
+                          </div>
+                        </div>
                         <SetupReview
-                          name={title.trim() || 'Untitled Video Project'}
+                          name={projectTitle.trim() || chosenStory?.title || 'Untitled Video Project'}
+                          showProjectDetails={false}
                           location={displayedLocation}
-                          format={`${selectedAspect} · ${selectedDuration} seconds`}
                           engine={selectedModel}
                           mood={selectedMood || (customMood.trim() ? 'Custom mood' : '')}
-                          moodNotes={customMood}
-                          directions={Array.from(selectedCards).map((id) => ({
+                          moodNotes={selectedMood === 'Custom prompt' ? customMood : ''}
+                          directions={chosenStoryIds.map((id) => ({
                             id,
                             title:
                               allVariations.find((item) => item.id === id)?.title ||
                               `Direction ${id}`,
                             look: branchAesthetics[id] || 'Liquid Glass',
-                            customLook: customAesthetics[id] || '',
+                            customLook: branchAesthetics[id] === 'Custom look' ? customAesthetics[id] || '' : '',
                           }))}
+                        />
+                        <ProjectSettingsFields
+                          aspect={selectedAspect}
+                          onAspectChange={setSelectedAspect}
+                          duration={selectedDuration}
+                          onDurationChange={setSelectedDuration}
+                          notes={customSpecs}
+                          onNotesChange={value => handleTextChangeWithUrlExtraction(2, value, setCustomSpecs)}
+                          references={<ReferenceLinks urls={stepUrls[2] || []} onRemove={url => removeUrl(2, url)} />}
                         />
                       </div>
                     )}
+                    </div>
+                    </div>
                   </div>
 
-                  {/* Bottom Actions with Step Dots */}
-                  <div
-                    data-art-exclusion
-                    className="w-full mx-auto px-2 sm:px-4 shrink-0 pt-3"
-                  >
-                    <SetupActions
-                      back={currentStep > 1}
-                      blank={true}
-                      variant={footerVariant}
-                      onReset={hasDraftContent ? handleResetDraft : undefined}
-                      disabled={!canContinue}
-                      loading={isSubmitting}
-                      onBack={goBack}
-                      onBlank={skipDirectToStudio}
-                      middle={
-                        <StepIndicator
-                          steps={stepNames}
-                          currentStep={visibleSteps.indexOf(currentStep) + 1}
-                          furthestStep={visibleSteps.filter((step) => step <= furthestStep).length}
-                          variant={stepIndicatorVariant}
-                          disabled={isSubmitting || isAmbientGenerating || waitingForEngine}
-                          onStepClick={(step) => advanceToStep(visibleSteps[step - 1])}
-                        />
-                      }
-                      primary={
-                        currentStep === 7
-                          ? 'Create project'
-                          : currentStep === 3
-                            ? 'Generate story directions'
-                            : 'Continue'
-                      }
-                    />
-                  </div>
-                </fieldset>
+                </SetupFlow>
               </form>
-            </main>
-          </div>
+
+          <EmptyProjectAction disabled={isSubmitting} onClick={skipDirectToStudio} />
 
           {VisualListTools && (
             <React.Suspense fallback={null}>
               <VisualListTools
                 onChange={setVisualListVariant}
-                onVariantChange={setVisualListVariant}
                 onWidthChange={setWizardWidth}
                 onStepIndicatorChange={setStepIndicatorVariant}
+                onFlowChange={setFlowVariant}
                 onFooterChange={setFooterVariant}
+                onHeaderChange={setHeaderVariant}
+                onStoryChange={setStoryPresentation}
+                onStoryContentChange={setStoryContent}
+                onIdeaInputChange={setIdeaInputVariant}
+                onInputChange={setInputVariant}
                 initialVariant={visualListVariant}
                 initialWidth={wizardWidth}
                 initialStepIndicator={stepIndicatorVariant}
@@ -1273,6 +1086,6 @@ export const NewProjectWizard: React.FC<NewProjectWizardProps> = ({
           )}
         </Primitive.Content>
       </Primitive.Portal>
-    </Primitive.Root>
+    </Primitive.Root></SetupInputContext.Provider>
   );
 };

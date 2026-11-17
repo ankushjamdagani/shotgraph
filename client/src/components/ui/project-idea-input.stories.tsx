@@ -1,0 +1,14 @@
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useState } from 'react';
+import { ProjectIdeaInput, projectIdeaInputVariants } from './project-idea-input';
+const meta = { title: 'Patterns/Project idea input', component: ProjectIdeaInput, args: { value: '', onChange: () => {} }, argTypes: { variant: { control: 'select', options: projectIdeaInputVariants } } } satisfies Meta<typeof ProjectIdeaInput>;
+export default meta;
+type Story = StoryObj<typeof meta>;
+export const Editable: Story = { render: function Example(args) { const [value, setValue] = useState(args.value); return <div className="w-[min(800px,90vw)]"><ProjectIdeaInput {...args} value={value} onChange={setValue}/></div>; } };
+export const Original: Story = { ...Editable, args: { variant: 'Original' } };
+export const OpenCanvas: Story = { ...Editable, args: { variant: 'Open canvas' } };
+export const EditorialPage: Story = { ...Editable, args: { variant: 'Editorial page' } };
+export const FocusPrompt: Story = { ...Editable, args: { variant: 'Focus prompt' } };
+export const FramedCanvas: Story = { ...Editable, args: { variant: 'Framed canvas' } };
+export const CompactComposer: Story = { ...Editable, args: { variant: 'Compact composer' } };
+export const LongIdea: Story = { ...Editable, args: { variant: 'Open canvas', value: 'A traveler returns to a city they once called home. An unexpected friendship challenges their memories and changes what it means to belong. The film follows their growing connection through quiet conversations and familiar places that now feel different.' } };

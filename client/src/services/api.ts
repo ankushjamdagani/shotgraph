@@ -8,8 +8,11 @@ export function sessionToken(): Promise<string> {
         return (await response.json()).token;
     }).catch(error => { tokenPromise = null; throw error; });
 }
+export type ApiRequestInit = RequestInit & { errorToast?: boolean };
+
 /** Same-origin transport with a per-server session token for mutations. */
-export async function apiFetch(input: string, init: RequestInit = {}): Promise<Response> {
+export async function apiFetch(input: string, init: ApiRequestInit = {}): Promise<Response> {
+    const { errorToast = true, ...requestInit } = init;
     const url = input.replace(/^https?:\/\/(localhost|127\.0\.0\.1):3030/, '');
     const headers = new Headers(init.headers);
     if (init.method && !['GET', 'HEAD'].includes(init.method.toUpperCase()))
@@ -23,13 +26,13 @@ export async function apiFetch(input: string, init: RequestInit = {}): Promise<R
     }
     if (projectId && revisions.has(projectId) && init.method)
         headers.set('x-project-revision', String(revisions.get(projectId)));
-    const response = await fetch(url, { ...init, headers });
+    const response = await fetch(url, { ...requestInit, headers });
     if (response.status === 401)
         tokenPromise = null;
     if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         if (init.method) {
-            toast.error(data.error || 'Changes could not be saved');
+            if (errorToast) toast.error(data.error || 'Changes could not be saved');
             if (projectId) {
                 const current = await fetch(`/api/projects/${projectId}`).then(r => r.ok ? r.json() : null).catch(() => null);
                 if (current?.id) {
