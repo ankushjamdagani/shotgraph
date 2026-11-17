@@ -14,6 +14,7 @@ export const buttonVariants = cva(
           'border border-control bg-surface text-text-primary hover:bg-hover',
         ghost: 'text-text-primary hover:bg-hover',
         soft: 'bg-card text-text-primary hover:bg-hover',
+        step: 'h-auto w-full flex-col items-start gap-2 rounded-none px-0 py-1 text-text-muted hover:text-text-primary disabled:opacity-100 [&:hover>span:first-child]:bg-focus',
         quiet: 'text-text-muted hover:bg-hover hover:text-text-primary',
         destructive: 'bg-danger-solid text-white hover:bg-danger-hover',
       },
