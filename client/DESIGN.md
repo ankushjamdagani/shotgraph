@@ -79,7 +79,7 @@ Custom CSS is limited to semantic tokens, legacy editor styles, Sonner integrati
 
 ## Project creation
 
-Creation uses a full-screen Radix dialog on Warm Stock, a compact brand/close header, and named setup steps (Brief, Engine, Format, Mood, Story, Look, Review). The form is centered within a single readable column, with a matching header alignment and a named seven-step progress track above the form. There is no left rail. The shared Cobalt Signal meadow artwork lives around the content; header and form have protected exclusion zones. Completed steps are revisitable. Keep the primary form at a readable width and use neutral shared controls throughout.
+Creation uses a full-screen Radix dialog on Warm Stock, a compact brand/close header, and named setup steps (Brief, Engine, Format, Story, Mood, Look, Review). The form is centered within a single readable column, with a matching header alignment and a named seven-step progress track above the form. There is no left rail. The shared Cobalt Signal meadow artwork lives around the content; header and form have protected exclusion zones. Completed steps are revisitable. Keep the primary form at a readable width and use neutral shared controls throughout.
 
 ChoiceGroup is the shared Radix radio-card pattern for format, duration, engine, mood and look. Selected choices use a 1px focus-color border and checkmark without layout shift. Every field has an explicit label. Blank creation remains available through setup and generation; AI failures offer retry and manual input. Review presents actual selected settings. Disable duplicate creation and closing during submission; retain inline errors and user input on failure.
 
@@ -97,6 +97,8 @@ StoryDeck presents the initially selected/recommended direction in front, with a
 
 Progress ribbon is the approved setup progress panel. Other progress variants and the comparison debugger have been removed.
 
-Setup order is Brief → Engine → Format → Mood → Story → Look → Review. Engine must pass a real structured-response round trip before assisted steps become available. Switching the engine cancels pending requests, resets verification and clears generated suggestions. No AI request runs while leaving Brief; mood analysis starts only after a verified Engine step. Blank creation stays available without AI assistance.
+Setup order is Brief → Engine → Format → Story → Mood → Look → Review. Engine must pass a real structured-response round trip before assisted steps become available. Switching the engine cancels pending requests, resets verification and clears generated suggestions. No AI request runs while leaving Brief; story generation starts after Format with the verified engine, and mood analysis uses the selected story after Story. Blank creation stays available without AI assistance.
 
 Preset mood cards include cinematic thumbnails with pace and light cues. These are illustrative mood treatments, not generated footage. Model suggestions remain optional and require explicit selection.
+
+Mood suggestions and Review use MoodThumbnail with the same illustrative reference matching. Review also shows the selected look for each story direction, using the same local look assets as the picker. VisualChoiceList is the shared horizontal Radix radio pattern for Mood and Look, with keyboard navigation and scroll snapping. Development Leva controls compare Landscape cards, Compact tiles, Filmstrip and Split cards; the fixed top/footer regions remain unchanged.
