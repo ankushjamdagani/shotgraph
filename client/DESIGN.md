@@ -79,6 +79,10 @@ Custom CSS is limited to semantic tokens, legacy editor styles, Sonner integrati
 
 ## Project creation
 
-Creation uses a full-screen Radix dialog on Warm Stock, a compact brand/close header, and named setup steps (Brief, Format, Mood, Engine, Story, Look, Review). Desktop steps sit in a narrow left rail; small screens use a horizontally scrollable step list. Completed steps are revisitable. Keep the primary form at a readable width and use neutral shared controls throughout.
+Creation uses a full-screen Radix dialog on Warm Stock, a compact brand/close header, and named setup steps (Brief, Format, Mood, Engine, Story, Look, Review). The form is centered within a single readable column, with a matching header alignment and a named seven-step progress track above the form. There is no left rail. The shared Cobalt Signal meadow artwork lives around the content; header and form have protected exclusion zones. Completed steps are revisitable. Keep the primary form at a readable width and use neutral shared controls throughout.
 
 ChoiceGroup is the shared Radix radio-card pattern for format, duration, engine, mood and look. Selected choices use a 1px focus-color border and checkmark without layout shift. Every field has an explicit label. Blank creation remains available through setup and generation; AI failures offer retry and manual input. Review presents actual selected settings. Disable duplicate creation and closing during submission; retain inline errors and user input on failure.
+
+Creation begins with a large, borderless idea editor. No project-name field is shown; the initial title uses the first line of the idea (up to 60 characters), with Untitled Video Project as the empty fallback. Save location shows the actual server default target path with Change folder; there is no manual path editor. Input and Textarea expose a shared plain variant; preserve explicit accessible labels and visible caret. SetupActions holds four development comparisons via scoped Leva controls; Quiet split is the production default pending review.
+
+Creation art uses feathered SVG exclusion masks around individual content groups instead of cutting a rectangular hole around the full form. The listing retains its original hard content protection. The first-step description is visually hidden because the editor placeholder provides the visible guidance.

@@ -8,10 +8,13 @@ type AsciiStyle = CSSProperties & {
 };
 
 /** Frame-by-frame ASCII video; no movement of the artwork container. */
-export function AsciiArt({ appearance }: { appearance?: CSSProperties }) {
+export function AsciiArt({ appearance, exclusionStyle = 'hard' }: { appearance?: CSSProperties; exclusionStyle?: 'hard' | 'soft' }) {
   const style = appearance as AsciiStyle | undefined;
   const kind = style?.['--welcome-ascii-kind'];
   const gradientId = useId();
+  const softExclusions = exclusionStyle === 'soft';
+  const maskId = gradientId + '-mask';
+  const blurId = gradientId + '-blur';
   const animated = style?.['--welcome-motion'] === 'running';
   const layer = useRef<SVGSVGElement>(null);
   const [bounds, setBounds] = useState({ width: 400, height: 600, exclusions: [] as {x:number;y:number;width:number;height:number}[] });
@@ -28,10 +31,18 @@ export function AsciiArt({ appearance }: { appearance?: CSSProperties }) {
     };
     const observer = new ResizeObserver(measure);
     observer.observe(panel);
-    panel.querySelectorAll('[data-art-exclusion]').forEach(element => observer.observe(element));
+    const observeContent = () => {
+      panel.querySelectorAll('[data-art-exclusion]').forEach(element => observer.observe(element));
+      measure();
+    };
+    observeContent();
+    const mutations = new MutationObserver(records => {
+      if (records.some(record => !layer.current?.contains(record.target))) observeContent();
+    });
+    mutations.observe(panel, {childList:true, subtree:true});
     panel.addEventListener('scroll', measure, true);
     measure();
-    return () => { observer.disconnect(); panel.removeEventListener('scroll', measure, true); };
+    return () => { observer.disconnect(); mutations.disconnect(); panel.removeEventListener('scroll', measure, true); };
   }, [kind]);
   const [time, setTime] = useState(0);
   useEffect(() => {
@@ -59,16 +70,24 @@ export function AsciiArt({ appearance }: { appearance?: CSSProperties }) {
     const excluded = bounds.exclusions.some(box =>
       col * cellWidth + cellWidth > box.x && col * cellWidth < box.x + box.width &&
       rowIndex * cellHeight + cellHeight > box.y && rowIndex * cellHeight < box.y + box.height);
-    return excluded ? ' ' : source[rowIndex]?.[col] ?? ' ';
+    return excluded && !softExclusions ? ' ' : source[rowIndex]?.[col] ?? ' ';
   }).join(''));
   const phase = Math.sin(time * (style?.['--welcome-color-speed'] ?? 3) / 20) * 36;
   const color = (offset:number) => 'hsl(calc(var(--collection-art-hue,215) + ' + (phase+offset).toFixed(2) + ') 76% var(--collection-art-lightness,46%))';
   return <svg ref={layer} aria-hidden="true" data-ascii-layer data-placement="panel" data-frame={time.toFixed(2)} viewBox={`0 0 ${bounds.width} ${bounds.height}`} className="pointer-events-none absolute inset-0 -z-10 size-full font-mono text-[7.5px]" style={{ opacity: style?.['--welcome-ascii-depth'] ?? .85, fontSize: cellWidth / .6 }}>
-    <defs><linearGradient id={gradientId} x1="0%" y1="100%" x2="100%" y2="0%">
+    <defs>
+      {softExclusions && <>
+        <filter id={blurId} x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="28"/></filter>
+        <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width={bounds.width} height={bounds.height}>
+          <rect width={bounds.width} height={bounds.height} fill="white"/>
+          {bounds.exclusions.map((box,index)=><rect key={index} x={box.x-12} y={box.y-12} width={box.width+24} height={box.height+24} rx="48" fill="black" filter={`url(#${blurId})`}/>)}
+        </mask>
+      </>}
+      <linearGradient id={gradientId} x1="0%" y1="100%" x2="100%" y2="0%">
       <stop offset="0%" style={{stopColor:color(0)}}/>
       <stop offset="50%" style={{stopColor:color(35)}}/>
       <stop offset="100%" style={{stopColor:color(70)}}/>
     </linearGradient></defs>
-    <text fill={'url(#'+gradientId+')'} xmlSpace="preserve" className="whitespace-pre">{rows.map((row, index) => <tspan key={index} textLength={bounds.width} lengthAdjust="spacingAndGlyphs" x={0} y={(index + .8) * cellHeight}>{row}</tspan>)}</text>
+    <text mask={softExclusions ? `url(#${maskId})` : undefined} fill={'url(#'+gradientId+')'} xmlSpace="preserve" className="whitespace-pre">{rows.map((row, index) => <tspan key={index} textLength={bounds.width} lengthAdjust="spacingAndGlyphs" x={0} y={(index + .8) * cellHeight}>{row}</tspan>)}</text>
   </svg>;
 }

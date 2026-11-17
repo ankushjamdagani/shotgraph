@@ -1,3 +1,5 @@
+import { AsciiArt } from './ascii-art';
+import { getDefaultStartAppearance } from './page-background';
 import { CollectionSort, type CollectionSortValue } from './collection-sort';
 import { ProjectNameCue } from './collection';
 import { startPanelBackgrounds, getStartPanelBackground } from '../../dev/start-panel-backgrounds';
@@ -192,4 +194,12 @@ export const CardHovers: Story = {
       <div className={cn("grid grid-cols-2 gap-6")}>{['New Project','Summer film'].map(title=><article key={title} className={cn('group',getCardHoverStyle())}><button className="block w-full text-left"><Thumbnail intent={title === 'New Project' ? 'create' : 'open'}><svg viewBox="0 0 300 160" className="size-full"><path d="M60 80h180" stroke="var(--border-focus)"/><rect x="25" y="65" width="70" height="30" rx="4" fill="var(--bg-card)" stroke="var(--border-subtle)"/><rect x="205" y="65" width="70" height="30" rx="4" fill="var(--bg-card)" stroke="var(--border-subtle)"/></svg></Thumbnail><span data-project-name className="mt-3 flex items-center gap-2 text-sm font-semibold">{title}<ProjectNameCue/></span><span data-card-meta className="mt-2 block text-xs text-text-muted">9:16 · 00:30 · 30 FPS</span></button></article>)}</div>
     </div>;
   },
+};
+
+/** Soft content protection for full-page creation, distinct from the listing panel. */
+export const SoftArtworkExclusions: Story = {
+  render: () => <div className="relative isolate flex min-h-[650px] w-[min(1000px,85vw)] items-center justify-center overflow-hidden" style={getPageBackground()}>
+    <AsciiArt appearance={getDefaultStartAppearance()} exclusionStyle="soft"/>
+    <div data-art-exclusion className="max-w-md p-6"><h2 className="text-3xl font-semibold">Start with an idea.</h2><p className="mt-6 text-xl text-text-muted">The artwork fades around content without a rectangular cut.</p></div>
+  </div>,
 };
